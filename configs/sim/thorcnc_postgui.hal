@@ -1,0 +1,3 @@
+# ThorCNC PostGUI HAL
+# Spindel-Sim-Parameter und Net-Verbindungen werden von Python gesetzt (nach hal.ready()).
+# Diese Datei bleibt als Platzhalter für weitere manuelle HAL-Verbindungen.

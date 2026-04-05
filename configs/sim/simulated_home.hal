@@ -1,0 +1,27 @@
+# Simulated home switches using window comparators (wcomp).
+# Each switch is active only inside a small window around position 0,
+# so the switch is OFF when the axis is anywhere in its working range.
+#
+# X/Y: window -1.5 .. 0.5  (negative end, HOME_SEARCH_VEL negative)
+# Z:   window -0.5 .. 1.5  (positive/top end, HOME_SEARCH_VEL positive)
+
+loadrt wcomp names=wcomp_x,wcomp_y,wcomp_z
+
+setp wcomp_x.min -1.5
+setp wcomp_x.max  0.5
+net Xpos => wcomp_x.in
+net Xhomesw <= wcomp_x.out => joint.0.home-sw-in
+
+setp wcomp_y.min -1.5
+setp wcomp_y.max  0.5
+net Ypos => wcomp_y.in
+net Yhomesw <= wcomp_y.out => joint.1.home-sw-in
+
+setp wcomp_z.min -0.5
+setp wcomp_z.max  1.5
+net Zpos => wcomp_z.in
+net Zhomesw <= wcomp_z.out => joint.2.home-sw-in
+
+addf wcomp_x servo-thread
+addf wcomp_y servo-thread
+addf wcomp_z servo-thread

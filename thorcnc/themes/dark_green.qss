@@ -1,0 +1,24 @@
+/* ThorCNC Dark Green Theme — extends dark, accent: green */
+@import "dark.qss";
+
+QPushButton:checked,
+QTabBar::tab:selected {
+    background-color: #1a6e1a;
+    border-color: #27ae60;
+}
+
+QSlider::handle:horizontal,
+QSlider::sub-page:horizontal {
+    background-color: #27ae60;
+    border-color: #2ecc71;
+}
+
+QLineEdit:focus {
+    border-color: #27ae60;
+}
+
+QLabel#lbl_dro_x,
+QLabel#lbl_dro_y,
+QLabel#lbl_dro_z {
+    color: #2ecc71;
+}

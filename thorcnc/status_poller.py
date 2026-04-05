@@ -1,0 +1,215 @@
+"""
+LinuxCNC Status Poller
+Polls linuxcnc.stat() via QTimer and emits Qt signals on state changes.
+"""
+import linuxcnc
+from PySide6.QtCore import QObject, QTimer, Signal
+
+
+class StatusPoller(QObject):
+    # Machine state
+    estop_changed        = Signal(bool)   # True = estop active
+    machine_on_changed   = Signal(bool)   # True = machine on
+    mode_changed         = Signal(int)    # linuxcnc.MODE_MANUAL/MDI/AUTO
+    interp_changed       = Signal(int)    # linuxcnc.INTERP_IDLE/READING/PAUSED/WAITING
+
+    # Position (mm, absolute machine coords)
+    position_changed     = Signal(list)   # [x, y, z, ...]
+    g5x_offset_changed   = Signal(list)   # work coord offsets
+    g5x_index_changed    = Signal(int)    # active WCS index (1=G54 … 9=G59.3)
+    tool_in_spindle      = Signal(int)
+    tool_offset_changed  = Signal(list)   # [x, y, z, ...] aktueller Werkzeugoffset
+
+    # Program
+    file_loaded          = Signal(str)
+    program_line         = Signal(int)
+    gcodes_changed       = Signal(tuple)  # tuple of active G-codes
+
+    # Overrides
+    feed_override        = Signal(float)  # 0.0–2.0
+    spindle_override     = Signal(float)
+    rapid_override       = Signal(float)  # 0.0-1.0
+
+    # Spindle
+    spindle_speed        = Signal(float)  # actual rpm
+    spindle_direction    = Signal(int)    # 1=fwd, -1=rev, 0=stop
+    spindle_at_speed     = Signal(bool)    # HAL: thorcnc.spindle-atspeed
+    spindle_speed_actual = Signal(float)   # HAL: thorcnc.spindle-speed-actual
+    spindle_load         = Signal(float)   # HAL: thorcnc.spindle-load (0-100%)
+
+    # Homing
+    homed_changed        = Signal(list)   # list of bools per axis
+
+    # Error / info messages
+    error_message        = Signal(str)
+    info_message         = Signal(str)
+
+    # Periodic tick (for anything not covered above)
+    periodic             = Signal()
+
+    def __init__(self, interval_ms: int = 100, parent=None):
+        super().__init__(parent)
+        self.stat = linuxcnc.stat()
+        self.error_channel = linuxcnc.error_channel()
+
+        # Shadow values to detect changes
+        self._estop          = None
+        self._machine_on     = None
+        self._mode           = None
+        self._interp         = None
+        self._position       = None
+        self._g5x_offset     = None
+        self._g5x_index      = None
+        self._tool           = None
+        self._tool_offset    = None
+        self._file           = None
+        self._line           = None
+        self._feed_override  = None
+        self._spindle_over   = None
+        self._spindle_speed  = None
+        self._spindle_dir    = None
+        self._spindle_at_spd = None
+        self._spindle_actual = None
+        self._spindle_load   = None
+        self._homed          = None
+        self._gcodes         = None
+
+        self._timer = QTimer(self)
+        self._timer.setInterval(interval_ms)
+        self._timer.timeout.connect(self._poll)
+
+    def start(self):
+        self._timer.start()
+
+    def stop(self):
+        self._timer.stop()
+
+    def _poll(self):
+        try:
+            self.stat.poll()
+        except linuxcnc.error:
+            return
+
+        self._check_errors()
+        self._emit_if_changed()
+        self.periodic.emit()
+
+    def _check_errors(self):
+        try:
+            error = self.error_channel.poll()
+            while error:
+                kind, text = error
+                if kind in (linuxcnc.NML_ERROR, linuxcnc.OPERATOR_ERROR):
+                    self.error_message.emit(text)
+                else:
+                    self.info_message.emit(text)
+                error = self.error_channel.poll()
+        except Exception:
+            pass
+
+    def _emit_if_changed(self):
+        s = self.stat
+
+        estop = s.task_state == linuxcnc.STATE_ESTOP
+        if estop != self._estop:
+            self._estop = estop
+            self.estop_changed.emit(estop)
+
+        machine_on = s.task_state == linuxcnc.STATE_ON
+        if machine_on != self._machine_on:
+            self._machine_on = machine_on
+            self.machine_on_changed.emit(machine_on)
+
+        if s.task_mode != self._mode:
+            self._mode = s.task_mode
+            self.mode_changed.emit(s.task_mode)
+
+        if s.interp_state != self._interp:
+            self._interp = s.interp_state
+            self.interp_changed.emit(s.interp_state)
+
+        pos = list(s.actual_position[:3])
+        if pos != self._position:
+            self._position = pos
+            self.position_changed.emit(pos)
+
+        g5x = list(s.g5x_offset[:3])
+        if g5x != self._g5x_offset:
+            self._g5x_offset = g5x
+            self.g5x_offset_changed.emit(g5x)
+
+        g5x_idx = s.g5x_index
+        if g5x_idx != self._g5x_index:
+            self._g5x_index = g5x_idx
+            self.g5x_index_changed.emit(g5x_idx)
+
+        if s.tool_in_spindle != self._tool:
+            self._tool = s.tool_in_spindle
+            self.tool_in_spindle.emit(s.tool_in_spindle)
+
+        tool_off = list(s.tool_offset[:3])
+        if tool_off != self._tool_offset:
+            self._tool_offset = tool_off
+            self.tool_offset_changed.emit(tool_off)
+
+        if s.file != self._file:
+            self._file = s.file
+            self.file_loaded.emit(s.file)
+
+        active_line = s.motion_line if s.motion_line > 0 else s.current_line
+        if active_line != self._line:
+            self._line = active_line
+            self.program_line.emit(active_line)
+
+        gcodes = s.gcodes
+        if gcodes != self._gcodes:
+            self._gcodes = gcodes
+            self.gcodes_changed.emit(gcodes)
+
+        if s.feedrate != self._feed_override:
+            self._feed_override = s.feedrate
+            self.feed_override.emit(s.feedrate)
+
+        spindle_over = s.spindle[0]['override']
+        if spindle_over != self._spindle_over:
+            self._spindle_over = spindle_over
+            self.spindle_override.emit(spindle_over)
+
+        rapid_over = s.rapidrate
+        if rapid_over != getattr(self, '_rapid_over', None):
+            self._rapid_over = rapid_over
+            self.rapid_override.emit(rapid_over)
+
+        spindle_speed = s.spindle[0]['speed']
+        if spindle_speed != self._spindle_speed:
+            self._spindle_speed = spindle_speed
+            self.spindle_speed.emit(spindle_speed)
+
+        spindle_dir = s.spindle[0]['direction']
+        if spindle_dir != self._spindle_dir:
+            self._spindle_dir = spindle_dir
+            self.spindle_direction.emit(spindle_dir)
+
+        try:
+            import hal as _hal
+            at_spd  = bool(_hal.get_value("thorcnc.spindle-atspeed"))
+            actual  = float(_hal.get_value("thorcnc.spindle-speed-actual"))
+            load    = float(_hal.get_value("thorcnc.spindle-load"))
+        except Exception:
+            at_spd = False
+            actual = 0.0
+            load   = 0.0
+        if at_spd != self._spindle_at_spd:
+            self._spindle_at_spd = at_spd
+            self.spindle_at_speed.emit(at_spd)
+        if round(actual) != self._spindle_actual:
+            self._spindle_actual = round(actual)
+            self.spindle_speed_actual.emit(actual)
+        if round(load) != self._spindle_load:
+            self._spindle_load = round(load)
+            self.spindle_load.emit(load)
+
+        homed = list(s.homed[:3])
+        if homed != self._homed:
+            self._homed = homed
+            self.homed_changed.emit(homed)

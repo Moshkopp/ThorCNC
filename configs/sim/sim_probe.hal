@@ -1,0 +1,3 @@
+# sim_probe.hal - DEAKTIVIERT
+# Die Probe-Simulation laeuft jetzt direkt ueber hal.set_p() in der GUI (mainwindow.py).
+# Diese Datei wird weiterhin geladen (POSTGUI_HALFILE), tut aber nichts mehr.

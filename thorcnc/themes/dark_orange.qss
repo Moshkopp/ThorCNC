@@ -1,0 +1,28 @@
+/* ThorCNC Dark Orange Theme — extends dark, accent: orange */
+@import "dark.qss";
+
+QPushButton:checked,
+QTabBar::tab:selected {
+    background-color: #7d4000;
+    border-color: #e67e22;
+}
+
+QSlider::handle:horizontal,
+QSlider::sub-page:horizontal {
+    background-color: #e67e22;
+    border-color: #f39c12;
+}
+
+QLineEdit:focus {
+    border-color: #e67e22;
+}
+
+QLabel#lbl_dro_x,
+QLabel#lbl_dro_y,
+QLabel#lbl_dro_z {
+    color: #f39c12;
+}
+
+QLabel#lbl_spindle_rpm {
+    color: #e67e22;
+}

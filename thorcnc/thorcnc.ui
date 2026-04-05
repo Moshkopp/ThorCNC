@@ -1,0 +1,598 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1440</width>
+    <height>900</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>ThorCNC</string>
+  </property>
+  <property name="styleSheet">
+   <string>
+    QTabWidget::pane { border: 1px solid #444; }
+    QTabBar::tab { height: 0px; width: 0px; margin: 0px; padding: 0px; border: none; }
+    QGroupBox { font-weight: bold; }
+   </string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QHBoxLayout" name="mainLayout">
+    
+    <!-- ==========================================
+         LINKE SPALTE: Navigation & Maschinen-Status
+         ========================================== -->
+    <item>
+     <widget class="QFrame" name="leftPanel">
+      <property name="minimumSize">
+       <size><width>180</width><height>0</height></size>
+      </property>
+      <property name="maximumSize">
+       <size><width>200</width><height>16777215</height></size>
+      </property>
+      <layout class="QVBoxLayout" name="leftLayout">
+       <property name="spacing"><number>8</number></property>
+       
+       <!-- Navigation -->
+       <item><widget class="QPushButton" name="nav_main"><property name="text"><string>MAIN</string></property><property name="minimumSize"><size><width>0</width><height>45</height></size></property></widget></item>
+       <item><widget class="QPushButton" name="nav_file"><property name="text"><string>FILE</string></property><property name="minimumSize"><size><width>0</width><height>45</height></size></property></widget></item>
+       <item><widget class="QPushButton" name="nav_tool"><property name="text"><string>TOOL</string></property><property name="minimumSize"><size><width>0</width><height>45</height></size></property></widget></item>
+       <item><widget class="QPushButton" name="nav_offsets"><property name="text"><string>OFFSETS</string></property><property name="minimumSize"><size><width>0</width><height>45</height></size></property></widget></item>
+       <item><widget class="QPushButton" name="nav_probing"><property name="text"><string>PROBING</string></property><property name="minimumSize"><size><width>0</width><height>45</height></size></property></widget></item>
+       <item><widget class="QPushButton" name="nav_settings"><property name="text"><string>SETTINGS</string></property><property name="minimumSize"><size><width>0</width><height>45</height></size></property></widget></item>
+       <item><widget class="QPushButton" name="nav_status"><property name="text"><string>STATUS</string></property><property name="minimumSize"><size><width>0</width><height>45</height></size></property></widget></item>
+
+       <item>
+        <spacer name="navSpacer"><property name="orientation"><enum>Qt::Vertical</enum></property></spacer>
+       </item>
+
+       <!-- Power / ESTOP -->
+       <item><widget class="QPushButton" name="estop_button"><property name="text"><string>E-STOP</string></property><property name="minimumSize"><size><width>0</width><height>65</height></size></property></widget></item>
+       <item><widget class="QPushButton" name="power_button"><property name="text"><string>POWER</string></property><property name="minimumSize"><size><width>0</width><height>65</height></size></property></widget></item>
+      </layout>
+     </widget>
+    </item>
+
+    <!-- ==========================================
+         MITTE: Main View und Bottom Bar
+         ========================================== -->
+    <item>
+     <layout class="QVBoxLayout" name="centerLayout">
+      <item>
+       <widget class="QTabWidget" name="tabWidget">
+        <property name="currentIndex"><number>0</number></property>
+        
+        <!-- MAIN VIEW TAB -->
+        <widget class="QWidget" name="tab_main">
+         <layout class="QVBoxLayout">
+          <property name="margin"><number>4</number></property>
+          
+          <!-- OBERER TEIL: GCode & Backplot -->
+          <item>
+           <widget class="QSplitter" name="mainSplitter">
+            <property name="orientation"><enum>Qt::Horizontal</enum></property>
+            <widget class="QWidget" name="gcodeEditor">
+             <property name="minimumSize"><size><width>250</width><height>0</height></size></property>
+            </widget>
+            <widget class="QFrame" name="activeGcodesFrame">
+             <property name="minimumSize"><size><width>60</width><height>0</height></size></property>
+             <property name="maximumSize"><size><width>80</width><height>16777215</height></size></property>
+             <property name="styleSheet"><string>background: #2a2a2a; border-radius: 4px;</string></property>
+             <layout class="QVBoxLayout">
+              <item>
+               <widget class="QLabel" name="active_gcodes_label">
+                <property name="text"><string>G-Codes</string></property>
+                <property name="alignment"><set>Qt::AlignTop|Qt::AlignHCenter</set></property>
+                <property name="wordWrap"><bool>true</bool></property>
+                <property name="font"><font><pointsize>11</pointsize><bold>true</bold></font></property>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+            <widget class="QWidget" name="vtk">
+             <property name="minimumSize"><size><width>450</width><height>0</height></size></property>
+            </widget>
+           </widget>
+          </item>
+          
+          <!-- UNTERER TEIL: Bottom Bar -->
+          <item>
+           <widget class="QFrame" name="bottomBarFrame">
+            <property name="frameShape"><enum>QFrame::StyledPanel</enum></property>
+            <property name="minimumSize"><size><width>0</width><height>200</height></size></property>
+            <property name="maximumSize"><size><width>16777215</width><height>240</height></size></property>
+            <layout class="QHBoxLayout" name="bottomBarLayout">
+             <property name="spacing"><number>12</number></property>
+             
+             <!-- 1. Tool Info -->
+             <item>
+              <widget class="QGroupBox" name="toolGroup">
+               <property name="title"><string>Current Tool</string></property>
+               <property name="maximumSize"><size><width>300</width><height>16777215</height></size></property>
+               <layout class="QVBoxLayout">
+                <item>
+                 <layout class="QFormLayout">
+                  <item row="0" column="0"><widget class="QLabel"><property name="text"><string>Tool #:</string></property><property name="font"><font><pointsize>11</pointsize></font></property></widget></item>
+                  <item row="0" column="1"><widget class="QLabel" name="tool_number_entry_main_panel"><property name="text"><string>0</string></property><property name="font"><font><pointsize>16</pointsize><bold>true</bold></font></property></widget></item>
+                  <item row="1" column="0"><widget class="QLabel"><property name="text"><string>Dia:</string></property><property name="font"><font><pointsize>11</pointsize></font></property></widget></item>
+                  <item row="1" column="1"><widget class="QLabel" name="tool_dia_label"><property name="text"><string>0.00</string></property><property name="font"><font><pointsize>11</pointsize></font></property></widget></item>
+                  <item row="2" column="0"><widget class="QLabel"><property name="text"><string>Len:</string></property><property name="font"><font><pointsize>11</pointsize></font></property></widget></item>
+                  <item row="2" column="1"><widget class="QLabel" name="tool_len_label"><property name="text"><string>0.00</string></property><property name="font"><font><pointsize>11</pointsize></font></property></widget></item>
+                  <item row="3" column="0"><widget class="QLabel"><property name="text"><string>Desc:</string></property><property name="font"><font><pointsize>11</pointsize></font></property></widget></item>
+                  <item row="3" column="1"><widget class="QLabel" name="tool_comment_label"><property name="text"><string>-</string></property><property name="font"><font><pointsize>11</pointsize></font></property><property name="wordWrap"><bool>true</bool></property></widget></item>
+                 </layout>
+                </item>
+                <item>
+                 <layout class="QHBoxLayout">
+                  <item><widget class="QLineEdit" name="mdi_m6_entry"><property name="placeholderText"><string>T... M6</string></property></widget></item>
+                  <item><widget class="QPushButton" name="btn_m6_change"><property name="text"><string>Load Tool</string></property></widget></item>
+                 </layout>
+                </item>
+               </layout>
+              </widget>
+             </item>
+
+             <!-- 2. DRO Layout (Mitte) -->
+             <item>
+              <widget class="QGroupBox" name="droFrame">
+               <property name="title"><string>Position (DRO)</string></property>
+               <layout class="QVBoxLayout">
+                <property name="margin"><number>0</number></property>
+                <item>
+                 <layout class="QHBoxLayout" name="dro_display_layout"/>
+                </item>
+               </layout>
+              </widget>
+             </item>
+             
+             <!-- 3. Overrides -->
+             <item>
+               <widget class="QGroupBox" name="overrideBox">
+                <property name="title"><string>Overrides</string></property>
+                <layout class="QVBoxLayout">
+                 <!-- ROW 1: F -->
+                 <item>
+                  <layout class="QHBoxLayout">
+                   <item><widget class="QSlider" name="feed_override_slider"><property name="orientation"><enum>Qt::Horizontal</enum></property><property name="minimum"><number>0</number></property><property name="maximum"><number>200</number></property><property name="value"><number>100</number></property></widget></item>
+                   <item><widget class="QLabel" name="feed_override_status"><property name="text"><string>F 100%</string></property><property name="minimumSize"><size><width>60</width><height>0</height></size></property><property name="alignment"><set>Qt::AlignCenter</set></property></widget></item>
+                   <item><widget class="QPushButton" name="feed_override_to_100_button"><property name="text"><string>100%</string></property><property name="maximumSize"><size><width>50</width><height>16777215</height></size></property></widget></item>
+                  </layout>
+                 </item>
+                 <!-- ROW 2: S -->
+                 <item>
+                  <layout class="QHBoxLayout">
+                   <item><widget class="QSlider" name="spindle_override_slider"><property name="orientation"><enum>Qt::Horizontal</enum></property><property name="minimum"><number>0</number></property><property name="maximum"><number>200</number></property><property name="value"><number>100</number></property></widget></item>
+                   <item><widget class="QLabel" name="spindle_override_status"><property name="text"><string>S 100%</string></property><property name="minimumSize"><size><width>60</width><height>0</height></size></property><property name="alignment"><set>Qt::AlignCenter</set></property></widget></item>
+                   <item><widget class="QPushButton" name="spindle_override_to_100_button"><property name="text"><string>100%</string></property><property name="maximumSize"><size><width>50</width><height>16777215</height></size></property></widget></item>
+                  </layout>
+                 </item>
+                 <!-- ROW 3: R -->
+                 <item>
+                  <layout class="QHBoxLayout">
+                   <item><widget class="QSlider" name="rapid_override_slider"><property name="orientation"><enum>Qt::Horizontal</enum></property><property name="minimum"><number>0</number></property><property name="maximum"><number>100</number></property><property name="value"><number>100</number></property></widget></item>
+                   <item><widget class="QLabel" name="rapid_override_status"><property name="text"><string>R 100%</string></property><property name="minimumSize"><size><width>60</width><height>0</height></size></property><property name="alignment"><set>Qt::AlignCenter</set></property></widget></item>
+                   <item><widget class="QPushButton" name="rapid_override_to_100_button"><property name="text"><string>100%</string></property><property name="maximumSize"><size><width>50</width><height>16777215</height></size></property></widget></item>
+                  </layout>
+                 </item>
+                 <!-- ROW 4: V -->
+                 <item>
+                  <layout class="QHBoxLayout">
+                   <item><widget class="QSlider" name="v_override_slider"><property name="orientation"><enum>Qt::Horizontal</enum></property><property name="minimum"><number>0</number></property><property name="maximum"><number>200</number></property><property name="value"><number>100</number></property></widget></item>
+                   <item><widget class="QLabel" name="v_override_status"><property name="text"><string>V 100%</string></property><property name="minimumSize"><size><width>60</width><height>0</height></size></property><property name="alignment"><set>Qt::AlignCenter</set></property></widget></item>
+                   <item><widget class="QPushButton" name="v_override_to_100_button"><property name="text"><string>100%</string></property><property name="maximumSize"><size><width>50</width><height>16777215</height></size></property></widget></item>
+                  </layout>
+                 </item>
+                </layout>
+               </widget>
+             </item>
+
+
+            </layout>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+
+        <widget class="QWidget" name="tab_file">
+         <layout class="QHBoxLayout">
+          <property name="margin"><number>4</number></property>
+          <item>
+           <widget class="QSplitter" name="fileSplitter">
+            <property name="orientation"><enum>Qt::Horizontal</enum></property>
+            <widget class="QWidget" name="fileManagerContainer">
+             <layout class="QVBoxLayout" name="fileManagerLayout">
+              <property name="leftMargin"><number>0</number></property>
+              <property name="topMargin"><number>0</number></property>
+              <property name="rightMargin"><number>0</number></property>
+              <property name="bottomMargin"><number>0</number></property>
+              <property name="spacing"><number>4</number></property>
+              <item>
+               <layout class="QHBoxLayout" name="fileNavLayout">
+                <item>
+                 <widget class="QPushButton" name="btn_nav_up">
+                  <property name="text"><string>UP</string></property>
+                  <property name="minimumSize"><size><width>60</width><height>30</height></size></property>
+                  <property name="styleSheet"><string>background-color: #333; color: white; border-radius: 4px; font-weight: bold;</string></property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="btn_nav_home">
+                  <property name="text"><string>HOME</string></property>
+                  <property name="minimumSize"><size><width>60</width><height>30</height></size></property>
+                  <property name="styleSheet"><string>background-color: #333; color: white; border-radius: 4px; font-weight: bold;</string></property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QLabel" name="lbl_current_path">
+                  <property name="text"><string>/</string></property>
+                  <property name="styleSheet"><string>color: #aaa; font-size: 11pt;</string></property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <widget class="QTreeView" name="fileManagerView">
+                <property name="minimumSize"><size><width>350</width><height>0</height></size></property>
+                <property name="styleSheet"><string>background-color: #222; color: #eee; font-size: 13pt;</string></property>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+            <widget class="QFrame" name="filePreviewFrame">
+             <layout class="QVBoxLayout">
+              <property name="margin"><number>4</number></property>
+              <item>
+               <widget class="QLabel">
+                <property name="text"><string>G-Code Preview:</string></property>
+                <property name="font"><font><bold>true</bold><pointsize>12</pointsize></font></property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QTextBrowser" name="filePreviewArea">
+                <property name="font"><font><family>Monospace</family><pointsize>11</pointsize></font></property>
+                <property name="lineWrapMode"><enum>QTextEdit::NoWrap</enum></property>
+                <property name="styleSheet"><string>background-color: #111; color: #0f0;</string></property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="load_gcode_button">
+                <property name="text"><string>LOAD TO MACHINE</string></property>
+                <property name="minimumSize"><size><width>0</width><height>70</height></size></property>
+                <property name="styleSheet"><string>background-color: #2980b9; color: white; border-radius: 4px; font-weight: bold; font-size: 15pt;</string></property>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+        <widget class="QWidget" name="tab_tool">
+         <layout class="QVBoxLayout">
+          <property name="margin"><number>4</number></property>
+          <property name="spacing"><number>8</number></property>
+          <item>
+           <layout class="QHBoxLayout">
+            <item>
+             <widget class="QPushButton" name="btn_add_tool">
+              <property name="text"><string>+ Add Tool</string></property>
+              <property name="minimumSize"><size><width>100</width><height>35</height></size></property>
+              <property name="styleSheet"><string>background-color: #2a2a2a; color: white; border-radius: 4px; font-weight: bold;</string></property>
+             </widget>
+            </item>
+            <item>
+             <spacer>
+              <property name="orientation"><enum>Qt::Horizontal</enum></property>
+             </spacer>
+            </item>
+            <item>
+             <widget class="QPushButton" name="btn_reload_tools">
+              <property name="text"><string>↺ Reload File</string></property>
+              <property name="minimumSize"><size><width>120</width><height>35</height></size></property>
+              <property name="styleSheet"><string>background-color: #f39c12; color: white; border-radius: 4px; font-weight: bold;</string></property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="btn_save_tools">
+              <property name="text"><string>💾 Save &amp; Apply</string></property>
+              <property name="minimumSize"><size><width>140</width><height>35</height></size></property>
+              <property name="styleSheet"><string>background-color: #27ae60; color: white; border-radius: 4px; font-weight: bold;</string></property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <widget class="QTableWidget" name="toolTable">
+            <property name="styleSheet"><string>
+             QTableWidget { background-color: #222; color: #eee; font-size: 13pt; gridline-color: #444; }
+             QHeaderView::section { background-color: #333; color: white; font-weight: bold; font-size: 11pt; padding: 4px; border: 1px solid #444; }
+            </string></property>
+            <column>
+             <property name="text"><string>Tool (T)</string></property>
+            </column>
+            <column>
+             <property name="text"><string>Pocket (P)</string></property>
+            </column>
+            <column>
+             <property name="text"><string>Diameter (D)</string></property>
+            </column>
+            <column>
+             <property name="text"><string>Z-Offset</string></property>
+            </column>
+            <column>
+             <property name="text"><string>Description</string></property>
+            </column>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+        <widget class="QWidget" name="tab_offsets"/>
+        <widget class="QWidget" name="tab_probing"/>
+        <widget class="QWidget" name="tab_settings">
+         <layout class="QVBoxLayout" name="vl_settings_main">
+          <item>
+           <widget class="QGroupBox" name="groupBoxToolSensor">
+            <property name="title">
+             <string>Werkzeug-Taster Einstellungen (M6 Remap)</string>
+            </property>
+            <layout class="QGridLayout" name="gl_toolsensor">
+             <item row="0" column="0">
+              <widget class="QLabel" name="lbl_dsb_ts_wechsel_x">
+               <property name="text"><string>Wechselposition X:</string></property>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <widget class="QDoubleSpinBox" name="dsb_ts_wechsel_x">
+               <property name="minimum"><double>-10000.0</double></property>
+               <property name="maximum"><double>10000.0</double></property>
+               <property name="decimals"><number>3</number></property>
+              </widget>
+             </item>
+             <item row="0" column="2" rowspan="3">
+              <widget class="QPushButton" name="btn_set_wechsel_pos">
+               <property name="text"><string>Aktuelle Pos.</string></property>
+              </widget>
+             </item>
+             <item row="1" column="0">
+              <widget class="QLabel" name="lbl_dsb_ts_wechsel_y">
+               <property name="text"><string>Wechselposition Y:</string></property>
+              </widget>
+             </item>
+             <item row="1" column="1">
+              <widget class="QDoubleSpinBox" name="dsb_ts_wechsel_y">
+               <property name="minimum"><double>-10000.0</double></property>
+               <property name="maximum"><double>10000.0</double></property>
+               <property name="decimals"><number>3</number></property>
+              </widget>
+             </item>
+             <item row="2" column="0">
+              <widget class="QLabel" name="lbl_dsb_ts_wechsel_z">
+               <property name="text"><string>Wechselposition Z:</string></property>
+              </widget>
+             </item>
+             <item row="2" column="1">
+              <widget class="QDoubleSpinBox" name="dsb_ts_wechsel_z">
+               <property name="minimum"><double>-10000.0</double></property>
+               <property name="maximum"><double>10000.0</double></property>
+               <property name="decimals"><number>3</number></property>
+              </widget>
+             </item>
+
+             <!-- Spacer -->
+             <item row="3" column="0" colspan="3"><widget class="Line" name="line1_ts"><property name="orientation"><enum>Qt::Horizontal</enum></property></widget></item>
+
+             <item row="4" column="0">
+              <widget class="QLabel" name="lbl_dsb_ts_x">
+               <property name="text"><string>Taster-Position X:</string></property>
+              </widget>
+             </item>
+             <item row="4" column="1">
+              <widget class="QDoubleSpinBox" name="dsb_ts_x">
+               <property name="minimum"><double>-10000.0</double></property>
+               <property name="maximum"><double>10000.0</double></property>
+               <property name="decimals"><number>3</number></property>
+              </widget>
+             </item>
+             <item row="4" column="2" rowspan="3">
+              <widget class="QPushButton" name="btn_set_taster_pos">
+               <property name="text"><string>Aktuelle Pos.</string></property>
+              </widget>
+             </item>
+             <item row="5" column="0">
+              <widget class="QLabel" name="lbl_dsb_ts_y">
+               <property name="text"><string>Taster-Position Y:</string></property>
+              </widget>
+             </item>
+             <item row="5" column="1">
+              <widget class="QDoubleSpinBox" name="dsb_ts_y">
+               <property name="minimum"><double>-10000.0</double></property>
+               <property name="maximum"><double>10000.0</double></property>
+               <property name="decimals"><number>3</number></property>
+              </widget>
+             </item>
+             <item row="6" column="0">
+              <widget class="QLabel" name="lbl_dsb_ts_z">
+               <property name="text"><string>Taster-Position Z:</string></property>
+              </widget>
+             </item>
+             <item row="6" column="1">
+              <widget class="QDoubleSpinBox" name="dsb_ts_z">
+               <property name="minimum"><double>-10000.0</double></property>
+               <property name="maximum"><double>10000.0</double></property>
+               <property name="decimals"><number>3</number></property>
+              </widget>
+             </item>
+
+             <item row="7" column="0" colspan="3"><widget class="Line" name="line2_ts"><property name="orientation"><enum>Qt::Horizontal</enum></property></widget></item>
+
+             <item row="8" column="0">
+               <widget class="QLabel" name="lbl_dsb_ts_spindle_zero"><property name="text"><string>Spindel Nullpunkt (Z):</string></property></widget>
+             </item>
+             <item row="8" column="1">
+               <widget class="QDoubleSpinBox" name="dsb_ts_spindle_zero"><property name="minimum"><double>-10000.0</double></property><property name="maximum"><double>10000.0</double></property><property name="decimals"><number>3</number></property></widget>
+             </item>
+             <item row="9" column="0"><widget class="QLabel" name="lbl_dsb_ts_max_probe"><property name="text"><string>MAX_PROBE Abstand:</string></property></widget></item>
+             <item row="9" column="1"><widget class="QDoubleSpinBox" name="dsb_ts_max_probe"><property name="minimum"><double>-10000.0</double></property><property name="maximum"><double>10000.0</double></property><property name="decimals"><number>3</number></property></widget></item>
+             <item row="10" column="0"><widget class="QLabel" name="lbl_dsb_ts_retract"><property name="text"><string>Rückzug (RETRACT):</string></property></widget></item>
+             <item row="10" column="1"><widget class="QDoubleSpinBox" name="dsb_ts_retract"><property name="minimum"><double>-10000.0</double></property><property name="maximum"><double>10000.0</double></property><property name="decimals"><number>3</number></property></widget></item>
+             <item row="11" column="0"><widget class="QLabel" name="lbl_dsb_ts_search_vel"><property name="text"><string>Such-Geschw. (SEARCH_VEL):</string></property></widget></item>
+             <item row="11" column="1"><widget class="QDoubleSpinBox" name="dsb_ts_search_vel"><property name="minimum"><double>0.0</double></property><property name="maximum"><double>10000.0</double></property><property name="decimals"><number>1</number></property></widget></item>
+             <item row="12" column="0"><widget class="QLabel" name="lbl_dsb_ts_probe_vel"><property name="text"><string>Tast-Geschw. (PROBE_VEL):</string></property></widget></item>
+             <item row="12" column="1"><widget class="QDoubleSpinBox" name="dsb_ts_probe_vel"><property name="minimum"><double>0.0</double></property><property name="maximum"><double>10000.0</double></property><property name="decimals"><number>1</number></property></widget></item>
+             </layout>
+           </widget>
+          </item>
+          <item>
+           <spacer name="verticalSpacer_settings">
+            <property name="orientation"><enum>Qt::Vertical</enum></property>
+            <property name="size"><size><width>20</width><height>40</height></size></property>
+           </spacer>
+          </item>
+         </layout>
+        </widget>
+        <widget class="QWidget" name="tab_status"><layout class="QVBoxLayout"><item><widget class="QPushButton" name="btn_halshow"><property name="text"><string>HAL Show</string></property></widget></item></layout></widget>
+       </widget>
+      </item>
+     </layout>
+    </item>
+
+    <!-- ==========================================
+         RECHTE SPALTE: Jogging & Cycle Controls
+         ========================================== -->
+    <item>
+     <widget class="QFrame" name="rightPanel">
+      <property name="minimumSize">
+       <size><width>280</width><height>0</height></size>
+      </property>
+      <property name="maximumSize">
+       <size><width>320</width><height>16777215</height></size>
+      </property>
+      <layout class="QVBoxLayout" name="rightLayout">
+       <property name="spacing"><number>8</number></property>
+
+       <!-- JOG STACKED WIDGET -->
+       <item>
+        <widget class="QStackedWidget" name="jogDisplay">
+         <property name="currentIndex"><number>0</number></property>
+         <property name="minimumSize"><size><width>0</width><height>380</height></size></property>
+         <widget class="QWidget" name="jog_xyz">
+          <layout class="QGridLayout" name="jogGridLayout">
+           
+           <!-- Z Achse oben -->
+           <item row="0" column="1"><widget class="QPushButton" name="z_plus_jogbutton_3"><property name="minimumSize"><size><width>60</width><height>50</height></size></property><property name="font"><font><pointsize>13</pointsize><bold>true</bold></font></property></widget></item>
+           <item row="1" column="1"><widget class="QPushButton" name="z_minus_jogbutton_3"><property name="minimumSize"><size><width>60</width><height>50</height></size></property><property name="font"><font><pointsize>13</pointsize><bold>true</bold></font></property></widget></item>
+
+           <!-- Y Achse -->
+           <item row="2" column="1"><widget class="QPushButton" name="y_plus_jogbutton_3"><property name="minimumSize"><size><width>60</width><height>50</height></size></property><property name="font"><font><pointsize>13</pointsize><bold>true</bold></font></property></widget></item>
+           <item row="4" column="1"><widget class="QPushButton" name="y_minus_jogbutton_3"><property name="minimumSize"><size><width>60</width><height>50</height></size></property><property name="font"><font><pointsize>13</pointsize><bold>true</bold></font></property></widget></item>
+
+           <!-- X Achse -->
+           <item row="3" column="0"><widget class="QPushButton" name="x_minus_jogbutton_3"><property name="minimumSize"><size><width>60</width><height>50</height></size></property><property name="font"><font><pointsize>13</pointsize><bold>true</bold></font></property></widget></item>
+           <item row="3" column="2"><widget class="QPushButton" name="x_plus_jogbutton_3"><property name="minimumSize"><size><width>60</width><height>50</height></size></property><property name="font"><font><pointsize>13</pointsize><bold>true</bold></font></property></widget></item>
+
+           <!-- Jog Slider und Increments darunter -->
+           <item row="5" column="0" colspan="3">
+            <widget class="QGroupBox" name="jogBox">
+             <property name="title"><string>Jog Speed &amp; Increment</string></property>
+             <layout class="QVBoxLayout">
+              <property name="spacing"><number>10</number></property>
+              <item><widget class="QLabel" name="jog_vel_label"><property name="text"><string>Velocity: 100%</string></property><property name="font"><font><pointsize>11</pointsize></font></property></widget></item>
+              <item><widget class="QSlider" name="jog_vel_slider"><property name="orientation"><enum>Qt::Horizontal</enum></property><property name="minimum"><number>1</number></property><property name="maximum"><number>200</number></property><property name="value"><number>100</number></property><property name="minimumSize"><size><width>0</width><height>30</height></size></property></widget></item>
+              <item>
+               <layout class="QHBoxLayout">
+                <item><widget class="QPushButton" name="btn_jog_cont"><property name="text"><string>CONT</string></property><property name="checkable"><bool>true</bool></property><property name="checked"><bool>true</bool></property><property name="minimumSize"><size><width>0</width><height>45</height></size></property><property name="font"><font><pointsize>11</pointsize><bold>true</bold></font></property></widget></item>
+                <item><widget class="QPushButton" name="btn_jog_1_0"><property name="text"><string>1.0</string></property><property name="checkable"><bool>true</bool></property><property name="minimumSize"><size><width>0</width><height>45</height></size></property><property name="font"><font><pointsize>11</pointsize><bold>true</bold></font></property></widget></item>
+                <item><widget class="QPushButton" name="btn_jog_0_1"><property name="text"><string>0.1</string></property><property name="checkable"><bool>true</bool></property><property name="minimumSize"><size><width>0</width><height>45</height></size></property><property name="font"><font><pointsize>11</pointsize><bold>true</bold></font></property></widget></item>
+                <item><widget class="QPushButton" name="btn_jog_0_01"><property name="text"><string>0.01</string></property><property name="checkable"><bool>true</bool></property><property name="minimumSize"><size><width>0</width><height>45</height></size></property><property name="font"><font><pointsize>11</pointsize><bold>true</bold></font></property></widget></item>
+               </layout>
+              </item>
+             </layout>
+            </widget>
+           </item>
+
+          </layout>
+         </widget>
+        </widget>
+       </item>
+
+       <item>
+        <spacer name="spacer1"><property name="orientation"><enum>Qt::Vertical</enum></property></spacer>
+       </item>
+
+       <!-- Spindle -->
+       <item>
+        <widget class="QGroupBox" name="spindleGroup">
+         <property name="title"><string>Spindle</string></property>
+         <layout class="QVBoxLayout">
+          <property name="spacing"><number>8</number></property>
+          <!-- Soll / Ist -->
+          <item>
+           <layout class="QGridLayout">
+            <property name="verticalSpacing"><number>6</number></property>
+            <item row="0" column="0"><widget class="QLabel"><property name="text"><string>Soll:</string></property><property name="font"><font><pointsize>13</pointsize></font></property></widget></item>
+            <item row="0" column="1">
+             <widget class="QLabel" name="lbl_spindle_soll">
+              <property name="text"><string>0</string></property>
+              <property name="alignment"><set>Qt::AlignRight|Qt::AlignVCenter</set></property>
+              <property name="font"><font><pointsize>20</pointsize><bold>true</bold></font></property>
+             </widget>
+            </item>
+            <item row="1" column="0"><widget class="QLabel"><property name="text"><string>Ist:</string></property><property name="font"><font><pointsize>13</pointsize></font></property></widget></item>
+            <item row="1" column="1">
+             <widget class="QLabel" name="lbl_spindle_ist">
+              <property name="text"><string>0</string></property>
+              <property name="alignment"><set>Qt::AlignRight|Qt::AlignVCenter</set></property>
+              <property name="font"><font><pointsize>20</pointsize><bold>true</bold></font></property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <!-- Auslastungs-Bar -->
+          <item>
+           <widget class="QProgressBar" name="spindle_load_bar">
+            <property name="minimum"><number>0</number></property>
+            <property name="maximum"><number>100</number></property>
+            <property name="value"><number>0</number></property>
+            <property name="minimumSize"><size><width>0</width><height>22</height></size></property>
+            <property name="format"><string>%p% Load</string></property>
+            <property name="alignment"><set>Qt::AlignCenter</set></property>
+            <property name="font"><font><pointsize>11</pointsize></font></property>
+           </widget>
+          </item>
+          <!-- CW / CCW / STOP -->
+          <item>
+           <layout class="QHBoxLayout">
+            <item><widget class="QPushButton" name="btn_spindle_fwd"><property name="text"><string>CW</string></property><property name="minimumSize"><size><width>0</width><height>50</height></size></property><property name="font"><font><pointsize>14</pointsize><bold>true</bold></font></property></widget></item>
+            <item><widget class="QPushButton" name="btn_spindle_rev"><property name="text"><string>CCW</string></property><property name="minimumSize"><size><width>0</width><height>50</height></size></property><property name="font"><font><pointsize>14</pointsize><bold>true</bold></font></property></widget></item>
+            <item><widget class="QPushButton" name="btn_spindle_stop"><property name="text"><string>STOP</string></property><property name="minimumSize"><size><width>0</width><height>50</height></size></property><property name="font"><font><pointsize>14</pointsize><bold>true</bold></font></property></widget></item>
+           </layout>
+          </item>
+         </layout>
+        </widget>
+       </item>
+
+       <!-- Abstand vor Cycle-Buttons -->
+       <item>
+        <spacer name="spacer2"><property name="orientation"><enum>Qt::Vertical</enum></property></spacer>
+       </item>
+
+       <!-- Cycle Controls -->
+       <item><widget class="QPushButton" name="btn_run"><property name="text"><string>CYCLE START</string></property><property name="minimumSize"><size><width>0</width><height>60</height></size></property></widget></item>
+       <item><widget class="QPushButton" name="btn_pause_mdi"><property name="text"><string>FEEDHOLD</string></property><property name="minimumSize"><size><width>0</width><height>50</height></size></property></widget></item>
+       <item><widget class="QPushButton" name="stop_button"><property name="text"><string>STOP</string></property><property name="minimumSize"><size><width>0</width><height>50</height></size></property></widget></item>
+
+      </layout>
+     </widget>
+    </item>
+
+   </layout>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
