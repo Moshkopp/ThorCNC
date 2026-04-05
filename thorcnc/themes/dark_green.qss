@@ -7,6 +7,12 @@ QTabBar::tab:selected {
     border-color: #27ae60;
 }
 
+QPushButton[objectName^="nav_"]:checked {
+    background-color: #1e7e34;
+    border-left: 4px solid #2ecc71;
+    color: #ffffff;
+}
+
 QSlider::handle:horizontal,
 QSlider::sub-page:horizontal {
     background-color: #27ae60;
@@ -14,7 +20,7 @@ QSlider::sub-page:horizontal {
 }
 
 QLineEdit:focus {
-    border-color: #27ae60;
+    border-color: #2ecc71;
 }
 
 QLabel#lbl_dro_x,

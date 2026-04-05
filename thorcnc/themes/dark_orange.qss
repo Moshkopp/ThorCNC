@@ -3,8 +3,14 @@
 
 QPushButton:checked,
 QTabBar::tab:selected {
-    background-color: #7d4000;
+    background-color: #8b4000;
     border-color: #e67e22;
+}
+
+QPushButton[objectName^="nav_"]:checked {
+    background-color: #e67e22;
+    border-left: 4px solid #f39c12;
+    color: #ffffff;
 }
 
 QSlider::handle:horizontal,

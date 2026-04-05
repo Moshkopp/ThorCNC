@@ -426,7 +426,7 @@ class ThorCNC(QObject):
                 b.setText("")
 
     @staticmethod
-    def _make_jog_icon(axis: str, direction: str, size: int = 52):
+    def _make_jog_icon(axis: str, direction: str, size: int = 42):
         """Zeichnet ein Jog-Button-Icon: farbiger Ring + Chevron-Pfeil + Achsbeschriftung."""
         from PySide6.QtGui import (QPixmap, QPainter, QColor, QPolygonF,
                                    QFont, QPen, QBrush, QRadialGradient,
@@ -1042,14 +1042,24 @@ class ThorCNC(QObject):
             b.clicked.connect(lambda: self._set_jog_increment(0.01))
 
         # Nav-Buttons → tabWidget
-        from PySide6.QtWidgets import QTabWidget
+        from PySide6.QtWidgets import QTabWidget, QButtonGroup
         tab = ui.findChild(QTabWidget, "tabWidget")
         if tab:
+            self.nav_group = QButtonGroup(self)
+            self.nav_group.setExclusive(True)
             for idx, name in enumerate(
                     ("nav_main", "nav_file", "nav_tool", "nav_offsets",
                      "nav_probing", "nav_settings", "nav_status")):
                 if b := btn(name):
+                    b.setCheckable(True)
+                    b.setMinimumHeight(60)  # Force height in code to be sure
+                    self.nav_group.addButton(b, idx)
                     b.clicked.connect(lambda _, i=idx, t=tab: t.setCurrentIndex(i))
+            
+            # Sync buttons when tab changes (to handle programmatic changes)
+            tab.currentChanged.connect(self._sync_nav_buttons)
+            # Initial sync
+            self._sync_nav_buttons(tab.currentIndex())
 
     # ── Slots ─────────────────────────────────────────────────────────────────
 
@@ -1397,6 +1407,12 @@ class ThorCNC(QObject):
     def _status(self, msg: str, error: bool = False):
         if sb := self.ui.statusBar():
             sb.showMessage(msg, 10000)
+
+    def _sync_nav_buttons(self, index: int):
+        """Synchronisiert den checked-Zustand der Nav-Buttons mit dem TabWidget-Index."""
+        if hasattr(self, "nav_group"):
+            if b := self.nav_group.button(index):
+                b.setChecked(True)
 
     # ── Maschinen-Aktionen ────────────────────────────────────────────────────
 

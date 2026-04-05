@@ -24,12 +24,26 @@ THEMES_DIR = os.path.join(_DIR, "themes")
 
 
 def load_theme(app: QApplication, name: str):
+    import re
     qss_file = os.path.join(THEMES_DIR, f"{name}.qss")
     if not os.path.isfile(qss_file):
         print(f"[ThorCNC] Theme '{name}' nicht gefunden, verwende 'dark'")
         qss_file = os.path.join(THEMES_DIR, "dark.qss")
+    
     with open(qss_file, "r") as f:
-        app.setStyleSheet(f.read())
+        content = f.read()
+    
+    # Einfache Auflösung von @import "file.qss";
+    def _resolve(match):
+        filename = match.group(1)
+        path = os.path.join(THEMES_DIR, filename)
+        if os.path.isfile(path):
+            with open(path, "r") as f_imp:
+                return f_imp.read()
+        return f"/* Import failed: {filename} */"
+    
+    content = re.sub(r'@import\s+"([^"]+)";', _resolve, content)
+    app.setStyleSheet(content)
 
 
 def main():

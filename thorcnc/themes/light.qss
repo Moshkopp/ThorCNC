@@ -1,4 +1,4 @@
-/* ThorCNC Light Theme */
+/* ThorCNC Light Theme - Unified Line */
 
 * {
     font-family: "Noto Sans", "DejaVu Sans", sans-serif;
@@ -7,36 +7,37 @@
 }
 
 QWidget {
-    background-color: #f0f0f0;
+    background-color: #f5f5f5; /* Level 0: Main Background */
 }
 
 QMainWindow, QDialog {
-    background-color: #f0f0f0;
+    background-color: #f5f5f5;
 }
 
+/* ── Frames & Containers ── */
 QFrame[frameShape="4"],
-QFrame[frameShape="6"] {
-    background-color: #e8e8e8;
+QFrame[frameShape="6"],
+QGroupBox {
+    background-color: #e8e8e8; /* Level 1: Panel Background */
     border: 1px solid #cccccc;
     border-radius: 4px;
 }
 
 QFrame[frameShape="4"]#frame_topbar {
     background-color: #dcdcdc;
+    border: none;
     border-bottom: 1px solid #bbbbbb;
     border-radius: 0;
 }
 
 QFrame#frame_statusbar {
-    background-color: #e0e0e0;
+    background-color: #dcdcdc;
+    border: none;
     border-top: 1px solid #bbbbbb;
     border-radius: 0;
 }
 
 QGroupBox {
-    background-color: #e8e8e8;
-    border: 1px solid #cccccc;
-    border-radius: 4px;
     margin-top: 16px;
     padding-top: 8px;
 }
@@ -45,106 +46,108 @@ QGroupBox::title {
     subcontrol-origin: margin;
     subcontrol-position: top left;
     padding: 0 4px;
-    color: #555555;
+    color: #666666;
     font-size: 11px;
 }
 
+/* ── Standard Buttons ── */
 QPushButton {
-    background-color: #d8d8d8;
+    background-color: #d0d0d0; /* Level 2: Widget Background */
     border: 1px solid #bbbbbb;
     border-radius: 4px;
     padding: 4px 10px;
-    min-height: 28px;
-    color: #1a1a1a;
+    min-height: 32px;
+    color: #222222;
 }
 
 QPushButton:hover {
-    background-color: #c8c8c8;
+    background-color: #c0c0c0;
     border-color: #999999;
 }
 
 QPushButton:pressed {
-    background-color: #bbbbbb;
+    background-color: #b0b0b0;
 }
 
 QPushButton:disabled {
     background-color: #e8e8e8;
     color: #aaaaaa;
-    border-color: #d0d0d0;
+    border-color: #dddddd;
 }
 
 QPushButton:checked {
-    background-color: #2980b9;
+    background-color: #2980b9; /* Accent */
     border-color: #3498db;
     color: #ffffff;
 }
 
+/* ── Navigation Sidebar (Floating Card Style) ── */
+QPushButton[objectName^="nav_"] {
+    background-color: transparent;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    margin: 4px 8px;
+    min-height: 60px;
+    font-size: 13px;
+    font-weight: bold;
+    text-align: left;
+    padding-left: 16px;
+    color: #555555;
+}
+
+QPushButton[objectName^="nav_"]:hover {
+    background-color: #e0e0e0;
+    border-color: #cccccc;
+}
+
+QPushButton[objectName^="nav_"]:checked {
+    background-color: #2980b9;
+    color: #ffffff;
+    border-left: 4px solid #3498db;
+}
+
+/* Machine Buttons */
 QPushButton#btn_estop {
     background-color: #c0392b;
     border-color: #e74c3c;
     color: #ffffff;
-    font-weight: bold;
-    font-size: 13px;
-}
-
-QPushButton#btn_estop:checked {
-    background-color: #e74c3c;
-    border-color: #ff6655;
 }
 
 QPushButton#btn_power:checked {
     background-color: #27ae60;
     border-color: #2ecc71;
-    color: #ffffff;
 }
 
-QPushButton#btn_run {
-    background-color: #27ae60;
-    border-color: #2ecc71;
-    color: #ffffff;
-    font-weight: bold;
-}
-
-QPushButton#btn_stop {
-    background-color: #c0392b;
-    border-color: #e74c3c;
-    color: #ffffff;
-    font-weight: bold;
-}
-
-QPushButton#btn_pause {
-    background-color: #d4ac0d;
-    border-color: #f1c40f;
-    color: #ffffff;
-    font-weight: bold;
-}
-
+/* ── Tabs ── */
 QTabWidget::pane {
     border: 1px solid #cccccc;
     background-color: #e8e8e8;
+    border-radius: 4px;
+    top: -1px;
 }
 
 QTabBar::tab {
-    background-color: #d8d8d8;
+    background-color: #dcdcdc;
     border: 1px solid #cccccc;
     border-bottom: none;
-    padding: 6px 16px;
+    padding: 8px 20px;
+    margin-right: 2px;
     border-top-left-radius: 4px;
     border-top-right-radius: 4px;
-    color: #333333;
+    color: #666666;
 }
 
 QTabBar::tab:selected {
     background-color: #e8e8e8;
     color: #000000;
-    border-bottom: 2px solid #2980b9;
 }
 
+/* ── Inputs ── */
 QLineEdit {
     background-color: #ffffff;
-    border: 1px solid #bbbbbb;
-    border-radius: 3px;
-    padding: 3px 6px;
+    border: 1px solid #cccccc;
+    border-radius: 4px;
+    padding: 4px 8px;
     color: #1a1a1a;
 }
 
@@ -152,36 +155,91 @@ QLineEdit:focus {
     border-color: #2980b9;
 }
 
-QSlider::groove:horizontal {
-    height: 6px;
-    background-color: #cccccc;
-    border-radius: 3px;
+/* ── DRO ── */
+/* ── Jog Buttons (Wurstfinger-Schutz) ── */
+QPushButton[objectName*="_jogbutton_"] {
+    min-width: 50px;
+    min-height: 50px;
+    margin: 2px;
+    border-radius: 6px;
+    background-color: #d0d0d0;
 }
 
-QSlider::handle:horizontal {
-    background-color: #2980b9;
-    border: 1px solid #3498db;
-    width: 16px;
-    height: 16px;
-    margin: -5px 0;
-    border-radius: 8px;
-}
-
-QSlider::sub-page:horizontal {
-    background-color: #2980b9;
-    border-radius: 3px;
+QPushButton[objectName*="_jogbutton_"]:hover {
+    background-color: #c0c0c0;
+    border-color: #27ae60;
 }
 
 QLabel#lbl_dro_x,
 QLabel#lbl_dro_y,
 QLabel#lbl_dro_z {
-    color: #0a5e0a;
+    color: #0d5e0d;
     background-color: #f8fff8;
     border: 1px solid #ccddcc;
-    border-radius: 3px;
-    padding: 2px 6px;
+    border-radius: 4px;
+    padding: 2px 8px;
+}
+
+/* ── Sidebar Alignment ── */
+QStackedWidget#jogDisplay,
+QGroupBox#spindleGroup,
+QGroupBox#jogBox {
+    min-width: 200px;
+}
+
+/* Parent layout margins removal (to match spindleGroup width) */
+QWidget#jog_xyz,
+QWidget#page_manual,
+QWidget#page_auto {
+    qproperty-contentsMargins: 0;
+}
+
+QGroupBox#spindleGroup QLabel {
+    font-weight: bold;
+    font-size: 15px;
 }
 
 QLabel#lbl_spindle_rpm {
+    font-size: 14px;
     color: #c0392b;
+}
+
+/* "Soll:" und "Ist:" Labels */
+QGroupBox#spindleGroup QGridLayout > QLabel {
+    font-size: 18px;
+    color: #333333;
+}
+
+QLabel#lbl_spindle_soll,
+QLabel#lbl_spindle_ist {
+    font-size: 28px;
+    color: #000000;
+    background-color: #f8f8f8;
+    border: 1px solid #cccccc;
+    padding: 6px;
+    min-width: 100px;
+}
+
+QProgressBar#spindle_load_bar {
+    min-height: 16px;
+    border: 1px solid #cccccc;
+    border-radius: 8px;
+    background-color: #f0f0f0;
+    text-align: center;
+    font-size: 10px;
+    font-weight: bold;
+    color: transparent;
+}
+
+QProgressBar#spindle_load_bar::chunk {
+    background-color: #3498db;
+    border-radius: 7px;
+}
+
+QPushButton#btn_spindle_fwd,
+QPushButton#btn_spindle_rev,
+QPushButton#btn_spindle_stop {
+    min-height: 52px;
+    font-size: 14px;
+    font-weight: bold;
 }
