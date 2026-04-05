@@ -48,36 +48,29 @@ detect_os() {
 OS=$(detect_os)
 info "Erkanntes System: $OS"
 
-# ── Abhängigkeiten installieren ───────────────────────────────────────────────
+# ── Abhängigkeiten prüfen ─────────────────────────────────────────────────────
 install_deps() {
+    # Check if in a virtual environment
+    if [ -n "${VIRTUAL_ENV:-}" ]; then
+        info "Virtuelle Umgebung (venv) erkannt. Überspringe System-Pakete für Python."
+        info "Abhängigkeiten werden direkt in die venv installiert..."
+        return 0
+    fi
+
     case "$OS" in
         debian|ubuntu)
             info "Installiere System-Pakete (apt)..."
-            sudo apt-get update -qq
-            sudo apt-get install -y \
-                python3-pyside6 \
-                python3-pyqtgraph \
-                python3-opengl \
-                python3-pip \
-                python3-hatchling \
-                linuxcnc-uspace
-            ok "System-Pakete installiert."
+            sudo apt-get update -qq || true
+            # Versuche PySide6 via apt, aber ignoriere Fehler falls es fehlt
+            sudo apt-get install -y python3-pyside6 python3-pyqtgraph python3-opengl 2>/dev/null || \
+                warn "Konnte python3-pyside6 nicht via apt finden. Wird später via pip installiert."
+            
+            sudo apt-get install -y python3-pip python3-hatchling linuxcnc-uspace 2>/dev/null || true
+            ok "System-Checks abgeschlossen."
             ;;
-
-        arch|cachyos|endeavouros|manjaro)
-            info "Installiere Pakete (pacman / pip)..."
-            # PySide6 kommt aus den Repo oder ist schon da
-            if ! python3 -c "import PySide6" &>/dev/null; then
-                sudo pacman -S --needed --noconfirm python-pyside6
-            fi
-            # pyqtgraph & PyOpenGL über pip (AUR-Pakete optional)
-            pip install --user pyqtgraph PyOpenGL
-            ok "Pakete installiert."
-            ;;
-
+        
         *)
-            warn "Unbekanntes System '$OS'. Versuche pip-Only-Installation."
-            pip install --user "PySide6>=6.5" pyqtgraph PyOpenGL
+            info "Verwende Standard-Installation (pip) für Host-System."
             ;;
     esac
 }
@@ -86,14 +79,16 @@ install_deps() {
 install_thorcnc() {
     cd "$SCRIPT_DIR"
 
+    # Extras [backplot] enthält PySide6, pyqtgraph, PyOpenGL
+    EXTRAS="[backplot]"
+    
     if $DEV_MODE; then
-        info "Editable Install (Entwicklungsmodus)..."
-        pip install --user -e .
+        info "Editable Install (Entwicklungsmodus) mit Extras $EXTRAS..."
+        pip install -e ".$EXTRAS"
         ok "thorcnc im Entwicklungsmodus installiert."
-        info "Änderungen am Quellcode sind sofort aktiv."
     else
-        info "Installiere thorcnc..."
-        pip install --user .
+        info "Installiere thorcnc mit Extras $EXTRAS..."
+        pip install ".$EXTRAS"
         ok "thorcnc installiert."
     fi
 }
