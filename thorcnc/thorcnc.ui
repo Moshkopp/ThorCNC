@@ -486,16 +486,22 @@
              </layout>
             </widget>
 
-            <!-- ── Tab 3: Maschine (Platzhalter) ── -->
+            <!-- ── Tab 3: Maschine ── -->
             <widget class="QWidget" name="settings_tab_machine">
              <attribute name="title"><string>Maschine</string></attribute>
              <layout class="QVBoxLayout">
               <item>
-               <widget class="QLabel">
-                <property name="text"><string>Maschineneinstellungen – kommt noch.</string></property>
-                <property name="alignment"><set>Qt::AlignCenter</set></property>
-                <property name="styleSheet"><string>color: #555; font-size: 13pt;</string></property>
+               <widget class="QPushButton" name="btn_halshow">
+                <property name="text"><string>HAL Show</string></property>
+                <property name="toolTip"><string>Öffnet HAL Show (Signale &amp; Pins)</string></property>
+                <property name="maximumWidth"><number>200</number></property>
                </widget>
+              </item>
+              <item>
+               <spacer>
+                <property name="orientation"><enum>Qt::Vertical</enum></property>
+                <property name="sizeHint" stdset="0"><size><width>20</width><height>40</height></size></property>
+               </spacer>
               </item>
              </layout>
             </widget>
@@ -518,7 +524,19 @@
           </item>
          </layout>
         </widget>
-        <widget class="QWidget" name="tab_status"><layout class="QVBoxLayout"><item><widget class="QPushButton" name="btn_halshow"><property name="text"><string>HAL Show</string></property></widget></item></layout></widget>
+        <widget class="QWidget" name="tab_status">
+         <layout class="QVBoxLayout" name="tab_status_layout">
+          <item>
+           <widget class="QListWidget" name="status_log">
+            <property name="alternatingRowColors"><bool>true</bool></property>
+            <property name="selectionMode"><enum>QAbstractItemView::NoSelection</enum></property>
+            <property name="editTriggers"><set>QAbstractItemView::NoEditTriggers</set></property>
+            <property name="wordWrap"><bool>true</bool></property>
+            <property name="styleSheet"><string>QListWidget { font-family: monospace; font-size: 11px; } QListWidget::item { padding: 3px 6px; border-bottom: 1px solid #333; }</string></property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
        </widget>
       </item>
      </layout>

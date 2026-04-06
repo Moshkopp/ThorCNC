@@ -1290,9 +1290,7 @@ class ThorCNC(QObject):
             b.clicked.connect(self._run_program)
         if b := btn("estop_button"):
             b.clicked.connect(self._toggle_estop)
-        if b := btn("btn_halshow"):
-            b.clicked.connect(self._run_halshow)
-        
+
         # Spindle Controls
         if b := btn("btn_spindle_fwd"):
             b.clicked.connect(lambda: self.cmd.spindle(linuxcnc.SPINDLE_FORWARD, 1000))  # Default 1000 RPM unless specified
@@ -1752,6 +1750,23 @@ class ThorCNC(QObject):
     def _status(self, msg: str, error: bool = False):
         if sb := self.ui.statusBar():
             sb.showMessage(msg, 10000)
+        self._append_status_log(msg, error=error)
+
+    def _append_status_log(self, msg: str, error: bool = False):
+        from PySide6.QtWidgets import QListWidget, QListWidgetItem
+        from PySide6.QtGui import QColor
+        from PySide6.QtCore import QDateTime
+        log: QListWidget = self.ui.findChild(QListWidget, "status_log")
+        if log is None:
+            return
+        ts = QDateTime.currentDateTime().toString("HH:mm:ss")
+        item = QListWidgetItem(f"[{ts}]  {msg}")
+        if error:
+            item.setForeground(QColor("#ff5555"))
+        else:
+            item.setForeground(QColor("#aaaaaa"))
+        log.addItem(item)
+        log.scrollToBottom()
 
     def _sync_nav_buttons(self, index: int):
         """Nav-Buttons an den Tab-Zustand anpassen und LinuxCNC-Modus umschalten."""
@@ -1928,12 +1943,28 @@ class ThorCNC(QObject):
         load_theme(QApplication.instance(), name)
         self.settings.set("theme", name)
 
+    def _drain_startup_errors(self):
+        """Liest den LinuxCNC Error-Channel einmalig beim Start aus und loggt alle Meldungen."""
+        import linuxcnc as _lc
+        self._append_status_log("── Session gestartet ──")
+        try:
+            ec = self.poller.error_channel
+            msg = ec.poll()
+            while msg:
+                kind, text = msg
+                is_err = kind in (_lc.NML_ERROR, _lc.OPERATOR_ERROR)
+                self._append_status_log(text, error=is_err)
+                msg = ec.poll()
+        except Exception:
+            pass
+
     def start(self):
         from PySide6.QtWidgets import QApplication
         QApplication.instance().aboutToQuit.connect(self._on_close)
         
         if hasattr(self, "_auto_load_file") and self._auto_load_file:
             self.load_file(self._auto_load_file)
+        self._drain_startup_errors()
         self.poller.start()
 
     def _on_close(self):
