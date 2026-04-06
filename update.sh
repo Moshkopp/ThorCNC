@@ -1,0 +1,87 @@
+#!/usr/bin/env bash
+# ─────────────────────────────────────────────────────────────────────────────
+# ThorCNC Updater
+# Zieht die neuesten Änderungen aus dem Repository und reinstalliert das Paket.
+#
+# Verwendung:
+#   ./update.sh            # normales Update
+#   ./update.sh --dev      # Update im Entwicklungsmodus (editable)
+# ─────────────────────────────────────────────────────────────────────────────
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DEV_MODE=false
+
+for arg in "$@"; do
+    case "$arg" in
+        --dev) DEV_MODE=true ;;
+        -h|--help)
+            sed -n '2,8p' "$0" | sed 's/^# //; s/^#//'
+            exit 0
+            ;;
+    esac
+done
+
+# ── Farben ────────────────────────────────────────────────────────────────────
+RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
+BLUE='\033[0;34m'; NC='\033[0m'; BOLD='\033[1m'
+
+info() { echo -e "${BLUE}[INFO]${NC}  $*"; }
+ok()   { echo -e "${GREEN}[OK]${NC}    $*"; }
+warn() { echo -e "${YELLOW}[WARN]${NC}  $*"; }
+err()  { echo -e "${RED}[FEHLER]${NC} $*" >&2; exit 1; }
+
+echo -e "${BOLD}ThorCNC Updater${NC}"
+echo "───────────────────────────────────────"
+
+cd "$SCRIPT_DIR"
+
+# ── Git-Status prüfen ─────────────────────────────────────────────────────────
+if ! git rev-parse --git-dir &>/dev/null; then
+    err "Kein Git-Repository gefunden in: $SCRIPT_DIR"
+fi
+
+# Lokale Änderungen anzeigen (kein Abbruch)
+if ! git diff --quiet || ! git diff --cached --quiet; then
+    warn "Lokale Änderungen vorhanden – werden beim Pull beibehalten (kein Überschreiben)."
+fi
+
+# Aktuelle Version merken
+OLD_REV=$(git rev-parse --short HEAD)
+info "Aktuelle Version: $OLD_REV"
+
+# ── Pull ──────────────────────────────────────────────────────────────────────
+info "Lade neueste Änderungen von origin..."
+git pull --ff-only origin "$(git rev-parse --abbrev-ref HEAD)" || {
+    warn "Fast-forward nicht möglich (lokale Änderungen?)."
+    warn "Versuche 'git pull --rebase'..."
+    git pull --rebase origin "$(git rev-parse --abbrev-ref HEAD)"
+}
+
+NEW_REV=$(git rev-parse --short HEAD)
+
+if [ "$OLD_REV" = "$NEW_REV" ]; then
+    ok "Bereits auf dem neuesten Stand ($NEW_REV) – kein Commit-Update."
+else
+    ok "Aktualisiert: $OLD_REV → $NEW_REV"
+    echo ""
+    git log --oneline "${OLD_REV}..HEAD"
+    echo ""
+fi
+
+# ── Paket neu installieren ────────────────────────────────────────────────────
+EXTRAS="[backplot]"
+
+if $DEV_MODE; then
+    info "Editable Reinstall (--dev) mit Extras $EXTRAS..."
+    pip install -e ".$EXTRAS"
+    ok "thorcnc (dev) aktualisiert."
+else
+    info "Reinstalliere thorcnc mit Extras $EXTRAS..."
+    pip install ".$EXTRAS"
+    ok "thorcnc aktualisiert."
+fi
+
+echo ""
+echo -e "${BOLD}Update abgeschlossen.${NC}"
+echo ""

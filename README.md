@@ -42,7 +42,7 @@ Supported distributions: **Debian 13 Trixie**, **Arch Linux**, **CachyOS**, **En
 ### Automatic (recommended)
 
 ```bash
-git clone https://github.com/youruser/thorcnc.git
+git clone https://github.com/Moshkopp/thorcnc.git
 cd thorcnc
 ./install.sh
 ```
