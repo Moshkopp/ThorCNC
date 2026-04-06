@@ -1,5 +1,14 @@
 # ThorCNC
 
+> [!CAUTION]
+> **PRE-PRE-PRE-ALPHA VERSION — WORK IN PROGRESS**
+>
+> This project is a **pre-pre-pre-alpha** version and **not intended for productive or machine use** on real CNC machines. 
+> 
+> **Use at your own risk.** The author takes no responsibility for any damage to hardware, software, or persons. This software should currently be used **only in simulation (Sim) for testing and experimentation**.
+
+---
+
 A modern LinuxCNC graphical interface (VCP) for 3-axis milling machines, built with PySide6 and no additional framework overhead.
 
 ![License](https://img.shields.io/badge/license-GPL--2.0--or--later-blue)
