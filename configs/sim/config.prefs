@@ -1,11 +1,11 @@
 {
     "last_file_dir": "/home/moshy/Schreibtisch",
-    "window_geometry": "01d9d0cb0003000000000000000000000000077f00000437000000390000001c00000705000003c800000001020000000780000000000000001c0000077f00000437",
+    "window_geometry": "01d9d0cb0003000000000000000000000000077f000004370000000000000018000004eb000003d200000001020000000780000000000000001c0000077f00000437",
     "window_state": "000000ff00000000fd00000000000007800000040600000004000000040000000800000008fc00000000",
     "backplot_view": {
-        "distance": 268.15117603353656,
-        "elevation": 39.0,
-        "azimuth": -103.0,
+        "distance": 1004.4660155521399,
+        "elevation": 28.0,
+        "azimuth": -107.0,
         "center": [
             243.8367462158203,
             186.90359497070312,
@@ -25,9 +25,15 @@
     "ts_search_vel": 300.0,
     "ts_probe_vel": 10.0,
     "mdi_history": [
+        "T2 M6 G43",
+        "T6 M6 G43",
+        "T5 M6 G43",
+        "T8 M6 G43",
+        "T6 M6 G43",
         "m3 s1500"
     ],
-    "theme": "light",
+    "theme": "dark_green",
     "backplot_msaa_samples": 16,
-    "backplot_antialiasing": true
+    "backplot_antialiasing": true,
+    "show_html_tab": false
 }

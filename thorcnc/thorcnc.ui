@@ -56,6 +56,7 @@
        <item><widget class="QPushButton" name="nav_tool"><property name="text"><string>TOOL</string></property><property name="minimumSize"><size><width>0</width><height>45</height></size></property></widget></item>
        <item><widget class="QPushButton" name="nav_offsets"><property name="text"><string>OFFSETS</string></property><property name="minimumSize"><size><width>0</width><height>45</height></size></property></widget></item>
        <item><widget class="QPushButton" name="nav_probing"><property name="text"><string>PROBING</string></property><property name="minimumSize"><size><width>0</width><height>45</height></size></property></widget></item>
+       <item><widget class="QPushButton" name="nav_html"><property name="text"><string>HTML</string></property><property name="minimumSize"><size><width>0</width><height>45</height></size></property></widget></item>
        <item><widget class="QPushButton" name="nav_settings"><property name="text"><string>SETTINGS</string></property><property name="minimumSize"><size><width>0</width><height>45</height></size></property></widget></item>
        <item><widget class="QPushButton" name="nav_status"><property name="text"><string>STATUS</string></property><property name="minimumSize"><size><width>0</width><height>45</height></size></property></widget></item>
 
@@ -176,26 +177,110 @@
              <item>
               <widget class="QGroupBox" name="toolGroup">
                <property name="title"><string>Current Tool</string></property>
-               <property name="maximumSize"><size><width>300</width><height>16777215</height></size></property>
+               <property name="minimumSize"><size><width>180</width><height>0</height></size></property>
+               <property name="maximumSize"><size><width>260</width><height>16777215</height></size></property>
                <layout class="QVBoxLayout">
-                <item>
-                 <layout class="QFormLayout">
-                  <item row="0" column="0"><widget class="QLabel"><property name="text"><string>Tool #:</string></property><property name="font"><font><pointsize>11</pointsize></font></property></widget></item>
-                  <item row="0" column="1"><widget class="QLabel" name="tool_number_entry_main_panel"><property name="text"><string>0</string></property><property name="font"><font><pointsize>16</pointsize><bold>true</bold></font></property></widget></item>
-                  <item row="1" column="0"><widget class="QLabel"><property name="text"><string>Dia:</string></property><property name="font"><font><pointsize>11</pointsize></font></property></widget></item>
-                  <item row="1" column="1"><widget class="QLabel" name="tool_dia_label"><property name="text"><string>0.00</string></property><property name="font"><font><pointsize>11</pointsize></font></property></widget></item>
-                  <item row="2" column="0"><widget class="QLabel"><property name="text"><string>Len:</string></property><property name="font"><font><pointsize>11</pointsize></font></property></widget></item>
-                  <item row="2" column="1"><widget class="QLabel" name="tool_len_label"><property name="text"><string>0.00</string></property><property name="font"><font><pointsize>11</pointsize></font></property></widget></item>
-                  <item row="3" column="0"><widget class="QLabel"><property name="text"><string>Desc:</string></property><property name="font"><font><pointsize>11</pointsize></font></property></widget></item>
-                  <item row="3" column="1"><widget class="QLabel" name="tool_comment_label"><property name="text"><string>-</string></property><property name="font"><font><pointsize>11</pointsize></font></property><property name="wordWrap"><bool>true</bool></property></widget></item>
-                 </layout>
-                </item>
+                <property name="spacing"><number>4</number></property>
+                <property name="leftMargin"><number>6</number></property>
+                <property name="topMargin"><number>14</number></property>
+                <property name="rightMargin"><number>6</number></property>
+                <property name="bottomMargin"><number>6</number></property>
+
+                <!-- Eingabe/Anzeige + LOAD -->
                 <item>
                  <layout class="QHBoxLayout">
-                  <item><widget class="QLineEdit" name="mdi_m6_entry"><property name="placeholderText"><string>T... M6</string></property></widget></item>
-                  <item><widget class="QPushButton" name="btn_m6_change"><property name="text"><string>Load Tool</string></property></widget></item>
+                  <property name="spacing"><number>6</number></property>
+                  <item>
+                   <widget class="QLineEdit" name="mdi_m6_entry">
+                    <property name="placeholderText"><string>0</string></property>
+                    <property name="alignment"><set>Qt::AlignCenter</set></property>
+                    <property name="styleSheet"><string>
+                     background-color: #1a1a1a;
+                     color: #ffffff;
+                     font-size: 22px;
+                     font-weight: bold;
+                     border: 1px solid #444;
+                     border-radius: 3px;
+                     padding: 2px 8px;
+                    </string></property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QPushButton" name="btn_m6_change">
+                    <property name="text"><string>LOAD</string></property>
+                    <property name="maximumSize"><size><width>55</width><height>16777215</height></size></property>
+                    <property name="styleSheet"><string>
+                     background-color: #2d5fa8;
+                     color: white;
+                     font-weight: bold;
+                     font-size: 11px;
+                     border-radius: 3px;
+                     padding: 2px 6px;
+                    </string></property>
+                   </widget>
+                  </item>
                  </layout>
                 </item>
+
+                <!-- Dia -->
+                <item>
+                 <layout class="QHBoxLayout">
+                  <property name="spacing"><number>6</number></property>
+                  <item>
+                   <widget class="QLabel">
+                    <property name="text"><string>&#216;</string></property>
+                    <property name="minimumSize"><size><width>14</width><height>0</height></size></property>
+                    <property name="styleSheet"><string>color:#888; font-size:13px;</string></property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QLabel" name="tool_dia_label">
+                    <property name="text"><string>0.00</string></property>
+                    <property name="alignment"><set>Qt::AlignRight|Qt::AlignVCenter</set></property>
+                    <property name="styleSheet"><string>
+                     background-color:#1a1a1a; color:#cccccc;
+                     border:1px solid #444; border-radius:3px;
+                     font-size:16px; font-weight:bold; padding:2px 8px;
+                    </string></property>
+                   </widget>
+                  </item>
+                 </layout>
+                </item>
+
+                <!-- Len -->
+                <item>
+                 <layout class="QHBoxLayout">
+                  <property name="spacing"><number>6</number></property>
+                  <item>
+                   <widget class="QLabel">
+                    <property name="text"><string>L</string></property>
+                    <property name="minimumSize"><size><width>14</width><height>0</height></size></property>
+                    <property name="styleSheet"><string>color:#888; font-size:13px;</string></property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QLabel" name="tool_len_label">
+                    <property name="text"><string>0.00</string></property>
+                    <property name="alignment"><set>Qt::AlignRight|Qt::AlignVCenter</set></property>
+                    <property name="styleSheet"><string>
+                     background-color:#1a1a1a; color:#cccccc;
+                     border:1px solid #444; border-radius:3px;
+                     font-size:16px; font-weight:bold; padding:2px 8px;
+                    </string></property>
+                   </widget>
+                  </item>
+                 </layout>
+                </item>
+
+                <!-- Beschreibung -->
+                <item>
+                 <widget class="QLabel" name="tool_comment_label">
+                  <property name="text"><string>-</string></property>
+                  <property name="wordWrap"><bool>true</bool></property>
+                  <property name="styleSheet"><string>color:#aaa; font-size:14px; padding:2px 4px;</string></property>
+                 </widget>
+                </item>
+
                </layout>
               </widget>
              </item>
@@ -397,6 +482,7 @@
         </widget>
         <widget class="QWidget" name="tab_offsets"/>
         <widget class="QWidget" name="tab_probing"/>
+        <widget class="QWidget" name="tab_html"/>
         <widget class="QWidget" name="tab_settings">
          <layout class="QVBoxLayout" name="vl_settings_main">
           <property name="margin"><number>8</number></property>

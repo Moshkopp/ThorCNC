@@ -49,6 +49,7 @@ class ThorCNC(QObject):
         self._setup_file_manager()
         self._setup_tool_table()
         self._setup_offsets_tab()
+        self._setup_html_tab()
         self._setup_settings_tab()
         self._connect_signals()
         self._apply_ini_settings()
@@ -1128,6 +1129,109 @@ class ThorCNC(QObject):
         except Exception as e:
             self._status(f"Offset-Clear Fehler: {e}")
 
+    def _setup_html_tab(self):
+        """Baut den HTML-Tab auf: links Dateiliste, rechts Viewer."""
+        from PySide6.QtWidgets import QWidget, QSplitter, QListWidget, QVBoxLayout, QLabel
+        from PySide6.QtCore import Qt
+
+        tab = self._w(QWidget, "tab_html")
+        if not tab:
+            return
+
+        lay = QVBoxLayout(tab)
+        lay.setContentsMargins(4, 4, 4, 4)
+
+        splitter = QSplitter(Qt.Orientation.Horizontal)
+        lay.addWidget(splitter)
+
+        # ── Links: Dateiliste ────────────────────────────────────────────
+        left = QWidget()
+        left_lay = QVBoxLayout(left)
+        left_lay.setContentsMargins(0, 0, 0, 0)
+        left_lay.setSpacing(2)
+        left_lay.addWidget(QLabel("HTML / PDF im NGC-Ordner:"))
+        self._html_list = QListWidget()
+        self._html_list.setStyleSheet(
+            "QListWidget::item { padding: 4px 6px; }"
+            "QListWidget::item:selected { background:#2d5fa8; color:white; }"
+            "QListWidget::item:hover { background:#2a2a2a; }")
+        left_lay.addWidget(self._html_list)
+        left.setMinimumWidth(160)
+        splitter.addWidget(left)
+
+        # ── Rechts: HTML-Viewer ──────────────────────────────────────────
+        self._html_viewer = None
+        right = QWidget()
+        right_lay = QVBoxLayout(right)
+        right_lay.setContentsMargins(0, 0, 0, 0)
+
+        try:
+            from PySide6.QtWebEngineWidgets import QWebEngineView
+            from PySide6.QtWebEngineCore import QWebEngineSettings
+            viewer = QWebEngineView()
+            s = viewer.settings()
+            s.setAttribute(QWebEngineSettings.WebAttribute.PluginsEnabled, True)
+            s.setAttribute(QWebEngineSettings.WebAttribute.PdfViewerEnabled, True)
+            self._html_viewer = viewer
+            self._html_viewer_type = "web"
+        except ImportError:
+            from PySide6.QtWidgets import QTextBrowser
+            viewer = QTextBrowser()
+            viewer.setOpenExternalLinks(False)
+            self._html_viewer = viewer
+            self._html_viewer_type = "text"
+
+        right_lay.addWidget(self._html_viewer)
+        splitter.addWidget(right)
+
+        splitter.setSizes([200, 700])
+        self._html_splitter = splitter
+
+        self._html_list.currentItemChanged.connect(self._on_html_item_changed)
+
+    def _refresh_html_list(self, ngc_path: str):
+        """Sucht HTML- und PDF-Dateien im Ordner der geladenen NGC-Datei."""
+        import os
+        self._html_list.clear()
+        if not ngc_path:
+            return
+        folder = os.path.dirname(ngc_path)
+        try:
+            files = sorted(
+                f for f in os.listdir(folder)
+                if f.lower().endswith((".html", ".htm", ".pdf"))
+            )
+        except OSError:
+            return
+        for name in files:
+            from PySide6.QtWidgets import QListWidgetItem
+            item = QListWidgetItem(name)
+            item.setData(256, os.path.join(folder, name))  # Qt.UserRole = 256
+            self._html_list.addItem(item)
+
+    def _on_html_item_changed(self, current, _previous):
+        if not current or not self._html_viewer:
+            return
+        path = current.data(256)
+        if not path:
+            return
+        if self._html_viewer_type == "web":
+            from PySide6.QtCore import QUrl
+            self._html_viewer.setUrl(QUrl.fromLocalFile(path))
+        else:
+            # QTextBrowser-Fallback: PDFs können nicht angezeigt werden
+            if path.lower().endswith(".pdf"):
+                self._html_viewer.setHtml(
+                    "<p style='color:#aaa;padding:16px'>"
+                    "PDF-Ansicht erfordert PySide6-WebEngine.<br>"
+                    f"Datei: {path}</p>")
+            else:
+                try:
+                    with open(path, "r", encoding="utf-8", errors="replace") as f:
+                        self._html_viewer.setHtml(f.read())
+                except OSError:
+                    pass
+
     def _setup_settings_tab(self):
         """Verbindet alle Settings-Sub-Tabs."""
         from PySide6.QtWidgets import QDoubleSpinBox, QPushButton, QComboBox, QCheckBox, QGroupBox, QVBoxLayout, QWidget
@@ -1180,8 +1284,23 @@ class ThorCNC(QObject):
             gl_gfx.addLayout(lay_msaa)
 
             gl_gfx.addWidget(self._cb_aa)
-            # Vor dem vertikalen Spacer am Ende einfügen (layout hat Theme, Language, Spacer -> count=3)
             layout.insertWidget(layout.count() - 1, gb_gfx)
+
+            # ── Navigation / Tabs ──
+            gb_nav = QGroupBox("Navigation")
+            gl_nav = QVBoxLayout(gb_nav)
+            self._cb_html_tab = QCheckBox("HTML-Tab anzeigen")
+            self._cb_html_tab.setToolTip(
+                "Blendet den HTML/PDF-Dokumenten-Tab in der Navigation ein oder aus.")
+            self._cb_html_tab.setChecked(self.settings.get("show_html_tab", True))
+            self._cb_html_tab.toggled.connect(self._on_html_tab_visibility)
+            gl_nav.addWidget(self._cb_html_tab)
+            layout.insertWidget(layout.count() - 1, gb_nav)
+
+        # Initiale Sichtbarkeit anwenden (nach dem UI-Aufbau)
+        from PySide6.QtCore import QTimer
+        QTimer.singleShot(0, lambda: self._on_html_tab_visibility(
+            self.settings.get("show_html_tab", True)))
 
 
         # Spinboxen laden & verbinden
@@ -1255,6 +1374,31 @@ class ThorCNC(QObject):
         self.settings.set("backplot_msaa_samples", val)
         self.settings.save()
         self._status(f"MSAA auf {val}x gesetzt. Ein Neustart ist nötig.")
+
+    def _on_html_tab_visibility(self, visible: bool):
+        """Blendet den HTML-Tab-Button ein/aus."""
+        self.settings.set("show_html_tab", visible)
+        self.settings.save()
+        from PySide6.QtWidgets import QPushButton, QTabWidget
+        if btn := self._w(QPushButton, "nav_html"):
+            btn.setVisible(visible)
+        # Falls der HTML-Tab gerade aktiv ist, zurück zu Main wechseln
+        if not visible:
+            if tab := self._w(QTabWidget, "tabWidget"):
+                html_idx = self._html_tab_index()
+                if tab.currentIndex() == html_idx:
+                    tab.setCurrentIndex(0)
+
+    def _html_tab_index(self) -> int:
+        """Gibt den tabWidget-Index von tab_html zurück."""
+        from PySide6.QtWidgets import QTabWidget, QWidget
+        tab = self._w(QTabWidget, "tabWidget")
+        if not tab:
+            return 5
+        for i in range(tab.count()):
+            if tab.widget(i) and tab.widget(i).objectName() == "tab_html":
+                return i
+        return 5
 
     def _set_wechsel_pos_from_machine(self):
         """Übernimmt die aktuelle Maschinenposition als Wechselposition X/Y/Z."""
@@ -1429,7 +1573,7 @@ class ThorCNC(QObject):
             self.nav_group.setExclusive(True)
             for idx, name in enumerate(
                     ("nav_main", "nav_file", "nav_tool", "nav_offsets",
-                     "nav_probing", "nav_settings", "nav_status")):
+                     "nav_probing", "nav_html", "nav_settings", "nav_status")):
                 if b := btn(name):
                     b.setCheckable(True)
                     b.setMinimumHeight(60)  # Force height in code to be sure
@@ -1488,10 +1632,13 @@ class ThorCNC(QObject):
             cb.setCurrentIndex(_IDX.get(mode, 0))
             cb.blockSignals(False)
         # MDI-Modus → automatisch MDI-Seite zeigen
+        # (nicht wenn _silent_mdi gesetzt ist – z.B. beim M6-Tool-Wechsel)
         if hasattr(self, "_gcode_mdi_stack"):
             if mode == linuxcnc.MODE_MDI:
-                self._switch_gcode_panel(1)
+                if not getattr(self, "_silent_mdi", False):
+                    self._switch_gcode_panel(1)
             else:
+                self._silent_mdi = False
                 self._switch_gcode_panel(0)
         # GO TO HOME im AUTO-Modus deaktivieren
         self._update_goto_home_style(self._is_machine_on and getattr(self, "_all_joints_homed", False))
@@ -1588,11 +1735,13 @@ class ThorCNC(QObject):
 
     @Slot(int)
     def _on_tool(self, tool: int):
-        from PySide6.QtWidgets import QLabel, QTableWidget
+        from PySide6.QtWidgets import QLineEdit, QTableWidget
         if tool == 0:
             return  # Tool 0 = kein/unbekanntes Werkzeug, Anzeige nicht überschreiben
-        if lbl := self._w(QLabel, "tool_number_entry_main_panel"):
-            lbl.setText(str(tool))
+        if entry := self._w(QLineEdit, "mdi_m6_entry"):
+            # Nur aktualisieren wenn der User gerade nicht tippt
+            if not entry.hasFocus():
+                entry.setText(str(tool))
 
         # Tool-Tabelle neu einlesen (Messung kann .tbl Datei geändert haben)
         self._load_tool_table()
@@ -1613,10 +1762,16 @@ class ThorCNC(QObject):
                     if c_item: comment = c_item.text()
                     break
 
+        def _fmt3(val: str) -> str:
+            try:
+                return f"{float(val):.3f}"
+            except ValueError:
+                return val
+
         if dia_lbl := self._w(QLabel, "tool_dia_label"):
-            dia_lbl.setText(dia)
+            dia_lbl.setText(_fmt3(dia))
         if len_lbl := self._w(QLabel, "tool_len_label"):
-            len_lbl.setText(length)
+            len_lbl.setText(_fmt3(length))
         if c_lbl := self._w(QLabel, "tool_comment_label"):
             c_lbl.setText(comment)
             
@@ -1789,6 +1944,8 @@ class ThorCNC(QObject):
         self.gcode_view.load_file(path)
         self.backplot.load_toolpath(parse_file(path))
         self._update_run_buttons()
+        if hasattr(self, "_html_list"):
+            self._refresh_html_list(path)
 
     @Slot(int)
     def _on_program_line(self, line: int):
@@ -1946,8 +2103,8 @@ class ThorCNC(QObject):
         if not t_val.upper().startswith("T"):
             t_val = "T" + t_val
         cmd_str = f"{t_val} M6 G43"
+        self._silent_mdi = True   # MDI-Panel nicht aufblenden
         self._send_mdi(cmd_str)
-        entry.clear()
 
     def _set_jog_increment(self, inc: float):
         self._jog_increment = inc
