@@ -18,9 +18,19 @@ from PySide6.QtCore import Qt
 
 try:
     import pyqtgraph as pg
+    
+    # Kompatibilitäts-Fix für PySide6: QOpenGLWidget wurde in Qt6 verschoben.
+    # Wir "patchen" es zurück an die Stelle, wo pyqtgraph es erwartet.
+    if not hasattr(pg.Qt.QtWidgets, "QOpenGLWidget"):
+        try:
+            from PySide6.QtOpenGLWidgets import QOpenGLWidget
+            pg.Qt.QtWidgets.QOpenGLWidget = QOpenGLWidget
+        except ImportError:
+            pass
+
     import pyqtgraph.opengl as gl
     _HAS_GL = True
-except ImportError:
+except Exception:
     _HAS_GL = False
 
 from ..gcode_parser import Segment, RAPID, FEED, ARC, bounding_box

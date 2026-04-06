@@ -585,9 +585,11 @@
        </item>
 
        <!-- Cycle Controls -->
+       <item><widget class="QPushButton" name="btn_go_to_home"><property name="text"><string>GO TO HOME</string></property><property name="minimumSize"><size><width>0</width><height>50</height></size></property></widget></item>
        <item><widget class="QPushButton" name="btn_run"><property name="text"><string>CYCLE START</string></property><property name="minimumSize"><size><width>0</width><height>60</height></size></property></widget></item>
        <item><widget class="QPushButton" name="btn_pause_mdi"><property name="text"><string>FEEDHOLD</string></property><property name="minimumSize"><size><width>0</width><height>50</height></size></property></widget></item>
        <item><widget class="QPushButton" name="stop_button"><property name="text"><string>STOP</string></property><property name="minimumSize"><size><width>0</width><height>50</height></size></property></widget></item>
+       <item><widget class="QLineEdit" name="mdiEntry"><property name="placeholderText"><string>MDI COMMAND...</string></property><property name="minimumSize"><size><width>0</width><height>40</height></size></property></widget></item>
 
       </layout>
      </widget>

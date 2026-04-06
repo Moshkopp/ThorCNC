@@ -43,6 +43,8 @@ class ThorCNC(QObject):
         self._replace_custom_widgets()
         self._restore_window_state()
         self._setup_dro()
+        self._hal_comp = None
+        self._setup_hal()
         self._setup_poller()
         self._setup_file_manager()
         self._setup_tool_table()
@@ -387,9 +389,9 @@ class ThorCNC(QObject):
         # Envelope zeigt nutzbaren Arbeitsbereich (0 bis MAX bzw. MIN bis 0)
         # nicht die technischen Soft-Limits mit Homing-Überfahrt
         self.backplot.set_machine_envelope(
-            x_min=0.0, x_max=lim("X", "MAX_LIMIT", 600),
-            y_min=0.0, y_max=lim("Y", "MAX_LIMIT", 500),
-            z_min=lim("Z", "MIN_LIMIT", -200), z_max=0.0,
+            x_min=lim("X", "MIN_LIMIT", 0), x_max=lim("X", "MAX_LIMIT", 600),
+            y_min=lim("Y", "MIN_LIMIT", 0), y_max=lim("Y", "MAX_LIMIT", 500),
+            z_min=lim("Z", "MIN_LIMIT", -200), z_max=lim("Z", "MAX_LIMIT", 0),
         )
 
     def _setup_jog_display(self):
@@ -797,36 +799,45 @@ class ThorCNC(QObject):
         ("dsb_ts_probe_vel",    "ts_probe_vel",   10.0),
     ]
 
-    def _setup_settings_tab(self):
-        """Verbindet alle Werkzeug-Taster-Spinboxen mit den Prefs und HAL-Pins."""
-        from PySide6.QtWidgets import QDoubleSpinBox, QPushButton
-
-        # HAL-Pins erstellen (optional, nur wenn HAL verfügbar)
-        self._hal_comp = None
+    def _setup_hal(self):
+        """Initialisiert die HAL-Komponente so früh wie möglich (Timing-Fix)."""
         try:
             import hal
             self._hal_comp = hal.component("thorcnc")
+            
+            # Pins für Tool-Sensor (aus Settings/VCP-Style)
             for _, key, _ in self._TOOLSENSOR_FIELDS:
                 pin_name = key.replace("_", "-")
                 self._hal_comp.newpin(pin_name, hal.HAL_FLOAT, hal.HAL_OUT)
-            # Add simulation probe pin
-            self._hal_comp.newpin("probe-sim", hal.HAL_BIT, hal.HAL_OUT)
-            self._hal_comp.newpin("spindle-atspeed",      hal.HAL_BIT,   hal.HAL_IN)
+            
+            # Standard-Pins für Status & Kontrolle
+            self._hal_comp.newpin("probe-sim",          hal.HAL_BIT,   hal.HAL_OUT)
+            self._hal_comp.newpin("spindle-atspeed",    hal.HAL_BIT,   hal.HAL_IN)
             self._hal_comp.newpin("spindle-speed-actual", hal.HAL_FLOAT, hal.HAL_IN)
-            self._hal_comp.newpin("spindle-load",         hal.HAL_FLOAT, hal.HAL_IN)
+            self._hal_comp.newpin("spindle-load",       hal.HAL_FLOAT, hal.HAL_IN)
+            
+            # Pins für TsHW / Handrad Integration (falls gewünscht)
+            self._hal_comp.newpin("jog-vel-final",      hal.HAL_FLOAT, hal.HAL_OUT)
+            
             self._hal_comp.ready()
-            # Sim-Parameter + Net-Verbindung per halcmd setzen,
-            # NACH ready() damit die Komponente im HAL sichtbar ist
-            import subprocess
-            _hc = lambda *args: subprocess.run(["halcmd"] + list(args),
-                                               capture_output=True)
-            _hc("setp", "limit_speed.maxv", "600.0")
-            _hc("setp", "spindle_mass.gain", "0.002")
-            _hc("net", "spindle-at-speed",    "thorcnc.spindle-atspeed")
-            _hc("net", "spindle-rpm-filtered", "thorcnc.spindle-speed-actual")
+            self._status("HAL-Komponente 'thorcnc' bereit.")
+            
+            # Sim-Parameter + Net-Verbindung per halcmd (nur Simulation)
+            if "sim" in self.ini_path.lower():
+                import subprocess
+                _hc = lambda *args: subprocess.run(["halcmd"] + list(args), capture_output=True)
+                _hc("setp", "limit_speed.maxv", "600.0")
+                _hc("setp", "spindle_mass.gain", "0.002")
+                _hc("net", "spindle-at-speed",    "thorcnc.spindle-atspeed")
+                _hc("net", "spindle-rpm-filtered", "thorcnc.spindle-speed-actual")
+                
         except Exception as e:
-            print(f"[ThorCNC] HAL nicht verfügbar (Simulation?): {e}")
+            print(f"[ThorCNC] HAL-Initialisierung übersprungen: {e}")
             self._hal_comp = None
+
+    def _setup_settings_tab(self):
+        """Verbindet alle Werkzeug-Taster-Spinboxen mit den Prefs und HAL-Pins."""
+        from PySide6.QtWidgets import QDoubleSpinBox, QPushButton
 
         # Spinboxen laden & verbinden
         for widget_name, prefs_key, default in self._TOOLSENSOR_FIELDS:
@@ -974,7 +985,7 @@ class ThorCNC(QObject):
         if b := btn("estop_button"):
             b.clicked.connect(self._toggle_estop)
         if b := btn("btn_halshow"):
-            b.clicked.connect(self._launch_halshow)
+            b.clicked.connect(self._run_halshow)
         
         # Spindle Controls
         if b := btn("btn_spindle_fwd"):
@@ -1005,6 +1016,14 @@ class ThorCNC(QObject):
             b.clicked.connect(lambda: self.cmd.rapidrate(1.0))
         if b := btn("v_override_to_100_button"):
             b.clicked.connect(self._on_v_override_to_100)
+        
+        # HAL Show
+        if b := btn("btn_halshow"):
+            b.clicked.connect(self._run_halshow)
+
+        # Go to Home
+        if b := btn("btn_go_to_home"):
+            b.clicked.connect(self._go_to_home)
 
         # Jog-Buttons (Suffix _3 = jog_xyz Seite, 3-Achsen)
         for axis, joint in (("x", 0), ("y", 1), ("z", 2)):
@@ -1016,8 +1035,9 @@ class ThorCNC(QObject):
                         lambda a=joint: self._jog_stop(a))
 
         # MDI
-        if mdi := ui.findChild(__import__("PySide6.QtWidgets", fromlist=["QLineEdit"]).QLineEdit, "mdiEntry"):
-            mdi.returnPressed.connect(lambda: self._send_mdi(mdi.text()))
+        mdi = ui.findChild(__import__("PySide6.QtWidgets", fromlist=["QLineEdit"]).QLineEdit, "mdiEntry")
+        if mdi:
+            mdi.returnPressed.connect(lambda: self._send_mdi(mdi.text(), mdi))
 
         # Overrides & Jog Slider
         if s := sld("feed_override_slider"):
@@ -1056,10 +1076,10 @@ class ThorCNC(QObject):
                     self.nav_group.addButton(b, idx)
                     b.clicked.connect(lambda _, i=idx, t=tab: t.setCurrentIndex(i))
             
-            # Sync buttons when tab changes (to handle programmatic changes)
             tab.currentChanged.connect(self._sync_nav_buttons)
-            # Initial sync
-            self._sync_nav_buttons(tab.currentIndex())
+            # Initial sync (Wait a bit for machine state)
+            from PySide6.QtCore import QTimer
+            QTimer.singleShot(500, lambda: self._sync_nav_buttons(tab.currentIndex()))
 
     # ── Slots ─────────────────────────────────────────────────────────────────
 
@@ -1409,10 +1429,28 @@ class ThorCNC(QObject):
             sb.showMessage(msg, 10000)
 
     def _sync_nav_buttons(self, index: int):
-        """Synchronisiert den checked-Zustand der Nav-Buttons mit dem TabWidget-Index."""
+        """Nav-Buttons an den Tab-Zustand anpassen und LinuxCNC-Modus umschalten."""
         if hasattr(self, "nav_group"):
             if b := self.nav_group.button(index):
+                b.blockSignals(True)
                 b.setChecked(True)
+                b.blockSignals(False)
+
+        # Modus-Umschaltung basierend auf Tab (Auto vs Manual)
+        # Tab 0: Main (Auto), Tab 1: File (Auto), Rest: Manual
+        try:
+            current_mode = self.poller.stat.task_mode
+            target_mode = linuxcnc.MODE_MANUAL
+            if index in (0, 1):
+                target_mode = linuxcnc.MODE_AUTO
+            
+            if current_mode != target_mode:
+                # Nur umschalten wenn die Maschine im IDLE ist
+                if self._interp_state == linuxcnc.INTERP_IDLE:
+                    self.cmd.mode(target_mode)
+                    self.cmd.wait_complete()
+        except Exception:
+            pass
 
     # ── Maschinen-Aktionen ────────────────────────────────────────────────────
 
@@ -1432,13 +1470,31 @@ class ThorCNC(QObject):
         else:
             self.cmd.state(linuxcnc.STATE_ESTOP)
 
-    def _launch_halshow(self):
+    def _run_halshow(self):
         """Startet halshow als externen Prozess."""
         import subprocess
         try:
             subprocess.Popen(["halshow"], start_new_session=True)
-        except FileNotFoundError:
-            self._status("halshow nicht gefunden – ist LinuxCNC korrekt installiert?")
+            self._status("HAL Show gestartet.")
+        except Exception as e:
+            self._status(f"Fehler: halshow nicht gefunden: {e}")
+
+    def _go_to_home(self):
+        """Fahrt auf Maschinen-Nullpunkt G53 G0 X0 Y0 Z0."""
+        try:
+            # Merken des alten Modus
+            old_mode = self.poller.stat.task_mode
+            self.cmd.mode(linuxcnc.MODE_MDI)
+            self.cmd.wait_complete()
+            # Erst Z hoch (Sicherheit), dann XY
+            self.cmd.mdi("G53 G0 Z0")
+            self.cmd.wait_complete()
+            self.cmd.mdi("G53 G0 X0 Y0")
+            self.cmd.wait_complete()
+            self.cmd.mode(old_mode)
+            self._status("Fahre auf Home-Position (G53)")
+        except Exception as e:
+            self._status(f"Home-Fahrt Fehler: {e}")
 
     def _run_program(self):
         self.cmd.mode(linuxcnc.MODE_AUTO)
@@ -1461,13 +1517,24 @@ class ThorCNC(QObject):
     def _stop_program(self):
         self.cmd.abort()
 
-    def _send_mdi(self, text: str):
+    def _send_mdi(self, text: str, widget=None):
         text = text.strip()
         if not text:
             return
-        self.cmd.mode(linuxcnc.MODE_MDI)
-        self.cmd.wait_complete()
-        self.cmd.mdi(text)
+        try:
+            # Merken des alten Modus
+            old_mode = self.poller.stat.task_mode
+            self.cmd.mode(linuxcnc.MODE_MDI)
+            self.cmd.wait_complete()
+            self.cmd.mdi(text)
+            self.cmd.wait_complete()
+            # Zurück in den alten Modus
+            self.cmd.mode(old_mode)
+            if widget:
+                widget.clear()
+            self._status(f"MDI: {text}")
+        except Exception as e:
+            self._status(f"MDI Fehler: {e}")
         
     def _send_m6(self):
         from PySide6.QtWidgets import QLineEdit

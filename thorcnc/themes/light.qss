@@ -187,13 +187,6 @@ QGroupBox#jogBox {
     min-width: 200px;
 }
 
-/* Parent layout margins removal (to match spindleGroup width) */
-QWidget#jog_xyz,
-QWidget#page_manual,
-QWidget#page_auto {
-    qproperty-contentsMargins: 0;
-}
-
 QGroupBox#spindleGroup QLabel {
     font-weight: bold;
     font-size: 15px;
