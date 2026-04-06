@@ -183,7 +183,9 @@ class ThorCNC(QObject):
         old_vtk = self.ui.findChild(QWidget, "vtk")
         parent_vtk = old_vtk.parent() if old_vtk else None
 
-        self.backplot = BackplotWidget()
+        _aa_on = self.settings.get("backplot_antialiasing", True)
+        _msaa  = self.settings.get("backplot_msaa_samples", 4) if _aa_on else 0
+        self.backplot = BackplotWidget(msaa_samples=_msaa)
         self.backplot.setObjectName("vtk")
 
         # Buttons direkt in BackplotWidget's eingebaute Toolbar einfügen

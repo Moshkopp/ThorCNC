@@ -69,8 +69,17 @@ if _HAS_GL:
         - Scrollrad               → Zoom — unverändert
         """
 
+        def __init__(self, samples: int = 4, **kwargs):
+            super().__init__(**kwargs)
+            # Format direkt auf dem Widget setzen (vor show()) – das ist
+            # zuverlässiger als nur QSurfaceFormat.setDefaultFormat().
+            from PySide6.QtGui import QSurfaceFormat
+            fmt = QSurfaceFormat()
+            fmt.setSamples(max(0, samples))
+            self.setFormat(fmt)
+
         def initializeGL(self):
-            # Wichtig: Explizites Einschalten von Multisampling
+            # Explizites Einschalten von Multisampling im GL-Kontext
             super().initializeGL()
             try:
                 from OpenGL import GL
@@ -105,13 +114,13 @@ if _HAS_GL:
 class _BackplotGL(QWidget):
     """Interne Klasse: der eigentliche OpenGL-Viewport."""
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, samples: int = 4):
         super().__init__(parent)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
 
         pg.setConfigOptions(antialias=True)
-        self._view = _ThorGLView()
+        self._view = _ThorGLView(samples=samples)
         self._view.setBackgroundColor("#1a1a1a")
 
         # Standard-Werte setzen, damit es beim Start nicht winzig herangezoomt ist!
@@ -400,7 +409,7 @@ class BackplotWidget(QWidget):
     Bei fehlendem pyqtgraph/OpenGL wird ein Fallback-Label gezeigt.
     """
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, msaa_samples: int = 4):
         super().__init__(parent)
         from PySide6.QtWidgets import QHBoxLayout
         outer = QVBoxLayout(self)
@@ -417,7 +426,7 @@ class BackplotWidget(QWidget):
         outer.addWidget(toolbar_widget)
 
         if _HAS_GL:
-            self._impl = _BackplotGL(self)
+            self._impl = _BackplotGL(self, samples=msaa_samples)
             outer.addWidget(self._impl)
         else:
             lbl = QLabel(

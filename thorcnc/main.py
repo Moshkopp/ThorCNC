@@ -126,8 +126,8 @@ def _get_antialiasing_setting(ini_path: str) -> bool:
 
 
 def _get_msaa_setting(ini_path: str) -> int:
-    """Hilfsfunktion: Liest die gewünschten OpenGL-Samples."""
-    return _get_antialiasing_setting(ini_path) if isinstance(_get_antialiasing_setting(ini_path), int) else (4 if _get_antialiasing_setting(ini_path) else 0)
+    """Liest die gewünschten MSAA-Samples aus den Prefs (0 = deaktiviert)."""
+    return _get_antialiasing_setting(ini_path)
 
 
 if __name__ == "__main__":

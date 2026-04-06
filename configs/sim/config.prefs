@@ -28,5 +28,6 @@
         "m3 s1500"
     ],
     "theme": "light",
-    "backplot_msaa_samples": 8
+    "backplot_msaa_samples": 16,
+    "backplot_antialiasing": true
 }
