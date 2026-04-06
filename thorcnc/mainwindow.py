@@ -731,6 +731,9 @@ class ThorCNC(QObject):
         path = self._fs_model.filePath(idx)
         if os.path.isdir(path):
             self._nav_set_dir(path)
+        else:
+            self._selected_filepath = path
+            self._load_selected_file()
 
     def _on_file_selected(self):
         from PySide6.QtWidgets import QTreeView
