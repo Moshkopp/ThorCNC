@@ -50,6 +50,26 @@
         <spacer name="navSpacer"><property name="orientation"><enum>Qt::Vertical</enum></property></spacer>
        </item>
 
+       <!-- 80px Trenner vor Modus-Combobox -->
+       <item>
+        <spacer name="modeSpacer">
+         <property name="orientation"><enum>Qt::Vertical</enum></property>
+         <property name="sizeType"><enum>QSizePolicy::Fixed</enum></property>
+         <property name="sizeHint" stdset="0"><size><width>20</width><height>80</height></size></property>
+        </spacer>
+       </item>
+
+       <!-- Maschinen-Modus -->
+       <item>
+        <widget class="QComboBox" name="combo_machine_mode">
+         <property name="minimumSize"><size><width>0</width><height>40</height></size></property>
+         <property name="font"><font><pointsize>11</pointsize><bold>true</bold></font></property>
+         <item><property name="text"><string>MANUAL</string></property></item>
+         <item><property name="text"><string>AUTO</string></property></item>
+         <item><property name="text"><string>MDI</string></property></item>
+        </widget>
+       </item>
+
        <!-- Power / ESTOP -->
        <item><widget class="QPushButton" name="estop_button"><property name="text"><string>E-STOP</string></property><property name="minimumSize"><size><width>0</width><height>65</height></size></property></widget></item>
        <item><widget class="QPushButton" name="power_button"><property name="text"><string>POWER</string></property><property name="minimumSize"><size><width>0</width><height>65</height></size></property></widget></item>
@@ -75,8 +95,39 @@
           <item>
            <widget class="QSplitter" name="mainSplitter">
             <property name="orientation"><enum>Qt::Horizontal</enum></property>
-            <widget class="QWidget" name="gcodeEditor">
+            <widget class="QWidget" name="gcodeContainer">
              <property name="minimumSize"><size><width>250</width><height>0</height></size></property>
+             <layout class="QVBoxLayout">
+              <property name="margin"><number>0</number></property>
+              <property name="spacing"><number>0</number></property>
+              <!-- Toggle-Leiste -->
+              <item>
+               <widget class="QWidget" name="gcodeToggleBar">
+                <property name="maximumSize"><size><width>16777215</width><height>36</height></size></property>
+                <layout class="QHBoxLayout">
+                 <property name="leftMargin"><number>4</number></property>
+                 <property name="topMargin"><number>2</number></property>
+                 <property name="rightMargin"><number>4</number></property>
+                 <property name="bottomMargin"><number>2</number></property>
+                 <property name="spacing"><number>4</number></property>
+                 <item><widget class="QPushButton" name="btn_gcode_view">
+                  <property name="text"><string>G-CODE</string></property>
+                  <property name="checkable"><bool>true</bool></property>
+                  <property name="checked"><bool>true</bool></property>
+                 </widget></item>
+                 <item><widget class="QPushButton" name="btn_mdi_view">
+                  <property name="text"><string>MDI</string></property>
+                  <property name="checkable"><bool>true</bool></property>
+                 </widget></item>
+                 <item><spacer><property name="orientation"><enum>Qt::Horizontal</enum></property></spacer></item>
+                </layout>
+               </widget>
+              </item>
+              <!-- Platzhalter – wird durch QStackedWidget ersetzt -->
+              <item>
+               <widget class="QWidget" name="gcodeEditor"/>
+              </item>
+             </layout>
             </widget>
             <widget class="QFrame" name="activeGcodesFrame">
              <property name="minimumSize"><size><width>60</width><height>0</height></size></property>
@@ -107,7 +158,7 @@
             <property name="maximumSize"><size><width>16777215</width><height>240</height></size></property>
             <layout class="QHBoxLayout" name="bottomBarLayout">
              <property name="spacing"><number>12</number></property>
-             
+
              <!-- 1. Tool Info -->
              <item>
               <widget class="QGroupBox" name="toolGroup">
@@ -191,7 +242,8 @@
              </item>
 
 
-            </layout>
+
+            </layout><!-- /bottomBarLayout -->
            </widget>
           </item>
          </layout>
@@ -585,11 +637,9 @@
        </item>
 
        <!-- Cycle Controls -->
-       <item><widget class="QPushButton" name="btn_go_to_home"><property name="text"><string>GO TO HOME</string></property><property name="minimumSize"><size><width>0</width><height>50</height></size></property></widget></item>
        <item><widget class="QPushButton" name="btn_run"><property name="text"><string>CYCLE START</string></property><property name="minimumSize"><size><width>0</width><height>60</height></size></property></widget></item>
        <item><widget class="QPushButton" name="btn_pause_mdi"><property name="text"><string>FEEDHOLD</string></property><property name="minimumSize"><size><width>0</width><height>50</height></size></property></widget></item>
        <item><widget class="QPushButton" name="stop_button"><property name="text"><string>STOP</string></property><property name="minimumSize"><size><width>0</width><height>50</height></size></property></widget></item>
-       <item><widget class="QLineEdit" name="mdiEntry"><property name="placeholderText"><string>MDI COMMAND...</string></property><property name="minimumSize"><size><width>0</width><height>40</height></size></property></widget></item>
 
       </layout>
      </widget>

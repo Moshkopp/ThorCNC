@@ -109,50 +109,157 @@ class ThorCNC(QObject):
 
     def _replace_custom_widgets(self):
         """GCodeEditor und VTKBackPlot durch eigene Impl. ersetzen."""
-        from PySide6.QtWidgets import QWidget, QSplitter
+        from PySide6.QtWidgets import (QWidget, QSplitter, QVBoxLayout, QHBoxLayout,
+                                       QPushButton, QStackedWidget, QLineEdit,
+                                       QListWidget, QSizePolicy)
 
-        # GCodeEditor → GCodeView
+        # ── GCode-Panel: Buttons sind fix in der UI (gcodeToggleBar)
+        #    Hier nur den gcodeEditor-Placeholder durch QStackedWidget ersetzen
         old_gcode = self.ui.findChild(QWidget, "gcodeEditor")
-        if old_gcode and old_gcode.parent():
-            parent = old_gcode.parent()
-            self.gcode_view = GCodeView()
-            self.gcode_view.setObjectName("gcodeEditor")
-            
-            if isinstance(parent, QSplitter):
-                idx = parent.indexOf(old_gcode)
-                parent.replaceWidget(idx, self.gcode_view)
-                old_gcode.deleteLater()
-            elif parent.layout():
-                idx = parent.layout().indexOf(old_gcode)
-                parent.layout().removeWidget(old_gcode)
-                old_gcode.deleteLater()
-                parent.layout().insertWidget(idx, self.gcode_view)
-        else:
-            self.gcode_view = GCodeView()
+        parent_gc = old_gcode.parent() if old_gcode else None
 
-        # VTKBackPlot → BackplotWidget
+        # Stack: Seite 0 = GCodeView, Seite 1 = MDI-Page
+        self._gcode_mdi_stack = QStackedWidget()
+        self._gcode_mdi_stack.setObjectName("gcodeEditor")
+
+        # Seite 0: GCodeView
+        self.gcode_view = GCodeView()
+        self._gcode_mdi_stack.addWidget(self.gcode_view)
+
+        # Seite 1: MDI-Page
+        mdi_page = QWidget()
+        mdi_page_lay = QVBoxLayout(mdi_page)
+        mdi_page_lay.setContentsMargins(4, 4, 4, 4)
+        mdi_page_lay.setSpacing(6)
+
+        self._mdi_input = QLineEdit()
+        self._mdi_input.setObjectName("mdiEntry")
+        self._mdi_input.setPlaceholderText("MDI COMMAND...")
+        self._mdi_input.setMinimumHeight(40)
+        self._mdi_input.setStyleSheet(
+            "QLineEdit { background:#1e1e1e; color:#eee; border:1px solid #555;"
+            " border-radius:4px; font-size:13pt; padding:2px 8px; }")
+        self._mdi_input.returnPressed.connect(
+            lambda: self._send_mdi(self._mdi_input.text(), self._mdi_input))
+
+        self._mdi_history_widget = QListWidget()
+        self._mdi_history_widget.setObjectName("mdiHistory")
+        self._mdi_history_widget.setStyleSheet(
+            "QListWidget { background:#1a1a1a; color:#ccc; border:1px solid #444;"
+            " font-size:12pt; }"
+            "QListWidget::item:hover { background:#2a2a2a; }"
+            "QListWidget::item:selected { background:#2d5fa8; color:white; }")
+        self._mdi_history_widget.itemDoubleClicked.connect(
+            lambda item: self._mdi_input.setText(item.text()))
+
+        mdi_page_lay.addWidget(self._mdi_input)
+        mdi_page_lay.addWidget(self._mdi_history_widget)
+        self._gcode_mdi_stack.addWidget(mdi_page)
+
+        # UI-Buttons verdrahten (aus der UI-Datei)
+        self._btn_show_gcode = self.ui.findChild(QPushButton, "btn_gcode_view")
+        self._btn_show_mdi   = self.ui.findChild(QPushButton, "btn_mdi_view")
+        if self._btn_show_gcode:
+            self._btn_show_gcode.clicked.connect(lambda: self._switch_gcode_panel(0))
+        if self._btn_show_mdi:
+            self._btn_show_mdi.clicked.connect(lambda: self._switch_gcode_panel(1))
+
+        # Placeholder durch Stack ersetzen (Stack liegt in einem QVBoxLayout)
+        if parent_gc and parent_gc.layout():
+            lay = parent_gc.layout()
+            idx = lay.indexOf(old_gcode)
+            lay.removeWidget(old_gcode)
+            old_gcode.deleteLater()
+            lay.insertWidget(idx, self._gcode_mdi_stack)
+
+        # MDI-History aus Settings laden
+        for entry in self.settings.get("mdi_history", []):
+            self._mdi_history_widget.addItem(entry)
+
+        self._switch_gcode_panel(0)
+
+        # ── Backplot mit View-Toolbar ─────────────────────────────────────────
         old_vtk = self.ui.findChild(QWidget, "vtk")
-        if old_vtk and old_vtk.parent():
-            parent = old_vtk.parent()
-            self.backplot = BackplotWidget()
-            self.backplot.setObjectName("vtk")
-            
-            if isinstance(parent, QSplitter):
-                idx = parent.indexOf(old_vtk)
-                parent.replaceWidget(idx, self.backplot)
-                old_vtk.deleteLater()
-            elif parent.layout():
-                idx = parent.layout().indexOf(old_vtk)
-                parent.layout().removeWidget(old_vtk)
-                old_vtk.deleteLater()
-                parent.layout().insertWidget(idx, self.backplot)
-                
-            # Restore backplot view
-            bpm = self.settings.get("backplot_view")
-            if bpm:
-                self.backplot.set_view_opts(bpm)
+        parent_vtk = old_vtk.parent() if old_vtk else None
+
+        self.backplot = BackplotWidget()
+        self.backplot.setObjectName("vtk")
+
+        # Buttons direkt in BackplotWidget's eingebaute Toolbar einfügen
+        # (kein Wrapper-Widget → kein GLViewWidget-Reparenting-Problem)
+        tb_lay = self.backplot.toolbar_layout()
+        _view_style = ("QPushButton { background:#333; color:#ccc; border-radius:4px;"
+                       " font-weight:bold; padding:1px 10px; }"
+                       "QPushButton:hover { background:#555; }")
+        # View-Buttons links (vor dem Stretch)
+        tb_lay.takeAt(0)   # den initialen Stretch kurz rausnehmen (wird unten neu eingefügt)
+        for label, fn in (("ISO",        self.backplot.set_view_iso),
+                          ("TOP",        self.backplot.set_view_z),
+                          ("FRONT",      self.backplot.set_view_y),
+                          ("SIDE",       self.backplot.set_view_x),
+                          ("CLR TRAIL",  self.backplot.clear_trail)):
+            b = QPushButton(label)
+            b.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+            b.setStyleSheet(_view_style)
+            b.clicked.connect(fn)
+            tb_lay.addWidget(b)
+        tb_lay.addStretch()   # Stretch wieder einfügen (trennt links von rechts)
+
+        self._btn_go_to_home = QPushButton("GO TO HOME")
+        self._btn_go_to_home.setObjectName("btn_go_to_home")
+        self._btn_go_to_home.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self._btn_go_to_home.clicked.connect(self._go_to_home)
+        self._update_goto_home_style(all_homed=False)
+        tb_lay.addWidget(self._btn_go_to_home)
+
+        if parent_vtk:
+            if isinstance(parent_vtk, QSplitter):
+                idx = parent_vtk.indexOf(old_vtk)
+                parent_vtk.replaceWidget(idx, self.backplot)
+            elif parent_vtk.layout():
+                lay = parent_vtk.layout()
+                idx = lay.indexOf(old_vtk)
+                lay.removeWidget(old_vtk)
+                lay.insertWidget(idx, self.backplot)
+            old_vtk.deleteLater()
+
+        bpm = self.settings.get("backplot_view")
+        if bpm:
+            self.backplot.set_view_opts(bpm)
+
+    def _switch_gcode_panel(self, idx: int):
+        self._gcode_mdi_stack.setCurrentIndex(idx)
+        active   = "background:#2d5fa8; color:white;"
+        inactive = "background:#2a2a2a; color:#aaa;"
+        for b, active_idx in ((self._btn_show_gcode, 0), (self._btn_show_mdi, 1)):
+            if b is None:
+                continue
+            b.setChecked(idx == active_idx)
+            b.setStyleSheet(
+                f"QPushButton {{ {active if idx == active_idx else inactive} border-radius:4px;"
+                " font-weight:bold; font-size:11pt; padding:2px 12px; }")
+
+    def _update_goto_home_style(self, all_homed: bool):
+        if not hasattr(self, "_btn_go_to_home"):
+            return
+        in_auto = getattr(self, "_current_mode", None) == linuxcnc.MODE_AUTO
+        if in_auto:
+            self._btn_go_to_home.setEnabled(False)
+            self._btn_go_to_home.setStyleSheet(
+                "QPushButton { background:#444; color:#888; border-radius:4px;"
+                " font-weight:bold; padding:1px 10px; }")
+        elif all_homed:
+            self._btn_go_to_home.setEnabled(True)
+            self._btn_go_to_home.setStyleSheet(
+                "QPushButton { background:#2d862d; color:white; border-radius:4px;"
+                " font-weight:bold; padding:1px 10px; }"
+                "QPushButton:hover { background:#3aa63a; }")
         else:
-            self.backplot = BackplotWidget()
+            self._btn_go_to_home.setEnabled(True)
+            self._btn_go_to_home.setStyleSheet(
+                "QPushButton { background:#c0392b; color:white; border-radius:4px;"
+                " font-weight:bold; padding:1px 10px; }"
+                "QPushButton:hover { background:#e74c3c; }")
 
     def _setup_dro(self):
         """DRO-Panel im probe_basic-Stil: Achsname | WORK | MACHINE | REF-Button."""
@@ -1034,10 +1141,11 @@ class ThorCNC(QObject):
                     b.released.connect(
                         lambda a=joint: self._jog_stop(a))
 
-        # MDI
-        mdi = ui.findChild(__import__("PySide6.QtWidgets", fromlist=["QLineEdit"]).QLineEdit, "mdiEntry")
-        if mdi:
-            mdi.returnPressed.connect(lambda: self._send_mdi(mdi.text(), mdi))
+        # Maschinen-Modus Combobox (MANUAL / AUTO / MDI)
+        _MODE_MAP = [linuxcnc.MODE_MANUAL, linuxcnc.MODE_AUTO, linuxcnc.MODE_MDI]
+        from PySide6.QtWidgets import QComboBox
+        if cb := ui.findChild(QComboBox, "combo_machine_mode"):
+            cb.activated.connect(lambda idx: self.cmd.mode(_MODE_MAP[idx]))
 
         # Overrides & Jog Slider
         if s := sld("feed_override_slider"):
@@ -1110,15 +1218,31 @@ class ThorCNC(QObject):
                 # Power aus: grüner Rahmen
                 b.setStyleSheet("QPushButton { border: 2px solid #27ae60; border-radius: 4px; background-color: #2a2a2a; color: white; font-weight: bold; font-size: 14pt; }")
         self._update_run_buttons()
+        # GO TO HOME: nur grün wenn Maschine an UND alle Joints gehomt
+        self._update_goto_home_style(on and getattr(self, "_all_joints_homed", False))
 
     @Slot(int)
     def _on_mode(self, mode: int):
-        from PySide6.QtWidgets import QPushButton
+        from PySide6.QtWidgets import QPushButton, QComboBox
+        self._current_mode = mode
         for name, m in (("manual_mode_button", linuxcnc.MODE_MANUAL),
                         ("mdi_mode_button",    linuxcnc.MODE_MDI),
                         ("auto_mode_button",   linuxcnc.MODE_AUTO)):
             if b := self._w(QPushButton, name):
                 b.setChecked(mode == m)
+        _IDX = {linuxcnc.MODE_MANUAL: 0, linuxcnc.MODE_AUTO: 1, linuxcnc.MODE_MDI: 2}
+        if cb := self._w(QComboBox, "combo_machine_mode"):
+            cb.blockSignals(True)
+            cb.setCurrentIndex(_IDX.get(mode, 0))
+            cb.blockSignals(False)
+        # MDI-Modus → automatisch MDI-Seite zeigen
+        if hasattr(self, "_gcode_mdi_stack"):
+            if mode == linuxcnc.MODE_MDI:
+                self._switch_gcode_panel(1)
+            else:
+                self._switch_gcode_panel(0)
+        # GO TO HOME im AUTO-Modus deaktivieren
+        self._update_goto_home_style(self._is_machine_on and getattr(self, "_all_joints_homed", False))
 
     @Slot(int)
     def _on_interp(self, state: int):
@@ -1281,6 +1405,8 @@ class ThorCNC(QObject):
 
     @Slot(list)
     def _on_homed(self, homed: list):
+        self._all_joints_homed = all(i < len(homed) and homed[i] for i in range(3))
+        self._update_goto_home_style(self._is_machine_on and self._all_joints_homed)
         for i, axis in enumerate(("X", "Y", "Z")):
             is_homed = i < len(homed) and homed[i]
             # DRO work label: grün wenn gehomed, rot wenn nicht
@@ -1522,17 +1648,21 @@ class ThorCNC(QObject):
         if not text:
             return
         try:
-            # Merken des alten Modus
-            old_mode = self.poller.stat.task_mode
             self.cmd.mode(linuxcnc.MODE_MDI)
             self.cmd.wait_complete()
             self.cmd.mdi(text)
-            self.cmd.wait_complete()
-            # Zurück in den alten Modus
-            self.cmd.mode(old_mode)
+            # Modus bleibt MDI — Poller aktualisiert Combobox automatisch.
+            # Der User wechselt über die Combobox zurück zu MANUAL/AUTO.
             if widget:
                 widget.clear()
             self._status(f"MDI: {text}")
+            # History eintragen (kein Duplikat direkt oben)
+            if hasattr(self, "_mdi_history_widget"):
+                hw = self._mdi_history_widget
+                if hw.count() == 0 or hw.item(0).text() != text:
+                    hw.insertItem(0, text)
+                    if hw.count() > 50:
+                        hw.takeItem(hw.count() - 1)
         except Exception as e:
             self._status(f"MDI Fehler: {e}")
         
@@ -1626,5 +1756,10 @@ class ThorCNC(QObject):
         
         if hasattr(self, "backplot") and hasattr(self.backplot, "get_view_opts"):
             self.settings.set("backplot_view", self.backplot.get_view_opts())
-            
+
+        if hasattr(self, "_mdi_history_widget"):
+            hw = self._mdi_history_widget
+            self.settings.set("mdi_history",
+                              [hw.item(i).text() for i in range(hw.count())])
+
         self.settings.save()

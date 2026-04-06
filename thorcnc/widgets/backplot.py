@@ -59,6 +59,40 @@ def _segments_to_array(segments: list[Segment], kind: int) -> np.ndarray | None:
     return np.array(pts, dtype=np.float32)
 
 
+if _HAS_GL:
+    class _ThorGLView(gl.GLViewWidget):
+        """GLViewWidget mit geänderter Maussteuerung:
+        - Mittlere Taste          → Pan (XZ-Ebene, fühlt sich natürlich an)
+        - Mittlere Taste + Strg   → Zoom (Distanz ändern)
+        - Linke Taste             → Orbit (drehen)  — unverändert
+        - Linke Taste + Strg      → Pan in View-Ebene — unverändert
+        - Scrollrad               → Zoom — unverändert
+        """
+
+        def mouseMoveEvent(self, ev):
+            lpos = ev.position() if hasattr(ev, 'position') else ev.localPos()
+            if not hasattr(self, 'mousePos'):
+                self.mousePos = lpos
+            diff = lpos - self.mousePos
+            self.mousePos = lpos
+
+            ctrl = bool(ev.modifiers() & Qt.KeyboardModifier.ControlModifier)
+
+            if ev.buttons() == Qt.MouseButton.LeftButton:
+                if ctrl:
+                    self.pan(diff.x(), diff.y(), 0, relative='view')
+                else:
+                    self.orbit(-diff.x(), diff.y())
+            elif ev.buttons() == Qt.MouseButton.MiddleButton:
+                if ctrl:
+                    # Strg + Mitte → Zoom
+                    self.opts['distance'] *= 1.01 ** diff.y()
+                    self.update()
+                else:
+                    # Mitte → Pan (X + Z, kein Y-Weltachsen-Zoom-Effekt)
+                    self.pan(diff.x(), 0, diff.y(), relative='view-upright')
+
+
 class _BackplotGL(QWidget):
     """Interne Klasse: der eigentliche OpenGL-Viewport."""
 
@@ -68,7 +102,7 @@ class _BackplotGL(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
 
         pg.setConfigOptions(antialias=True)
-        self._view = gl.GLViewWidget()
+        self._view = _ThorGLView()
         self._view.setBackgroundColor("#1a1a1a")
 
         # Standard-Werte setzen, damit es beim Start nicht winzig herangezoomt ist!
@@ -346,37 +380,23 @@ class BackplotWidget(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
+        from PySide6.QtWidgets import QHBoxLayout
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
+        outer.setSpacing(0)
+
+        # Toolbar – wird von außen befüllt via toolbar_layout()
+        toolbar_widget = QWidget(self)
+        toolbar_widget.setFixedHeight(32)
+        self._toolbar_lay = QHBoxLayout(toolbar_widget)
+        self._toolbar_lay.setContentsMargins(4, 2, 4, 2)
+        self._toolbar_lay.setSpacing(4)
+        self._toolbar_lay.addStretch()   # rechts ausrichten per default
+        outer.addWidget(toolbar_widget)
 
         if _HAS_GL:
-            # Toolbar
-            from PySide6.QtWidgets import QHBoxLayout, QPushButton
-            toolbar = QHBoxLayout()
-            toolbar.setContentsMargins(5, 5, 5, 0)
-
-            btn_iso = QPushButton("ISO")
-            btn_z = QPushButton("Z (Top)")
-            btn_y = QPushButton("Y (Front)")
-            btn_x = QPushButton("X (Side)")
-            btn_clear = QPushButton("Clear Trail")
-
-            for b in (btn_iso, btn_z, btn_y, btn_x, btn_clear):
-                b.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-                b.setStyleSheet("background-color: #333; color: white; border-radius: 3px; padding: 4px 8px;")
-                toolbar.addWidget(b)
-            toolbar.addStretch()
-
             self._impl = _BackplotGL(self)
-
-            btn_iso.clicked.connect(self._impl.set_view_iso)
-            btn_z.clicked.connect(self._impl.set_view_z)
-            btn_y.clicked.connect(self._impl.set_view_y)
-            btn_x.clicked.connect(self._impl.set_view_x)
-            btn_clear.clicked.connect(self._impl.clear_trail)
-
-            layout.addLayout(toolbar)
-            layout.addWidget(self._impl)
+            outer.addWidget(self._impl)
         else:
             lbl = QLabel(
                 "pyqtgraph / OpenGL nicht verfügbar.\n"
@@ -385,8 +405,12 @@ class BackplotWidget(QWidget):
             )
             lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
             lbl.setStyleSheet("color: #888; border: 1px dashed #555;")
-            layout.addWidget(lbl)
+            outer.addWidget(lbl)
             self._impl = None
+
+    def toolbar_layout(self) -> "QHBoxLayout":
+        """Gibt das QHBoxLayout der Toolbar zurück (links einfügen, rechts ist Stretch)."""
+        return self._toolbar_lay
 
     def load_toolpath(self, segments: list[Segment]):
         if self._impl:
@@ -407,6 +431,26 @@ class BackplotWidget(QWidget):
     def set_machine_envelope(self, x_min, x_max, y_min, y_max, z_min, z_max):
         if self._impl:
             self._impl.set_machine_envelope(x_min, x_max, y_min, y_max, z_min, z_max)
+
+    def set_view_iso(self):
+        if self._impl:
+            self._impl.set_view_iso()
+
+    def set_view_z(self):
+        if self._impl:
+            self._impl.set_view_z()
+
+    def set_view_y(self):
+        if self._impl:
+            self._impl.set_view_y()
+
+    def set_view_x(self):
+        if self._impl:
+            self._impl.set_view_x()
+
+    def clear_trail(self):
+        if self._impl:
+            self._impl.clear_trail()
 
     def get_view_opts(self) -> dict:
         if self._impl:
