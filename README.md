@@ -8,10 +8,21 @@ A modern LinuxCNC graphical interface (VCP) for 3-axis milling machines, built w
 
 ---
 
+![ThorCNC Screenshot](thorcnc/images/screen_main.png)
+
+---
+
 ## Features
 
 - **3D Backplot** — OpenGL-accelerated toolpath visualization via pyqtgraph, with real-time tool position, live trail, and machine envelope display
+  - View presets: ISO, TOP, FRONT, SIDE
+  - Clear trail button in toolbar
+  - Mouse: left drag = orbit, middle drag = pan, Ctrl+middle drag = zoom
+- **GO TO HOME** — Toolbar button with color feedback: red = not homed / machine off, green = homed + machine on, gray = AUTO mode
+- **Machine Mode** — Combobox in the left panel to switch between MANUAL / AUTO / MDI
+- **G-Code / MDI Panel** — Toggle between G-code viewer and MDI input with persistent command history (last 50 entries, no consecutive duplicates)
 - **DRO** — Digital readout for work (G54–G59.3) and machine coordinates, with per-axis zero and reference buttons
+- **OFFSETS Tab** — Full WCS table (G54–G59.3) with X/Y/Z values read live from the `.var` file, plus per-row CLEAR button (sends `G10 L2`)
 - **Tool Table** — Editable tool table with diameter and length, live-updated after M6 tool changes
 - **M6 Remap support** — Integrates with custom NGC tool-measurement routines; automatic tool geometry update in backplot after probing
 - **Spindle control** — Forward/reverse/stop, speed and override display, load indicator
@@ -19,7 +30,8 @@ A modern LinuxCNC graphical interface (VCP) for 3-axis milling machines, built w
 - **HAL integration** — Reads and writes HAL pins directly; compatible with standard LinuxCNC HAL components
 - **WCS selector** — Quick switch between G54–G59.3 via dropdown in the DRO panel
 - **Simulation support** — Works with LinuxCNC sim configurations; no real hardware required for development
-- **Themes** — Dark (default), light, dark_green, dark_orange
+- **Settings** — Four sub-tabs: Toolsetter, UI (live theme + language switching), Maschine, Erweitert
+- **Themes** — Dark (default), light, dark_green, dark_orange — switchable at runtime
 
 ---
 
@@ -57,6 +69,20 @@ Uninstall:
 
 ```bash
 ./install.sh --uninstall
+```
+
+### Update
+
+Pull the latest changes and reinstall without deleting the folder:
+
+```bash
+./update.sh
+```
+
+In development mode:
+
+```bash
+./update.sh --dev
 ```
 
 ### Manual
@@ -117,6 +143,7 @@ Without the remap, ThorCNC falls back to the standard `hal_manualtoolchange` dia
 thorcnc/
 ├── main.py             # Entry point, argument parsing
 ├── mainwindow.py       # Main controller — connects UI to LinuxCNC
+├── thorcnc.ui          # Qt Designer UI layout
 ├── status_poller.py    # QTimer-based LinuxCNC stat polling, emits Qt signals
 ├── gcode_parser.py     # Lightweight G-code parser for backplot preview
 ├── settings.py         # Persistent settings (JSON)
@@ -132,6 +159,8 @@ configs/
 ## Architecture
 
 ThorCNC connects directly to LinuxCNC via the official Python bindings (`linuxcnc.stat`, `linuxcnc.command`, `linuxcnc.ini`) without any intermediate framework. A `QTimer`-based poller detects state changes and emits Qt signals, keeping the UI fully decoupled from the polling logic.
+
+The backplot uses a `GLViewWidget` subclass (`_ThorGLView`) to implement custom mouse behaviour, and exposes a `toolbar_layout()` API so the main window can inject buttons directly into the widget — avoiding Qt's OpenGL context destruction that occurs when re-parenting a `QOpenGLWidget`.
 
 ---
 
