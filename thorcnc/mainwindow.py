@@ -1125,7 +1125,7 @@ class ThorCNC(QObject):
 
     def _setup_settings_tab(self):
         """Verbindet alle Settings-Sub-Tabs."""
-        from PySide6.QtWidgets import QDoubleSpinBox, QPushButton, QComboBox
+        from PySide6.QtWidgets import QDoubleSpinBox, QPushButton, QComboBox, QCheckBox, QGroupBox, QVBoxLayout, QWidget
 
         # ── UI-Tab: Theme & Sprache ───────────────────────────────────────────
         if cb := self._w(QComboBox, "combo_theme"):
@@ -1143,6 +1143,40 @@ class ThorCNC(QObject):
                 cb.setCurrentIndex(idx)
             cb.currentTextChanged.connect(
                 lambda lang: self.settings.set("language", lang))
+
+        # ── Backplot Antialiasing ──
+        if ui_tab := self._w(QWidget, "settings_tab_ui"):
+            layout = ui_tab.layout()
+            gb_gfx = QGroupBox("Grafik / Performance")
+            # Wir suchen uns einen Platz vor dem vertikalen Spacer
+            gl_gfx = QVBoxLayout(gb_gfx)
+            self._cb_aa = QCheckBox("Backplot Antialiasing (Glättung)")
+            self._cb_aa.setToolTip("Verbessert die Linienqualität (MSAA). Erfordert Neustart für volle Wirkung.")
+            
+            active = self.settings.get("backplot_antialiasing", True)
+            self._cb_aa.setChecked(active)
+            self._cb_aa.toggled.connect(self._on_aa_toggled)
+            
+            # --- MSAA Samples ---
+            lay_msaa = QHBoxLayout()
+            lay_msaa.addWidget(QLabel("MSAA Samples:"))
+            self._cb_msaa = QComboBox()
+            for x in [2, 4, 8, 16]:
+                self._cb_msaa.addItem(f"{x}x", userData=x)
+            
+            saved_msaa = self.settings.get("backplot_msaa_samples", 4)
+            idx = self._cb_msaa.findData(saved_msaa)
+            if idx >= 0: self._cb_msaa.setCurrentIndex(idx)
+            
+            self._cb_msaa.setEnabled(active)
+            self._cb_msaa.currentIndexChanged.connect(self._on_msaa_changed)
+            
+            lay_msaa.addWidget(self._cb_msaa)
+            gl_gfx.addLayout(lay_msaa)
+
+            gl_gfx.addWidget(self._cb_aa)
+            # Vor dem vertikalen Spacer am Ende einfügen (layout hat Theme, Language, Spacer -> count=3)
+            layout.insertWidget(layout.count() - 1, gb_gfx)
 
 
         # Spinboxen laden & verbinden
@@ -1200,6 +1234,22 @@ class ThorCNC(QObject):
         self.settings.set(key, value)
         self.settings.save()
         self._hal_set(key, value)
+
+    def _on_aa_toggled(self, enabled: bool):
+        """Callback: Antialiasing Checkbox geändert."""
+        self.settings.set("backplot_antialiasing", enabled)
+        self.settings.save()
+        self.backplot.set_antialiasing(enabled)
+        if hasattr(self, "_cb_msaa"):
+            self._cb_msaa.setEnabled(enabled)
+        self._status("Antialiasing-Master-Schalter geändert. (MSAA-Level braucht Neustart)")
+
+    def _on_msaa_changed(self, index: int):
+        """MSAA Samples (2x, 4x, etc) geändert."""
+        val = self._cb_msaa.itemData(index)
+        self.settings.set("backplot_msaa_samples", val)
+        self.settings.save()
+        self._status(f"MSAA auf {val}x gesetzt. Ein Neustart ist nötig.")
 
     def _set_wechsel_pos_from_machine(self):
         """Übernimmt die aktuelle Maschinenposition als Wechselposition X/Y/Z."""
@@ -1965,6 +2015,9 @@ class ThorCNC(QObject):
         if hasattr(self, "_auto_load_file") and self._auto_load_file:
             self.load_file(self._auto_load_file)
         self._drain_startup_errors()
+        if hasattr(self, "backplot"):
+             s = self.backplot.get_actual_samples()
+             self._status(f"Grafik-System bereit (Antialiasing: {s}x MSAA)")
         self.poller.start()
 
     def _on_close(self):

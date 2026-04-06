@@ -69,6 +69,15 @@ if _HAS_GL:
         - Scrollrad               → Zoom — unverändert
         """
 
+        def initializeGL(self):
+            # Wichtig: Explizites Einschalten von Multisampling
+            super().initializeGL()
+            try:
+                from OpenGL import GL
+                GL.glEnable(GL.GL_MULTISAMPLE)
+            except Exception:
+                pass
+
         def mouseMoveEvent(self, ev):
             lpos = ev.position() if hasattr(ev, 'position') else ev.localPos()
             if not hasattr(self, 'mousePos'):
@@ -285,6 +294,19 @@ class _BackplotGL(QWidget):
         for item, arr in self._items_data:
             item.setData(pos=arr + [x, y, z])
 
+    def set_antialiasing(self, enabled: bool):
+        """Aktiviert/Deaktiviert das Linien-Smoothing aller Items live."""
+        pg.setConfigOptions(antialias=enabled)
+        # Alle Linien-Items durchgehen
+        for item in self._view.items:
+            if isinstance(item, gl.GLLinePlotItem):
+                item.setAntialiasing(enabled)
+            elif isinstance(item, gl.GLScatterPlotItem):
+                 # ScatterPlotItems haben oft kein explizites setAntialiasing in pyqtgraph-opengl
+                 # aber die globalen pg-options helfen ggf.
+                 pass
+        self._view.update()
+
     def set_machine_envelope(self,
                              x_min: float, x_max: float,
                              y_min: float, y_max: float,
@@ -460,3 +482,13 @@ class BackplotWidget(QWidget):
     def set_view_opts(self, opts: dict):
         if self._impl:
             self._impl.set_view_opts(opts)
+
+    def set_antialiasing(self, enabled: bool):
+        if self._impl:
+            self._impl.set_antialiasing(enabled)
+
+    def get_actual_samples(self) -> int:
+        """Gibt die tatsächlich vom Treiber bereitgestellten MSAA-Samples zurück."""
+        if self._impl and hasattr(self._impl, "_view"):
+            return self._impl._view.format().samples()
+        return 0

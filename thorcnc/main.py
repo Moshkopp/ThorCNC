@@ -16,6 +16,7 @@ import argparse
 
 from PySide6.QtWidgets import QApplication
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QSurfaceFormat
 
 from .mainwindow import ThorCNC
 
@@ -58,6 +59,14 @@ def main():
 
     # Theme: CLI > Env > INI-Datei > Fallback "dark"
     ini_path = args.ini or os.environ.get("INI_FILE_NAME", "")
+    
+    # Anti-Aliasing (MSAA) Setting laden (muss VOR QApplication passieren!)
+    msaa_samples = _get_msaa_setting(ini_path)
+    if msaa_samples > 0:
+        fmt = QSurfaceFormat()
+        fmt.setSamples(msaa_samples)
+        QSurfaceFormat.setDefaultFormat(fmt)
+
     theme = (args.theme
              or os.environ.get("THORCNC_THEME", "")
              or _theme_from_ini(ini_path)
@@ -85,6 +94,40 @@ def _theme_from_ini(ini_path: str) -> str:
         return ini.find("DISPLAY", "THEME") or ""
     except Exception:
         return ""
+
+
+def _get_antialiasing_setting(ini_path: str) -> bool:
+    """Liest das Antialiasing-Setting direkt aus den Prefs (für QSurfaceFormat)."""
+    try:
+        prefs_file = "thorcnc.prefs"
+        ini_dir = os.path.dirname(ini_path) if ini_path else os.path.expanduser("~")
+        
+        if ini_path and os.path.isfile(ini_path):
+            import linuxcnc
+            ini = linuxcnc.ini(ini_path)
+            p = ini.find("DISPLAY", "PREFS_FILE")
+            if p: prefs_file = p
+            
+        prefs_path = os.path.expanduser(prefs_file)
+        if not os.path.isabs(prefs_path):
+            prefs_path = os.path.join(ini_dir, prefs_path)
+            
+        if os.path.isfile(prefs_path):
+            import json
+            with open(prefs_path, "r") as f:
+                prefs = json.load(f)
+                # Wenn global aus, dann 0, sonst den gespeicherten Wert (default 4)
+                if not prefs.get("backplot_antialiasing", True):
+                    return 0
+                return prefs.get("backplot_msaa_samples", 4)
+    except Exception:
+        pass
+    return 4
+
+
+def _get_msaa_setting(ini_path: str) -> int:
+    """Hilfsfunktion: Liest die gewünschten OpenGL-Samples."""
+    return _get_antialiasing_setting(ini_path) if isinstance(_get_antialiasing_setting(ini_path), int) else (4 if _get_antialiasing_setting(ini_path) else 0)
 
 
 if __name__ == "__main__":
