@@ -1034,7 +1034,7 @@ class ThorCNC(QObject):
         hdr.setSectionResizeMode(4, QHeaderView.ResizeMode.Fixed)
         tbl.setColumnWidth(0, 80)
         tbl.setColumnWidth(4, 90)
-        tbl.verticalHeader().setDefaultSectionSize(42)
+        tbl.verticalHeader().setDefaultSectionSize(47)
 
         _bold = QFont()
         _bold.setBold(True)
@@ -1054,9 +1054,10 @@ class ThorCNC(QObject):
             # Clear-Button
             btn = QPushButton("CLEAR")
             btn.setFocusPolicy(_Qt.FocusPolicy.NoFocus)
+            btn.setFixedSize(74, 35)
             btn.setStyleSheet(
                 "QPushButton { background:#7b241c; color:white; border-radius:4px;"
-                " font-weight:bold; margin:3px 6px; }"
+                " font-weight:bold; }"
                 "QPushButton:hover { background:#a93226; }")
             btn.clicked.connect(lambda _=False, n=p_idx: self._clear_wcs(n))
             tbl.setCellWidget(row, 4, btn)
@@ -1123,8 +1124,26 @@ class ThorCNC(QObject):
             self._status(f"Offset-Clear Fehler: {e}")
 
     def _setup_settings_tab(self):
-        """Verbindet alle Werkzeug-Taster-Spinboxen mit den Prefs und HAL-Pins."""
-        from PySide6.QtWidgets import QDoubleSpinBox, QPushButton
+        """Verbindet alle Settings-Sub-Tabs."""
+        from PySide6.QtWidgets import QDoubleSpinBox, QPushButton, QComboBox
+
+        # ── UI-Tab: Theme & Sprache ───────────────────────────────────────────
+        if cb := self._w(QComboBox, "combo_theme"):
+            # Gespeichertes Theme vorauswählen
+            saved = self.settings.get("theme", "dark")
+            idx = cb.findText(saved)
+            if idx >= 0:
+                cb.setCurrentIndex(idx)
+            cb.currentTextChanged.connect(self._apply_theme)
+
+        if cb := self._w(QComboBox, "combo_language"):
+            saved_lang = self.settings.get("language", "Deutsch")
+            idx = cb.findText(saved_lang)
+            if idx >= 0:
+                cb.setCurrentIndex(idx)
+            cb.currentTextChanged.connect(
+                lambda lang: self.settings.set("language", lang))
+
 
         # Spinboxen laden & verbinden
         for widget_name, prefs_key, default in self._TOOLSENSOR_FIELDS:
@@ -1902,6 +1921,12 @@ class ThorCNC(QObject):
                 "Optional: Füge 'PREFS_FILE = thorcnc.prefs' im [DISPLAY] Abschnitt deiner INI hinzu, um den Ort explizit festzulegen!"
             )
             self._warn_missing_prefs = False
+
+    def _apply_theme(self, name: str):
+        from PySide6.QtWidgets import QApplication
+        from .main import load_theme
+        load_theme(QApplication.instance(), name)
+        self.settings.set("theme", name)
 
     def start(self):
         from PySide6.QtWidgets import QApplication
