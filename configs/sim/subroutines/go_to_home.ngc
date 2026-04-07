@@ -1,0 +1,8 @@
+( Go to Machine Home - G53 )
+O<go_to_home> sub
+    ( First move Z to machine zero for safety )
+    G53 G0 Z0
+    ( Then move X and Y to machine zero )
+    G53 G0 X0 Y0
+O<go_to_home> endsub
+M2

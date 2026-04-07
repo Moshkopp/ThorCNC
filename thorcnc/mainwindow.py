@@ -2032,19 +2032,17 @@ class ThorCNC(QObject):
             self._status(f"Fehler: halshow nicht gefunden: {e}")
 
     def _go_to_home(self):
-        """Fahrt auf Maschinen-Nullpunkt G53 G0 X0 Y0 Z0."""
+        """Fahrt auf Maschinen-Nullpunkt via Subroutine O<go_to_home> CALL."""
         try:
             # Merken des alten Modus
             old_mode = self.poller.stat.task_mode
             self.cmd.mode(linuxcnc.MODE_MDI)
             self.cmd.wait_complete()
-            # Erst Z hoch (Sicherheit), dann XY
-            self.cmd.mdi("G53 G0 Z0")
-            self.cmd.wait_complete()
-            self.cmd.mdi("G53 G0 X0 Y0")
+            # Subroutine aufrufen (G53 Z0 gefolgt von X0 Y0)
+            self.cmd.mdi("O<go_to_home> CALL")
             self.cmd.wait_complete()
             self.cmd.mode(old_mode)
-            self._status("Fahre auf Home-Position (G53)")
+            self._status("Subroutine: Fahrt auf Home-Position gestartet (G53)")
         except Exception as e:
             self._status(f"Home-Fahrt Fehler: {e}")
 
