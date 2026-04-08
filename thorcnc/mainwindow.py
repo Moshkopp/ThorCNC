@@ -49,6 +49,7 @@ class ThorCNC(QObject):
         self._setup_file_manager()
         self._setup_tool_table()
         self._setup_offsets_tab()
+        self._setup_probing_tab()
         self._setup_html_tab()
         self._setup_settings_tab()
         self._connect_signals()
@@ -126,6 +127,8 @@ class ThorCNC(QObject):
 
         # Seite 0: GCodeView
         self.gcode_view = GCodeView()
+        self.gcode_view.setStyleSheet(
+            "QPlainTextEdit { font-family: 'Monospace'; font-size: 18px; }")
         self._gcode_mdi_stack.addWidget(self.gcode_view)
 
         # Seite 1: MDI-Page
@@ -541,9 +544,8 @@ class ThorCNC(QObject):
     @staticmethod
     def _make_jog_icon(axis: str, direction: str, size: int = 42):
         """Zeichnet ein Jog-Button-Icon: farbiger Ring + Chevron-Pfeil + Achsbeschriftung."""
-        from PySide6.QtGui import (QPixmap, QPainter, QColor, QPolygonF,
-                                   QFont, QPen, QBrush, QRadialGradient,
-                                   QConicalGradient, QPainterPath)
+        from PySide6.QtGui import (QPixmap, QPainter, QColor,
+                                   QFont, QPen, QBrush, QRadialGradient)
         from PySide6.QtCore import QPointF, QRectF
 
         pix = QPixmap(size, size)
@@ -577,60 +579,16 @@ class ThorCNC(QObject):
         p.setPen(ring_pen)
         p.drawEllipse(QPointF(cx, cy), r, r)
 
-        # ── Chevron-Pfeil ─────────────────────────────────────────────────
-        # Zwei dicke Linien bilden einen ">"-Pfeil (kein Filled-Polygon)
-        sign = "+" if direction in ("up", "right") else "−"
-        arm  = size * 0.20   # halbe Schenkel-Länge
-        tip_offset = size * 0.10   # wie weit die Spitze von der Mitte entfernt ist
-
-        # Chevron-Spitze und zwei Schenkel-Endpunkte
-        if direction == "up":
-            tip = QPointF(cx,         cy - size * 0.18)
-            p1  = QPointF(cx - arm,   cy + tip_offset)
-            p2  = QPointF(cx + arm,   cy + tip_offset)
-        elif direction == "down":
-            tip = QPointF(cx,         cy + size * 0.18)
-            p1  = QPointF(cx - arm,   cy - tip_offset)
-            p2  = QPointF(cx + arm,   cy - tip_offset)
-        elif direction == "right":
-            tip = QPointF(cx + size * 0.18, cy)
-            p1  = QPointF(cx - tip_offset,  cy - arm)
-            p2  = QPointF(cx - tip_offset,  cy + arm)
-        else:  # left
-            tip = QPointF(cx - size * 0.18, cy)
-            p1  = QPointF(cx + tip_offset,  cy - arm)
-            p2  = QPointF(cx + tip_offset,  cy + arm)
-
-        arrow_pen = QPen(ac.lighter(140), size * 0.11)
-        arrow_pen.setCapStyle(Qt.PenCapStyle.RoundCap)
-        arrow_pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
-        p.setPen(arrow_pen)
-        p.setBrush(Qt.BrushStyle.NoBrush)
-
-        path = QPainterPath()
-        path.moveTo(p1)
-        path.lineTo(tip)
-        path.lineTo(p2)
-        p.drawPath(path)
-
-        # ── Achsbeschriftung (Achse + Vorzeichen, Gegenseite des Pfeils) ──
-        font = QFont("Monospace", max(6, size // 8))
+        # ── Achse + Vorzeichen zentriert ──────────────────────────────────
+        sign = "+" if direction in ("up", "right") else "-"
+        font = QFont("Bebas Kai", max(8, size // 3))
         font.setBold(True)
         p.setFont(font)
         label_color = ac.lighter(160)
-        label_color.setAlpha(220)
+        label_color.setAlpha(230)
         p.setPen(QPen(label_color))
-
-        if direction == "up":
-            label_rect = QRectF(0, size * 0.68, size, size * 0.28)
-        elif direction == "down":
-            label_rect = QRectF(0, size * 0.04, size, size * 0.28)
-        elif direction == "right":
-            label_rect = QRectF(0, size * 0.04, size * 0.52, size)
-        else:  # left
-            label_rect = QRectF(size * 0.48, size * 0.04, size * 0.52, size)
-
-        p.drawText(label_rect, Qt.AlignmentFlag.AlignCenter, f"{axis}{sign}")
+        p.drawText(QRectF(0, 0, size, size),
+                   Qt.AlignmentFlag.AlignCenter, f"{axis}{sign}")
 
         p.end()
         from PySide6.QtGui import QIcon
@@ -1128,6 +1086,472 @@ class ThorCNC(QObject):
             self._offset_var_mtime = 0.0   # mtime invalidieren → sofortiger Refresh
         except Exception as e:
             self._status(f"Offset-Clear Fehler: {e}")
+
+    # ── Probing Tab ───────────────────────────────────────────────────────────
+
+    def _setup_probing_tab(self):
+        """Lädt SVG-Icons, verbindet Override-Slider und baut probe-DRO."""
+        from PySide6.QtWidgets import (QPushButton, QButtonGroup, QLineEdit,
+                                       QSlider, QToolButton, QMenu, QFrame,
+                                       QWidget, QStackedWidget, QGridLayout,
+                                       QVBoxLayout, QHBoxLayout, QLabel)
+        from PySide6.QtGui import QIcon, QAction
+        from PySide6.QtCore import QSize, Qt
+
+        self._probe_img_dir = os.path.join(_DIR, "images", "probe")
+
+        # ── Mode-Dropdown Menü ────────────────────────────────────────────────
+        MODES = ["OUTSIDE CORNERS", "INSIDE CORNERS",
+                 "BOSS AND POCKET", "EDGE ANGLE", "RIDGE AND VALLEY"]
+        mode_btn = self._w(QToolButton, "btn_probe_mode")
+        if mode_btn:
+            menu = QMenu(mode_btn)
+            for mode in MODES:
+                act = QAction(mode, menu)
+                act.triggered.connect(
+                    lambda _=False, m=mode: self._probe_set_mode(m))
+                menu.addAction(act)
+            mode_btn.setMenu(menu)
+
+        # ── QStackedWidget aufbauen ───────────────────────────────────────────
+        self._probe_stack = QStackedWidget()
+        self._probe_pages = {}
+
+        BTN_SZ  = QSize(130, 130)
+        ICON_SZ = QSize(118, 108)
+        BTN_SS  = ("QPushButton{background:#3a3a3a;border:2px solid #555;border-radius:8px;}"
+                   "QPushButton:hover{border-color:#888;background:#444;}"
+                   "QPushButton:checked{border-color:#00cc44;border-width:3px;background:#2a3a2a;}")
+        LBL_SS  = "color:#aaa;font-size:9pt;font-weight:bold;"
+        FLD_SS  = ("background:#1a1a1a;color:#cccccc;border:1px solid #555;"
+                   "border-radius:4px;font-size:11pt;padding:2px 6px;")
+
+        def make_btn(ngc_name, btn_group):
+            btn = QPushButton()
+            btn.setMinimumSize(BTN_SZ)
+            btn.setMaximumSize(BTN_SZ)
+            btn.setIconSize(ICON_SZ)
+            btn.setCheckable(True)
+            btn.setStyleSheet(BTN_SS)
+            btn.clicked.connect(lambda _=False, n=ngc_name: self._probe_run_sequence(n))
+            btn_group.addButton(btn)
+            return btn
+
+        def svg(subfolder, filename):
+            p = os.path.join(self._probe_img_dir, subfolder, filename)
+            return QIcon(p) if os.path.exists(p) else QIcon()
+
+        def make_grid_page(subfolder, cells):
+            """cells: list of (row, col, ngc_name, svg_file)"""
+            page = QWidget()
+            gl = QGridLayout(page)
+            gl.setSpacing(6)
+            gl.setContentsMargins(0, 0, 0, 0)
+            grp = QButtonGroup(page)
+            grp.setExclusive(True)
+            for row, col, ngc, svgf in cells:
+                btn = make_btn(ngc, grp)
+                btn.setIcon(svg(subfolder, svgf))
+                gl.addWidget(btn, row, col)
+            return page
+
+        GRID_3x3 = [
+            (0, 0, "corner_tl",   "corner_tl.svg"),
+            (0, 1, "edge_top",    "edge_top.svg"),
+            (0, 2, "corner_tr",   "corner_tr.svg"),
+            (1, 0, "edge_left",   "edge_left.svg"),
+            (1, 1, "center",      "center.svg"),
+            (1, 2, "edge_right",  "edge_right.svg"),
+            (2, 0, "corner_bl",   "corner_bl.svg"),
+            (2, 1, "edge_bottom", "edge_bottom.svg"),
+            (2, 2, "corner_br",   "corner_br.svg"),
+        ]
+
+        # Page 1 – Outside Corners (3×3)
+        p = make_grid_page("outside", GRID_3x3)
+        self._probe_stack.addWidget(p)
+        self._probe_pages["OUTSIDE CORNERS"] = p
+
+        # Page 2 – Inside Corners (3×3)
+        p = make_grid_page("inside", GRID_3x3)
+        self._probe_stack.addWidget(p)
+        self._probe_pages["INSIDE CORNERS"] = p
+
+        # Page 3 – Boss and Pocket (3×2 + Felder)
+        p = QWidget()
+        vl = QVBoxLayout(p)
+        vl.setSpacing(8)
+        vl.setContentsMargins(0, 0, 0, 0)
+        gl_bp = QGridLayout()
+        gl_bp.setSpacing(6)
+        grp_bp = QButtonGroup(p)
+        grp_bp.setExclusive(True)
+        for row, col, ngc, svgf in [
+            (0, 0, "pocket_round_top",    "pocket_round_top.svg"),
+            (0, 1, "boss_round",          "boss_round.svg"),
+            (0, 2, "pocket_round_bottom", "pocket_round_bottom.svg"),
+            (1, 0, "pocket_rect_top",     "pocket_rect_top.svg"),
+            (1, 1, "boss_rect",           "boss_rect.svg"),
+            (1, 2, "pocket_rect_bottom",  "pocket_rect_bottom.svg"),
+        ]:
+            btn = make_btn(ngc, grp_bp)
+            btn.setIcon(svg("boss_pocket", svgf))
+            gl_bp.addWidget(btn, row, col)
+        vl.addLayout(gl_bp)
+        hl_bp = QHBoxLayout()
+        for lbl_txt, obj_name in [("DIAM:", "le_probe_bp_diam"),
+                                   ("X:",    "le_probe_bp_x"),
+                                   ("Y:",    "le_probe_bp_y")]:
+            lbl = QLabel(lbl_txt); lbl.setStyleSheet(LBL_SS)
+            le  = QLineEdit("0.0000")
+            le.setObjectName(obj_name)
+            le.setReadOnly(True)
+            le.setAlignment(Qt.AlignCenter)
+            le.setStyleSheet(FLD_SS)
+            hl_bp.addWidget(lbl); hl_bp.addWidget(le)
+        vl.addLayout(hl_bp)
+        self._probe_stack.addWidget(p)
+        self._probe_pages["BOSS AND POCKET"] = p
+
+        # Page 4 – Edge Angle (3×3, angle/ subfolder)
+        p = make_grid_page("angle", GRID_3x3)
+        self._probe_stack.addWidget(p)
+        self._probe_pages["EDGE ANGLE"] = p
+
+        # Page 5 – Ridge and Valley (1×2 + Länge/Breite Input)
+        p = QWidget()
+        vl = QVBoxLayout(p)
+        vl.setSpacing(8)
+        vl.setContentsMargins(0, 0, 0, 0)
+        hl_rv = QHBoxLayout()
+        grp_rv = QButtonGroup(p)
+        grp_rv.setExclusive(True)
+        for ngc, svgf in [("ridge", "ridge.svg"), ("valley", "valley.svg")]:
+            btn = make_btn(ngc, grp_rv)
+            btn.setIcon(svg("ridge_valley", svgf))
+            hl_rv.addWidget(btn)
+        vl.addLayout(hl_rv)
+        hl_rv_f = QHBoxLayout()
+        for lbl_txt, obj_name in [("LÄNGE:", "le_probe_rv_length"),
+                                   ("BREITE:", "le_probe_rv_width")]:
+            lbl = QLabel(lbl_txt); lbl.setStyleSheet(LBL_SS)
+            le  = QLineEdit()
+            le.setObjectName(obj_name)
+            le.setAlignment(Qt.AlignCenter)
+            le.setStyleSheet(FLD_SS)
+            hl_rv_f.addWidget(lbl); hl_rv_f.addWidget(le)
+        vl.addLayout(hl_rv_f)
+        self._probe_stack.addWidget(p)
+        self._probe_pages["RIDGE AND VALLEY"] = p
+
+        # ── frm_probe_grid durch Stack ersetzen ───────────────────────────────
+        frm = self._w(QFrame, "frm_probe_grid")
+        if frm:
+            gl = frm.layout()
+            while gl.count():
+                item = gl.takeAt(0)
+                if w := item.widget():
+                    w.setParent(None)
+            gl.setSpacing(0)
+            gl.setContentsMargins(12, 12, 12, 12)
+            gl.addWidget(self._probe_stack, 0, 0)
+            # Fixer Home-Marker unten-links (X=links, Y=unten → Nullpunkt)
+            from PySide6.QtCore import QTimer
+            _SZ = 16
+            _m  = QLabel("⌂", frm)
+            _m.setFixedSize(_SZ, _SZ)
+            _m.setAlignment(Qt.AlignCenter)
+            _m.setStyleSheet(
+                f"background:#e67e00;color:white;border-radius:{_SZ//2}px;"
+                "font-size:8pt;font-weight:bold;")
+            _m.setToolTip("Maschinen-Nullpunkt")
+            def _place_marker(marker=_m, f=frm, sz=_SZ):
+                h = f.height()
+                if h < sz * 2:          # noch nicht gerendert → nochmal
+                    QTimer.singleShot(100, lambda: _place_marker(marker, f, sz))
+                    return
+                marker.move(4, h - sz - 4)
+                marker.raise_()
+                marker.show()
+            QTimer.singleShot(200, _place_marker)
+
+        self._probe_set_mode("OUTSIDE CORNERS")
+
+        # ── CLEAR-Buttons ─────────────────────────────────────────────────────
+        for btn_name, fields in [
+            ("btn_probe_clear_x", ["le_probe_x_minus", "le_probe_x_ctr",
+                                   "le_probe_x_plus",  "le_probe_x_width"]),
+            ("btn_probe_clear_y", ["le_probe_y_minus", "le_probe_y_ctr",
+                                   "le_probe_y_plus",  "le_probe_y_width"]),
+            ("btn_probe_clear_all", ["le_probe_x_minus", "le_probe_x_ctr",
+                                     "le_probe_x_plus",  "le_probe_x_width",
+                                     "le_probe_y_minus", "le_probe_y_ctr",
+                                     "le_probe_y_plus",  "le_probe_y_width",
+                                     "le_probe_z", "le_probe_diam",
+                                     "le_probe_delta", "le_probe_angle"]),
+        ]:
+            if btn := self._w(QPushButton, btn_name):
+                btn.clicked.connect(
+                    lambda _=False, flds=fields: self._probe_clear_fields(flds))
+
+        # ── PROBE active toggle label ──────────────────────────────────────────
+        if btn := self._w(QPushButton, "btn_probe_active"):
+            btn.toggled.connect(lambda on, b=btn: b.setText("ON" if on else "OFF"))
+
+        # ── Override-Slider (gleiche LinuxCNC-Kommandos wie Main-Tab) ─────────
+        def sld(name):
+            return self._w(QSlider, name)
+
+        if s := sld("probe_feed_override_slider"):
+            s.valueChanged.connect(lambda v: self.cmd.feedrate(v / 100.0))
+        if s := sld("probe_spindle_override_slider"):
+            s.valueChanged.connect(lambda v: self.cmd.spindleoverride(v / 100.0))
+        if s := sld("probe_rapid_override_slider"):
+            s.valueChanged.connect(lambda v: self.cmd.rapidrate(v / 100.0))
+        if s := sld("probe_v_override_slider"):
+            s.valueChanged.connect(self._on_probe_v_override_changed)
+
+        if btn := self._w(QPushButton, "probe_feed_override_to_100_button"):
+            btn.clicked.connect(lambda: self.cmd.feedrate(1.0))
+        if btn := self._w(QPushButton, "probe_spindle_override_to_100_button"):
+            btn.clicked.connect(lambda: self.cmd.spindleoverride(1.0))
+        if btn := self._w(QPushButton, "probe_rapid_override_to_100_button"):
+            btn.clicked.connect(lambda: self.cmd.rapidrate(1.0))
+        if btn := self._w(QPushButton, "probe_v_override_to_100_button"):
+            btn.clicked.connect(self._on_probe_v_override_to_100)
+
+        # ── Probe-DRO aufbauen ────────────────────────────────────────────────
+        self._setup_probe_dro()
+
+        # ── Prefs: laden + autosave bei Änderung ─────────────────────────────
+        self._probe_prefs_load()
+        self._probe_prefs_connect()
+
+    def _setup_probe_dro(self):
+        """Baut kompaktes (read-only) DRO im Probing-Tab-Bottom-Bar."""
+        from PySide6.QtWidgets import (QWidget, QHBoxLayout, QVBoxLayout,
+                                       QLabel, QFrame, QSizePolicy)
+
+        container = self.ui.findChild(QHBoxLayout, "probe_dro_display_layout")
+        if not container:
+            return
+
+        self._probe_dro_work    = {}
+        self._probe_dro_machine = {}
+
+        wrapper = QWidget()
+        wrapper.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        vbox = QVBoxLayout(wrapper)
+        vbox.setContentsMargins(8, 4, 8, 4)
+        vbox.setSpacing(4)
+
+        dro_style_work    = ("font: 16pt 'Bebas Kai'; color: #00dd55;"
+                             " background: rgb(30,34,36); border-radius:3px;"
+                             " padding: 0 6px;")
+        dro_style_machine = ("font: 14pt 'Bebas Kai'; color: #aaaaaa;"
+                             " background: rgb(30,34,36); border-radius:3px;"
+                             " padding: 0 6px;")
+
+        for axis in ("X", "Y", "Z"):
+            row = QWidget()
+            row.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+            hl = QHBoxLayout(row)
+            hl.setContentsMargins(0, 0, 0, 0)
+            hl.setSpacing(6)
+
+            lbl_axis = QLabel(axis)
+            lbl_axis.setFixedWidth(36)
+            lbl_axis.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            lbl_axis.setStyleSheet("font: bold 18pt 'Bebas Kai'; color: rgb(238,238,236);")
+            hl.addWidget(lbl_axis)
+
+            lbl_work = QLabel("+0.000")
+            lbl_work.setFixedWidth(110)
+            lbl_work.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+            lbl_work.setStyleSheet(dro_style_work)
+            hl.addWidget(lbl_work)
+
+            lbl_mach = QLabel("+0.000")
+            lbl_mach.setFixedWidth(110)
+            lbl_mach.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+            lbl_mach.setStyleSheet(dro_style_machine)
+            hl.addWidget(lbl_mach)
+
+            hl.addStretch()
+            vbox.addWidget(row)
+            self._probe_dro_work[axis]    = lbl_work
+            self._probe_dro_machine[axis] = lbl_mach
+
+        container.addWidget(wrapper)
+
+    # Mapping: pref-key → (widget-name, widget-type)
+    _PROBE_PREFS = [
+        ("probe_tool",       "spb_probe_tool",        "SpinBox"),
+        ("probe_step_off",   "dsb_probe_step_off",    "DoubleSpinBox"),
+        ("probe_dia",        "dsb_probe_dia",          "DoubleSpinBox"),
+        ("probe_max_xy",     "dsb_probe_max_xy",       "DoubleSpinBox"),
+        ("probe_rapid",      "dsb_probe_rapid",        "DoubleSpinBox"),
+        ("probe_max_z",      "dsb_probe_max_z",        "DoubleSpinBox"),
+        ("probe_search",     "dsb_probe_search",       "DoubleSpinBox"),
+        ("probe_xy_clear",   "dsb_probe_xy_clearance", "DoubleSpinBox"),
+        ("probe_feed",       "dsb_probe_feed",         "DoubleSpinBox"),
+        ("probe_z_clear",    "dsb_probe_z_clearance",  "DoubleSpinBox"),
+        ("probe_extra_dep",  "dsb_probe_extra_depth",  "DoubleSpinBox"),
+        ("probe_edge_w",     "dsb_probe_edge_width",   "DoubleSpinBox"),
+        ("probe_motion",     "combo_probe_motion",     "ComboBox"),
+        ("probe_before",     "te_probe_before",        "TextEdit"),
+        ("probe_after",      "te_probe_after",         "TextEdit"),
+    ]
+
+    def _probe_prefs_load(self):
+        from PySide6.QtWidgets import QSpinBox, QDoubleSpinBox, QComboBox, QTextEdit
+        for key, wname, wtype in self._PROBE_PREFS:
+            val = self.settings.get(key)
+            if val is None:
+                continue
+            if wtype == "SpinBox":
+                if w := self._w(QSpinBox, wname):
+                    w.setValue(int(val))
+            elif wtype == "DoubleSpinBox":
+                if w := self._w(QDoubleSpinBox, wname):
+                    w.setValue(float(val))
+            elif wtype == "ComboBox":
+                if w := self._w(QComboBox, wname):
+                    idx = w.findText(str(val))
+                    if idx >= 0:
+                        w.setCurrentIndex(idx)
+            elif wtype == "TextEdit":
+                if w := self._w(QTextEdit, wname):
+                    w.setPlainText(str(val))
+
+    def _probe_prefs_connect(self):
+        """Verbindet alle Probe-Widgets mit autosave."""
+        from PySide6.QtWidgets import QSpinBox, QDoubleSpinBox, QComboBox, QTextEdit
+        for key, wname, wtype in self._PROBE_PREFS:
+            if wtype == "SpinBox":
+                if w := self._w(QSpinBox, wname):
+                    w.valueChanged.connect(
+                        lambda v, k=key: self._probe_pref_save(k, v))
+            elif wtype == "DoubleSpinBox":
+                if w := self._w(QDoubleSpinBox, wname):
+                    w.valueChanged.connect(
+                        lambda v, k=key: self._probe_pref_save(k, v))
+            elif wtype == "ComboBox":
+                if w := self._w(QComboBox, wname):
+                    w.currentTextChanged.connect(
+                        lambda v, k=key: self._probe_pref_save(k, v))
+            elif wtype == "TextEdit":
+                if w := self._w(QTextEdit, wname):
+                    w.textChanged.connect(
+                        lambda k=key, wn=wname:
+                            self._probe_pref_save(
+                                k, self._w(QTextEdit, wn).toPlainText()))
+
+    def _probe_pref_save(self, key: str, value):
+        self.settings.set(key, value)
+        self.settings.save()
+
+    def _probe_clear_fields(self, field_names: list):
+        from PySide6.QtWidgets import QLineEdit
+        for name in field_names:
+            if le := self._w(QLineEdit, name):
+                le.setText("0")
+
+    def _on_probe_v_override_changed(self, val: int):
+        from PySide6.QtWidgets import QLabel
+        if lbl := self._w(QLabel, "probe_v_override_status"):
+            lbl.setText(f"V {val}%")
+        self.cmd.feedrate(val / 100.0)
+        self.cmd.spindleoverride(val / 100.0)
+
+    def _on_probe_v_override_to_100(self):
+        from PySide6.QtWidgets import QSlider, QLabel
+        if s := self._w(QSlider, "probe_v_override_slider"):
+            s.setValue(100)
+        if lbl := self._w(QLabel, "probe_v_override_status"):
+            lbl.setText("V 100%")
+        self.cmd.feedrate(1.0)
+        self.cmd.spindleoverride(1.0)
+
+    def _probe_set_mode(self, mode: str):
+        from PySide6.QtWidgets import QToolButton, QLabel
+        if btn := self._w(QToolButton, "btn_probe_mode"):
+            btn.setText(mode)
+        if lbl := self._w(QLabel, "lbl_probe_section_title"):
+            lbl.setText(mode)
+        if hasattr(self, "_probe_pages") and mode in self._probe_pages:
+            self._probe_stack.setCurrentWidget(self._probe_pages[mode])
+
+    def _probe_ngc_dir(self) -> str:
+        """Gibt das NGC-Verzeichnis zurück (selbe Quelle wie File-Manager)."""
+        d = os.path.expanduser("~/linuxcnc/nc_files")
+        if self.ini:
+            cfg = self.ini.find("DISPLAY", "PROGRAM_PREFIX")
+            if cfg:
+                cfg = os.path.expanduser(cfg)
+                if not os.path.isabs(cfg):
+                    cfg = os.path.abspath(
+                        os.path.join(os.path.dirname(self.ini_path), cfg))
+                d = cfg
+        return d
+
+    def _probe_run_sequence(self, ngc_name: str):
+        """
+        Schreibt before_probe.ngc / after_probe.ngc und erzeugt
+        probe_run.ngc, das die drei Dateien der Reihe nach aufruft,
+        dann lädt und startet es.
+
+        Ablauf:  before_probe.ngc → <ngc_name>.ngc → after_probe.ngc
+        """
+        from PySide6.QtWidgets import QTextEdit
+        ngc_dir = self._probe_ngc_dir()
+
+        before_te = self._w(QTextEdit, "te_probe_before")
+        after_te  = self._w(QTextEdit, "te_probe_after")
+        before_code = before_te.toPlainText().strip() if before_te else ""
+        after_code  = after_te.toPlainText().strip()  if after_te  else ""
+
+        # before_probe.ngc schreiben
+        before_path = os.path.join(ngc_dir, "before_probe.ngc")
+        with open(before_path, "w") as f:
+            f.write("; ThorCNC – before probing\n")
+            if before_code:
+                f.write(before_code + "\n")
+            f.write("M2\n")
+
+        # after_probe.ngc schreiben
+        after_path = os.path.join(ngc_dir, "after_probe.ngc")
+        with open(after_path, "w") as f:
+            f.write("; ThorCNC – after probing\n")
+            if after_code:
+                f.write(after_code + "\n")
+            f.write("M2\n")
+
+        # Probe-NGC prüfen
+        probe_path = os.path.join(ngc_dir, f"{ngc_name}.ngc")
+        if not os.path.exists(probe_path):
+            self._status(f"Probe NGC nicht gefunden: {ngc_name}.ngc")
+            return
+
+        # Wrapper-Datei erzeugen: ruft alle drei nacheinander auf
+        run_path = os.path.join(ngc_dir, "probe_run.ngc")
+        with open(run_path, "w") as f:
+            f.write("; ThorCNC – Probe sequence\n")
+            f.write(f"O<before_probe> call\n")
+            f.write(f"O<{ngc_name}> call\n")
+            f.write(f"O<after_probe> call\n")
+            f.write("M2\n")
+
+        try:
+            self.cmd.mode(1)   # MANUAL → AUTO benötigt erst MANUAL
+            self.cmd.wait_complete()
+            self.cmd.mode(2)   # AUTO
+            self.cmd.wait_complete()
+            self.cmd.program_open(run_path)
+            self.cmd.auto(0, 0)   # AUTO_RUN from line 0
+            self._status(f"Probe: {ngc_name}")
+        except Exception as e:
+            self._status(f"Probe Fehler: {e}")
 
     def _setup_html_tab(self):
         """Baut den HTML-Tab auf: links Dateiliste, rechts Viewer."""
@@ -1726,6 +2150,13 @@ class ThorCNC(QObject):
                 self._dro_work[axis].setText(f"{work:+.3f}")
             if axis in self._dro_machine:
                 self._dro_machine[axis].setText(f"{mach:+.3f}")
+            # probe-DRO mitsyncen
+            probe_dro_work = getattr(self, "_probe_dro_work", {})
+            probe_dro_mach = getattr(self, "_probe_dro_machine", {})
+            if axis in probe_dro_work:
+                probe_dro_work[axis].setText(f"{work:+.3f}")
+            if axis in probe_dro_mach:
+                probe_dro_mach[axis].setText(f"{mach:+.3f}")
 
         # Tool-Marker nur zeigen wenn alle Achsen gereferenciert
         if all_homed:
@@ -1773,6 +2204,15 @@ class ThorCNC(QObject):
         if len_lbl := self._w(QLabel, "tool_len_label"):
             len_lbl.setText(_fmt3(length))
         if c_lbl := self._w(QLabel, "tool_comment_label"):
+            c_lbl.setText(comment)
+        # Probe-Statusbar mitsyncen
+        if nr_lbl := self._w(QLabel, "probe_tool_nr_label"):
+            nr_lbl.setText(f"T{tool}")
+        if dia_lbl := self._w(QLabel, "probe_tool_dia_label"):
+            dia_lbl.setText(_fmt3(dia))
+        if len_lbl := self._w(QLabel, "probe_tool_len_label"):
+            len_lbl.setText(_fmt3(length))
+        if c_lbl := self._w(QLabel, "probe_tool_comment_label"):
             c_lbl.setText(comment)
             
         try:
@@ -1839,32 +2279,44 @@ class ThorCNC(QObject):
     @Slot(float)
     def _on_feed_override(self, val: float):
         from PySide6.QtWidgets import QLabel, QSlider
-        if lbl := self._w(QLabel, "feed_override_status"):
-            lbl.setText(f"F {val*100:.0f}%")
-        if s := self._w(QSlider, "feed_override_slider"):
-            s.blockSignals(True)
-            s.setValue(int(val * 100))
-            s.blockSignals(False)
+        pct = f"F {val*100:.0f}%"
+        ival = int(val * 100)
+        for lbl_name, sld_name in [
+            ("feed_override_status",       "feed_override_slider"),
+            ("probe_feed_override_status", "probe_feed_override_slider"),
+        ]:
+            if lbl := self._w(QLabel, lbl_name):
+                lbl.setText(pct)
+            if s := self._w(QSlider, sld_name):
+                s.blockSignals(True); s.setValue(ival); s.blockSignals(False)
 
     @Slot(float)
     def _on_spindle_override(self, val: float):
         from PySide6.QtWidgets import QLabel, QSlider
-        if lbl := self._w(QLabel, "spindle_override_status"):
-            lbl.setText(f"S {val*100:.0f}%")
-        if s := self._w(QSlider, "spindle_override_slider"):
-            s.blockSignals(True)
-            s.setValue(int(val * 100))
-            s.blockSignals(False)
+        pct = f"S {val*100:.0f}%"
+        ival = int(val * 100)
+        for lbl_name, sld_name in [
+            ("spindle_override_status",       "spindle_override_slider"),
+            ("probe_spindle_override_status", "probe_spindle_override_slider"),
+        ]:
+            if lbl := self._w(QLabel, lbl_name):
+                lbl.setText(pct)
+            if s := self._w(QSlider, sld_name):
+                s.blockSignals(True); s.setValue(ival); s.blockSignals(False)
 
     @Slot(float)
     def _on_rapid_override(self, val: float):
         from PySide6.QtWidgets import QLabel, QSlider
-        if lbl := self._w(QLabel, "rapid_override_status"):
-            lbl.setText(f"R {val*100:.0f}%")
-        if s := self._w(QSlider, "rapid_override_slider"):
-            s.blockSignals(True)
-            s.setValue(int(val * 100))
-            s.blockSignals(False)
+        pct = f"R {val*100:.0f}%"
+        ival = int(val * 100)
+        for lbl_name, sld_name in [
+            ("rapid_override_status",       "rapid_override_slider"),
+            ("probe_rapid_override_status", "probe_rapid_override_slider"),
+        ]:
+            if lbl := self._w(QLabel, lbl_name):
+                lbl.setText(pct)
+            if s := self._w(QSlider, sld_name):
+                s.blockSignals(True); s.setValue(ival); s.blockSignals(False)
 
     def _on_v_override_changed(self, val: int):
         from PySide6.QtWidgets import QLabel

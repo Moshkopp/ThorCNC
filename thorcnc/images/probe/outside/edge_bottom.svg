@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80">
+  <!-- Workpiece -->
+  <rect x="8" y="8" width="64" height="54" fill="#5a5a5a" rx="2"/>
+  <!-- Probe ball -->
+  <circle cx="40" cy="70" r="7" fill="#cc22cc" stroke="#ff66ff" stroke-width="1.5"/>
+  <!-- Arrow left -->
+  <line x1="32" y1="70" x2="18" y2="70" stroke="white" stroke-width="2"/>
+  <polygon points="18,67 12,70 18,73" fill="white"/>
+  <!-- Arrow right -->
+  <line x1="48" y1="70" x2="62" y2="70" stroke="white" stroke-width="2"/>
+  <polygon points="62,67 68,70 62,73" fill="white"/>
+</svg>

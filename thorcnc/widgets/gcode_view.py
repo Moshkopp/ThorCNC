@@ -76,7 +76,7 @@ class GCodeView(QPlainTextEdit):
         self.setReadOnly(True)
         self.setLineWrapMode(QPlainTextEdit.LineWrapMode.NoWrap)
 
-        font = QFont("Monospace", 10)
+        font = QFont("Monospace", 30)
         font.setStyleHint(QFont.StyleHint.TypeWriter)
         self.setFont(font)
 

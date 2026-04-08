@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80">
+  <!-- Workpiece side view: Z ref at top surface -->
+  <rect x="5" y="28" width="70" height="42" fill="#5a5a5a" rx="2"/>
+  <!-- Top surface highlight (Z reference) -->
+  <line x1="5" y1="28" x2="75" y2="28" stroke="#00cc44" stroke-width="2"/>
+  <!-- Round hole going down -->
+  <rect x="28" y="28" width="24" height="30" fill="#1a1a1a"/>
+  <ellipse cx="40" cy="58" rx="12" ry="4" fill="#2a2a2a"/>
+  <!-- Probe ball inside hole -->
+  <circle cx="40" cy="42" r="7" fill="#cc22cc" stroke="#ff66ff" stroke-width="1.5"/>
+  <!-- Arrow down (measuring into hole) -->
+  <line x1="40" y1="50" x2="40" y2="58" stroke="white" stroke-width="2"/>
+  <polygon points="37,58 40,64 43,58" fill="white"/>
+  <!-- Z label -->
+  <text x="6" y="26" font-size="8" fill="#00cc44" font-family="sans-serif">Z</text>
+</svg>

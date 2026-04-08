@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80">
+  <!-- Workpiece base -->
+  <rect x="5" y="52" width="70" height="18" fill="#5a5a5a" rx="2"/>
+  <!-- Round boss -->
+  <rect x="28" y="28" width="24" height="24" fill="#5a5a5a"/>
+  <ellipse cx="40" cy="28" rx="12" ry="4" fill="#6a6a6a"/>
+  <!-- Top surface highlight (Z reference) -->
+  <line x1="28" y1="28" x2="52" y2="28" stroke="#00cc44" stroke-width="2"/>
+  <!-- Probe ball left side -->
+  <circle cx="20" cy="40" r="7" fill="#cc22cc" stroke="#ff66ff" stroke-width="1.5"/>
+  <!-- Arrow right (probing boss from outside) -->
+  <line x1="28" y1="40" x2="34" y2="40" stroke="white" stroke-width="2"/>
+  <polygon points="34,37 40,40 34,43" fill="white"/>
+  <!-- Z label -->
+  <text x="30" y="26" font-size="8" fill="#00cc44" font-family="sans-serif">Z</text>
+</svg>
