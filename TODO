@@ -1,1 +1,6 @@
 Probing Tab ausbauen
+Status-Bar Refactoring: 'Current Tool', 'DRO' und 'Overrides' in eine eigene UI-Komponente (status_bar.ui) auslagern und 
+in allen relevanten Tabs (Main, Probing, etc.) einbinden.
+oder besser: eine eigene Statusbar erstellen und diese in allen Tabs einbinden. um die UI übersichtlicher zu machen.
+dann hätte man nur noch ein mittleres Frame was sich im inhalt ändert je nach Tab. was ich meine die schönere UI ist wenn man die Statusbar
+immer sieht und nicht immer neu laden muss. das wäre zwar etwas mehr arbeit aber ich denke es lohnt sich. 

@@ -13,6 +13,7 @@ from .status_poller import StatusPoller
 from .gcode_parser import parse_file
 from .widgets.gcode_view import GCodeView
 from .widgets.backplot import BackplotWidget
+from .widgets.tool_dialog import ToolSelectionDialog
 
 _DIR = os.path.dirname(__file__)
 
@@ -116,6 +117,21 @@ class ThorCNC(QObject):
         ui_file = os.path.join(_DIR, "thorcnc.ui")
         # Kein Parent → QMainWindow bleibt eigenständig, kein Doppel-Wrap
         self.ui = loader.load(ui_file)
+        
+        # Load modular status bar
+        from PySide6.QtWidgets import QWidget, QVBoxLayout
+        status_ui_file = os.path.join(_DIR, "widgets", "status_bar.ui")
+        if os.path.exists(status_ui_file):
+            status_container = self.ui.findChild(QWidget, "statusBarContainer")
+            if status_container:
+                container_layout = QVBoxLayout(status_container)
+                container_layout.setContentsMargins(0, 0, 0, 0)
+                self.status_bar = loader.load(status_ui_file, status_container)
+                container_layout.addWidget(self.status_bar)
+            else:
+                self.status_bar = self.ui
+        else:
+            self.status_bar = self.ui
 
     def _replace_custom_widgets(self):
         """Replace GCodeEditor and VTKBackPlot with custom implementations."""
@@ -960,7 +976,7 @@ class ThorCNC(QObject):
 
         # Titel
         title = QLabel("Work Coordinate Offsets (G54 – G59.3)")
-        title.setStyleSheet("font-size:14pt; font-weight:bold; color:#eee;")
+        title.setStyleSheet("font-size:16pt; font-weight:bold; color:#eee; margin-bottom: 5px;")
         outer.addWidget(title)
 
         # Table
@@ -975,8 +991,8 @@ class ThorCNC(QObject):
         tbl.setStyleSheet("""
             QTableWidget {
                 background: #1e1e1e; color: #eee;
-                gridline-color: #3a3a3a;
-                font-size: 12pt;
+                gridline-color: #333;
+                font-size: 14pt;
                 border: 1px solid #444;
             }
             QHeaderView::section {
@@ -994,13 +1010,13 @@ class ThorCNC(QObject):
         hdr.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
         hdr.setSectionResizeMode(3, QHeaderView.ResizeMode.Stretch)
         hdr.setSectionResizeMode(4, QHeaderView.ResizeMode.Fixed)
-        tbl.setColumnWidth(0, 80)
-        tbl.setColumnWidth(4, 90)
-        tbl.verticalHeader().setDefaultSectionSize(47)
+        tbl.setColumnWidth(0, 100)
+        tbl.setColumnWidth(4, 110)
+        tbl.verticalHeader().setDefaultSectionSize(65)
 
         _bold = QFont()
         _bold.setBold(True)
-        _bold.setPointSize(12)
+        _bold.setPointSize(14)
 
         for row, (label, p_idx, base_param) in enumerate(self._WCS_LIST):
             # WCS-Name
@@ -1025,7 +1041,8 @@ class ThorCNC(QObject):
             tbl.setCellWidget(row, 4, btn)
 
         outer.addWidget(tbl)
-        outer.addStretch()
+        # Removed stretch to allow table to fill the space
+
 
         self._offset_table = tbl
         self._offset_active_row = 0
@@ -2282,9 +2299,15 @@ class ThorCNC(QObject):
 
     @Slot(int)
     def _on_tool(self, tool: int):
-        from PySide6.QtWidgets import QLineEdit, QTableWidget
+        from PySide6.QtWidgets import QLineEdit, QTableWidget, QLabel
         if tool == 0:
             return  # Tool 0 = no/unknown tool, do not overwrite display
+            
+        # Update modular status bar label
+        lbl = self.status_bar.findChild(QLabel, "label_tool_nr")
+        if lbl:
+            lbl.setText(f"T{tool}")
+            
         if entry := self._w(QLineEdit, "mdi_m6_entry"):
             # Nur aktualisieren wenn der User gerade nicht tippt
             if not entry.hasFocus():
@@ -2696,18 +2719,31 @@ class ThorCNC(QObject):
             self._status(f"MDI error: {e}")
         
     def _send_m6(self):
-        from PySide6.QtWidgets import QLineEdit
-        entry = self._w(QLineEdit, "mdi_m6_entry")
-        if not entry:
-            return
-        t_val = entry.text().strip()
-        if not t_val:
-            return
-        if not t_val.upper().startswith("T"):
-            t_val = "T" + t_val
-        cmd_str = f"{t_val} M6 G43"
-        self._silent_mdi = True   # MDI-Panel nicht aufblenden
-        self._send_mdi(cmd_str)
+        # Prepare tool data from current table
+        tool_data = []
+        if self.tool_table:
+            for row in range(self.tool_table.rowCount()):
+                try:
+                    nr_item = self.tool_table.item(row, 0)
+                    dia_item = self.tool_table.item(row, 2)
+                    comment_item = self.tool_table.item(row, 4)
+                    
+                    if nr_item:
+                        nr_str = nr_item.text().strip()
+                        if nr_str:
+                            tool_data.append({
+                                'nr': int(nr_str),
+                                'dia': float(dia_item.text()) if dia_item and dia_item.text().strip() else 0.0,
+                                'comment': comment_item.text() if comment_item else ""
+                            })
+                except Exception:
+                    continue
+
+        dialog = ToolSelectionDialog(tool_data, self.ui)
+        if dialog.exec():
+            val = dialog.get_selected_tool()
+            if val is not None:
+                self._send_mdi(f"T{val} M6 G43")
 
     def _set_jog_increment(self, inc: float):
         self._jog_increment = inc
