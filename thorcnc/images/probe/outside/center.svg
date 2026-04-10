@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80">
+  <!-- Outside Center (Z Surface) - NO ARROW -->
+  <rect x="17.5" y="17.5" width="45" height="45" fill="#5a5a5a" rx="2"/>
+  <circle cx="40" cy="40" r="6" fill="#cc22cc" stroke="#ff66ff" stroke-width="1"/>
+</svg>

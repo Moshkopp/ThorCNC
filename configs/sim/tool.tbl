@@ -17,4 +17,4 @@ T16 P16 D+25.000000 Z+29.340000 ;Schaftfraeser 25mm
 T17 P17 D+26.000000 Z+39.610000 ;Schaftfraeser 26mm
 T18 P18 D+28.000000 Z+24.850000 ;Schaftfraeser 28mm
 T19 P19 D+30.000000 Z+32.170000 ;Schaftfraeser 30mm
-T20 P20 D+35.000000 Z+27.500000 ;Planfraeser 35mm
+T99 P99 D2 Z+27.500000 ;Planfraeser 35mm

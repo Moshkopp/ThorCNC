@@ -1,0 +1,4 @@
+O<before_probe> sub
+  M64 P2
+O<before_probe> endsub
+M2

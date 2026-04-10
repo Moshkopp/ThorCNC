@@ -1,15 +1,15 @@
 """
-3D Backplot mit pyqtgraph OpenGL.
+3D Backplot using pyqtgraph OpenGL.
 
-Farbkodierung:
-  Eilgang (G0)  → rot,   gestrichelt (alpha 0.4)
-  Vorschub (G1) → weiß
-  Bogen (G2/G3) → cyan
+Color coding:
+  Rapid (G0)  → red, dashed (alpha 0.4)
+  Feed (G1)   → white
+  Arc (G2/G3) → cyan
 
-Werkzeugposition → gelber Punkt
+Tool position → yellow point
 
-Fallback: wenn pyqtgraph/OpenGL nicht verfügbar, wird ein
-Hinweis-Label angezeigt statt eines Fehlers.
+Fallback: if pyqtgraph/OpenGL is not available, a
+hint label is displayed instead of an error.
 """
 
 import numpy as np
@@ -42,7 +42,7 @@ _COLOR_FEED    = (0.9, 0.9, 0.9, 1.0)    # weiß
 _COLOR_ARC     = (0.2, 0.9, 0.9, 1.0)    # cyan
 _COLOR_TOOL    = (1.0, 0.9, 0.0, 1.0)    # gelb
 
-_CROSS_LEN = 40.0   # Länge der Achsenkreuz-Arme (mm)
+_CROSS_LEN = 40.0   # Length of axis cross arms (mm)
 
 
 def _segments_to_array(segments: list[Segment], kind: int) -> np.ndarray | None:
@@ -107,7 +107,7 @@ if _HAS_GL:
                     self.opts['distance'] *= 1.01 ** diff.y()
                     self.update()
                 else:
-                    # Mitte → Pan (X + Z, kein Y-Weltachsen-Zoom-Effekt)
+                    # Center -> Pan (X + Z, no Y-world axis zoom effect)
                     self.pan(diff.x(), 0, diff.y(), relative='view-upright')
 
 
@@ -137,7 +137,7 @@ class _BackplotGL(QWidget):
         self._items_data: list = []
         self._wcs_offset = (0.0, 0.0, 0.0)
 
-        # Werkzeug-Marker (Fräser) - Zylinder
+        # Tool marker (End mill) - Cylinder
         self._tool_marker = gl.GLMeshItem(
             meshdata=self._capped_cylinder(1.0, 20.0, cols=40),
             color=(0.9, 0.8, 0.2, 1.0),   # Undurchsichtiges Titan-Gold
@@ -148,7 +148,7 @@ class _BackplotGL(QWidget):
         )
         self._view.addItem(self._tool_marker)
 
-        # Werkzeug-Trail (Pfad der gefahren wurde)
+        # Tool trail (History of movement)
         self._trail_pts = []
         self._trail_item = gl.GLLinePlotItem(
             pos=np.empty((0, 3), dtype=np.float32),
@@ -161,7 +161,7 @@ class _BackplotGL(QWidget):
         self._view.addItem(self._trail_item)
 
     def _setup_static_items(self):
-        # ── Maschinen-Nullpunkt (fest bei 0,0,0) ─────────────────────────
+        # ── Machine Zero (Fixed at 0,0,0) ─────────────────────────
         # helles Kreuz: X=rot, Y=grün, Z=blau
         L = _CROSS_LEN
         mach_pts = np.array([
@@ -178,14 +178,14 @@ class _BackplotGL(QWidget):
             pos=mach_pts, color=mach_col, width=2.5,
             antialias=True, mode='lines'))
 
-        # Maschinen-Nullpunkt Marker (weißer Punkt)
+        # Machine Zero Marker (White point)
         self._mach_marker = gl.GLScatterPlotItem(
             pos=np.array([[0, 0, 0]], dtype=np.float32),
             color=np.array([[1.0, 1.0, 1.0, 1.0]], dtype=np.float32),
             size=8, pxMode=True)
         self._view.addItem(self._mach_marker)
 
-        # ── WCS-Nullpunkt (G54 etc., verschiebbar) ────────────────────────
+        # ── WCS Origin (G54 etc., movable) ────────────────────────
         # orange Kreuz, etwas kürzer
         ws = _CROSS_LEN * 0.7
         wcs_pts = np.array([
@@ -203,7 +203,7 @@ class _BackplotGL(QWidget):
             antialias=True, mode='lines')
         self._view.addItem(self._wcs_cross)
 
-        # WCS-Nullpunkt Marker (oranger Punkt)
+        # WCS Origin Marker (Orange point)
         self._wcs_marker = gl.GLScatterPlotItem(
             pos=np.array([[0, 0, 0]], dtype=np.float32),
             color=np.array([[1.0, 0.5, 0.0, 1.0]], dtype=np.float32),
@@ -289,7 +289,7 @@ class _BackplotGL(QWidget):
         self._trail_item.setData(pos=np.empty((0, 3), dtype=np.float32))
 
     def set_wcs_origin(self, x: float, y: float, z: float):
-        """Verschiebt das WCS-Achsenkreuz (orange) an die neue Position."""
+        """Moves the WCS axis cross (orange) to the new position."""
         self._wcs_offset = (x, y, z)
         ws = _CROSS_LEN * 0.7
         wcs_pts = np.array([
@@ -320,7 +320,7 @@ class _BackplotGL(QWidget):
                              x_min: float, x_max: float,
                              y_min: float, y_max: float,
                              z_min: float, z_max: float):
-        """Zeichnet den Maschinenarbeitsbereich als Drahtgitterrahmen."""
+        """Draws the machine work area as a wireframe."""
         if hasattr(self, "_envelope_item") and self._envelope_item:
             self._view.removeItem(self._envelope_item)
 
@@ -331,7 +331,7 @@ class _BackplotGL(QWidget):
             [x_min, y_min, z_max], [x_max, y_min, z_max],
             [x_max, y_max, z_max], [x_min, y_max, z_max],
         ]
-        # 12 Kanten als Linienpaare
+        # 12 Edges as line pairs
         edges = [
             c[0],c[1], c[1],c[2], c[2],c[3], c[3],c[0],  # Boden
             c[4],c[5], c[5],c[6], c[6],c[7], c[7],c[4],  # Deckel
@@ -497,7 +497,7 @@ class BackplotWidget(QWidget):
             self._impl.set_antialiasing(enabled)
 
     def get_actual_samples(self) -> int:
-        """Gibt die tatsächlich vom Treiber bereitgestellten MSAA-Samples zurück."""
+        """Returns the MSAA samples actually provided by the driver."""
         if self._impl and hasattr(self._impl, "_view"):
             return self._impl._view.format().samples()
         return 0

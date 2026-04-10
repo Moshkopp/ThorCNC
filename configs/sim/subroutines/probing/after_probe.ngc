@@ -1,0 +1,4 @@
+O<after_probe> sub
+  M65 P2
+O<after_probe> endsub
+M2

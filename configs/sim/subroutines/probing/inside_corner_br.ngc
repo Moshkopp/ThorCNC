@@ -1,0 +1,47 @@
+( ThorCNC - Inside Bottom-Right Corner )
+( #1: Edge Width, #3: Max XY, #4: Max Z, #5: Search Vel, #6: Probe Vel, #7: Z Cl, #8: Depth, #9: Auto Zero )
+
+O<inside_corner_br> sub
+    ( 1. Z-Probe )
+    G91
+    G38.2 Z-[#4] F#5
+    G0 Z#7
+    G38.2 Z-[#7 * 1.5] F#6
+    O101 if [#9 GT 0.5]
+        G10 L20 P0 Z0
+    O101 endif
+    G0 Z#7
+    G90
+
+    #<start_x> = #5420
+    #<start_y> = #5421
+    #<rad> = [#5410 / 2]
+    
+    ( 2. X-Probe to right wall )
+    G91
+    G38.2 X#3 F#5
+    #<x_hit> = #5061
+    G0 X-[#7]
+    G38.2 X[#7 * 1.5] F#6
+    #<x_hit> = #5061
+    G90
+    G0 X#<start_x>
+    
+    ( 3. Y-Probe to bottom wall )
+    G91
+    G38.2 Y-#3 F#5
+    #<y_hit> = #5062
+    G0 Y#7
+    G38.2 Y[#7 * 1.5] F#6
+    #<y_hit> = #5062
+    G90
+    G0 Y#<start_y>
+    
+    ( 4. Final Position & Zeroing )
+    G0 X#<start_x> Y#<start_y>
+    O102 if [#9 GT 0.5]
+        ( Right wall is at x_hit + radius. Bottom wall is at y_hit - radius )
+        G10 L20 P0 X[#<start_x> - [#<x_hit> + #<rad>]] Y[#<start_y> - [#<y_hit> - #<rad>]]
+    O102 endif
+O<inside_corner_br> endsub
+M2

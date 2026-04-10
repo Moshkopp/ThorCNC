@@ -16,7 +16,7 @@ class SettingsManager:
                 with open(self.filepath, "r", encoding="utf-8") as f:
                     self.prefs = json.load(f)
             except Exception as e:
-                print(f"Fehler beim Laden der Settings {self.filepath}: {e}")
+                print(f"Error loading settings {self.filepath}: {e}")
                 self.prefs = {}
         else:
             self.prefs = {}
@@ -34,4 +34,4 @@ class SettingsManager:
             with open(self.filepath, "w", encoding="utf-8") as f:
                 json.dump(self.prefs, f, indent=4)
         except Exception as e:
-            print(f"Fehler beim Speichern der Settings in {self.filepath}: {e}")
+            print(f"Error saving settings in {self.filepath}: {e}")

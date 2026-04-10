@@ -18,12 +18,13 @@ class StatusPoller(QObject):
     g5x_offset_changed   = Signal(list)   # work coord offsets
     g5x_index_changed    = Signal(int)    # active WCS index (1=G54 … 9=G59.3)
     tool_in_spindle      = Signal(int)
-    tool_offset_changed  = Signal(list)   # [x, y, z, ...] aktueller Werkzeugoffset
+    tool_offset_changed  = Signal(list)   # [x, y, z, ...] current tool offset
 
     # Program
     file_loaded          = Signal(str)
     program_line         = Signal(int)
     gcodes_changed       = Signal(tuple)  # tuple of active G-codes
+    mcodes_changed       = Signal(tuple)  # tuple of active M-codes
 
     # Overrides
     feed_override        = Signal(float)  # 0.0–2.0
@@ -73,6 +74,7 @@ class StatusPoller(QObject):
         self._spindle_load   = None
         self._homed          = None
         self._gcodes         = None
+        self._mcodes         = None
 
         self._timer = QTimer(self)
         self._timer.setInterval(interval_ms)
@@ -165,6 +167,11 @@ class StatusPoller(QObject):
         if gcodes != self._gcodes:
             self._gcodes = gcodes
             self.gcodes_changed.emit(gcodes)
+
+        mcodes = s.mcodes
+        if mcodes != self._mcodes:
+            self._mcodes = mcodes
+            self.mcodes_changed.emit(mcodes)
 
         if s.feedrate != self._feed_override:
             self._feed_override = s.feedrate

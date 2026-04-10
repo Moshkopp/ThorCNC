@@ -18,7 +18,7 @@ from typing import List, Tuple, Optional
 # Segment-Typen
 RAPID = 0   # G0
 FEED  = 1   # G1
-ARC   = 2   # G2/G3 (bereits in Linien aufgelöst)
+ARC   = 2   # G2/G3 (already resolved into lines)
 
 
 @dataclass

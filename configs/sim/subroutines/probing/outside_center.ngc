@@ -1,0 +1,16 @@
+( ThorCNC - Outside Center Z-Probe )
+( #3: Max XY, #4: Max Z, #5: Search Vel, #6: Probe Vel, #7: Z Cl, #8: Depth, #9: Auto Zero )
+
+O<outside_center> sub
+    ( Simple Z-Probe at current location )
+    G91
+    G38.2 Z-[#4] F#5
+    G0 Z#7
+    G38.2 Z-[#7 * 1.5] F#6
+    O101 if [#9 GT 0.5]
+        G10 L20 P0 Z0
+    O101 endif
+    G0 Z#7
+    G90
+O<outside_center> endsub
+M2

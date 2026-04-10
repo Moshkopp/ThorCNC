@@ -1,12 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80">
-  <!-- Workpiece -->
-  <rect x="18" y="18" width="54" height="54" fill="#5a5a5a" rx="2"/>
-  <!-- Probe ball at top-left corner (touching both faces) -->
-  <circle cx="15" cy="15" r="7" fill="#cc22cc" stroke="#ff66ff" stroke-width="1.5"/>
-  <!-- Arrow right (X along top face) -->
-  <line x1="23" y1="18" x2="38" y2="18" stroke="white" stroke-width="2"/>
-  <polygon points="38,15 44,18 38,21" fill="white"/>
-  <!-- Arrow down (Y along left face) -->
-  <line x1="18" y1="23" x2="18" y2="38" stroke="white" stroke-width="2"/>
-  <polygon points="15,38 18,44 21,38" fill="white"/>
+  <!-- Outside Top-Left Corner (Material is 45x45 in Bottom-Right) -->
+  <rect x="30" y="30" width="45" height="45" fill="#5a5a5a" rx="2"/>
+  <circle cx="45" cy="45" r="6" fill="#cc22cc" stroke="#ff66ff" stroke-width="1"/>
+  <!-- Arrows from Outside -->
+  <line x1="8" y1="45" x2="25" y2="45" stroke="white" stroke-width="2"/>
+  <polygon points="25,41 30,45 25,49" fill="white"/>
+  <line x1="45" y1="8" x2="45" y2="25" stroke="white" stroke-width="2"/>
+  <polygon points="41,25 45,30 49,25" fill="white"/>
 </svg>

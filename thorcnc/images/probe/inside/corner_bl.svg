@@ -1,14 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80">
-  <!-- Workpiece -->
-  <rect x="5" y="5" width="70" height="70" fill="#5a5a5a" rx="2"/>
-  <!-- Pocket -->
-  <rect x="18" y="18" width="44" height="44" fill="#1a1a1a" rx="1"/>
-  <!-- Probe ball touching bottom wall (y=62) and left wall (x=18): center = 62-7=55 -->
-  <circle cx="25" cy="55" r="7" fill="#cc22cc" stroke="#ff66ff" stroke-width="1.5"/>
-  <!-- Arrow right (into pocket) -->
-  <line x1="33" y1="55" x2="48" y2="55" stroke="white" stroke-width="2"/>
-  <polygon points="48,52 54,55 48,58" fill="white"/>
-  <!-- Arrow up (into pocket) -->
-  <line x1="25" y1="47" x2="25" y2="32" stroke="white" stroke-width="2"/>
-  <polygon points="22,32 25,26 28,32" fill="white"/>
+  <!-- Inside Bottom-Left Corner (Pocket floor is 45x45 grey) -->
+  <rect x="0" y="0" width="80" height="80" fill="#2a2a2a"/>
+  <!-- Walls (Lighter Grey #5a5a5a) -->
+  <path d="M0,0 L35,0 L35,45 L80,45 L80,80 L0,80 Z" fill="#5a5a5a"/>
+  <!-- Probe Ball on Floor -->
+  <circle cx="55" cy="25" r="6" fill="#cc22cc" stroke="#ff66ff" stroke-width="1"/>
+  <line x1="55" y1="25" x2="30" y2="25" stroke="white" stroke-width="2"/>
+  <polygon points="30,21 25,25 30,29" fill="white"/>
+  <line x1="55" y1="25" x2="55" y2="50" stroke="white" stroke-width="2"/>
+  <polygon points="51,50 55,55 59,50" fill="white"/>
 </svg>

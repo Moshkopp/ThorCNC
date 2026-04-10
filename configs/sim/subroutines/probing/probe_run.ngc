@@ -1,0 +1,5 @@
+; ThorCNC – Probe sequence
+O<before_probe> call
+O<outside_center> call  [20.0] [0] [10.0] [50.0] [20.0] [50.0] [20.0] [4.0] [0]
+O<after_probe> call
+M2

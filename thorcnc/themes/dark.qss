@@ -199,7 +199,7 @@ QSlider::handle:horizontal {
 }
 
 /* ── Labels (DRO) ── */
-/* ── Jog Buttons (Wurstfinger-Schutz) ── */
+/* ── Jog Buttons (Touch optimized) ── */
 QPushButton[objectName*="_jogbutton_"] {
     min-width: 50px;
     min-height: 50px;
@@ -210,7 +210,7 @@ QPushButton[objectName*="_jogbutton_"] {
 
 QPushButton[objectName*="_jogbutton_"]:hover {
     background-color: #4a4a4a;
-    border-color: #2ecc71; /* Grüner Rand beim Hovern für Achsen-Buttons */
+    border-color: #2ecc71; /* Green border on hover for axis buttons */
 }
 
 QLabel#lbl_dro_x,
@@ -240,7 +240,7 @@ QLabel#lbl_spindle_rpm {
     color: #f39c12;
 }
 
-/* "Soll:" und "Ist:" Labels */
+/* "Target:" and "Actual:" Labels */
 QGroupBox#spindleGroup QGridLayout > QLabel {
     font-size: 18px; /* Deutlich größer */
     color: #aaaaaa;

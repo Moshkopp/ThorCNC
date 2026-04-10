@@ -1,0 +1,17 @@
+# probe_sim.hal (POSTGUI)
+#
+# Virtuelles Werkstück entfernt.
+# Ermöglicht manuelle Simulation des Probe-Eingangs.
+
+loadrt or2 count=1
+addf or2.0 servo-thread
+
+# 1. Anschluss vom manuellen Button in der ThorCNC-GUI
+net sim-hit-gui thorcnc.probe-sim => or2.0.in0
+
+# 2. Ein freier Pin für manuelle Bedienung via Halshow
+# Du kannst in Halshow 'or2.0.in1' auf TRUE setzen, um einen Kontakt zu simulieren.
+net sim-hit-manual <= or2.0.in1
+
+# Finaler Input an LinuxCNC
+net probe-final or2.0.out => motion.probe-input

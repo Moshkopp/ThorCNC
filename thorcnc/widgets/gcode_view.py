@@ -34,7 +34,7 @@ class _GCodeHighlighter(QSyntaxHighlighter):
             (re.compile(r'\b[XYZABC][-+]?[\d.]+', re.IGNORECASE), fmt("#2ecc71")),
             # F, S
             (re.compile(r'\b[FS][\d.]+', re.IGNORECASE),      fmt("#f1c40f")),
-            # T (Werkzeug)
+            # T (Tool)
             (re.compile(r'\bT\d+', re.IGNORECASE),            fmt("#bb8fce")),
             # I J K R (Bogen-Parameter)
             (re.compile(r'\b[IJKR][-+]?[\d.]+', re.IGNORECASE), fmt("#85c1e9")),
@@ -89,7 +89,7 @@ class GCodeView(QPlainTextEdit):
 
         self._update_line_number_width(0)
 
-        # Hintergrundfarben
+        # Background colors
         self._bg_current = QColor("#2c3e50")   # aktuelle Zeile
         self._fg_linenum  = QColor("#5d6d7e")
         self._fg_linenum_current = QColor("#aaaaaa")
