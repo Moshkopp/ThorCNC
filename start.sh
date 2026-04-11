@@ -63,7 +63,7 @@ fi
 
 # ── Umgebungsvariablen setzen ────────────────────────────────────────────────
 export THORCNC_THEME="$THEME"
-export PYTHONPATH="$SCRIPT_DIR:$PYTHONPATH"
+export PYTHONPATH="$SCRIPT_DIR${PYTHONPATH:+:$PYTHONPATH}"
 
 # Falls wir nicht im venv sind, stellen wir sicher, dass ~/.local/bin ganz vorne ist
 if [ -z "${VIRTUAL_ENV:-}" ]; then
