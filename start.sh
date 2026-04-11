@@ -61,13 +61,19 @@ if ! python3 -c "import pyqtgraph.opengl" &>/dev/null 2>&1; then
     echo "           pip install pyqtgraph PyOpenGL"
 fi
 
-# ── Theme via Umgebungsvariable weitergeben ───────────────────────────────────
+# ── Umgebungsvariablen setzen ────────────────────────────────────────────────
 export THORCNC_THEME="$THEME"
+export PYTHONPATH="$SCRIPT_DIR:$PYTHONPATH"
 
-# Wir nutzen unsere eigene thorcnc.ui, keine Probe Basic Konvertierung mehr.
+# Falls wir nicht im venv sind, stellen wir sicher, dass ~/.local/bin ganz vorne ist
+if [ -z "${VIRTUAL_ENV:-}" ]; then
+    export PATH="$HOME/.local/bin:$PATH"
+fi
 
 echo "[start.sh] Starte LinuxCNC mit: $INI"
 echo "[start.sh] Theme: $THEME"
+echo "[start.sh] PYTHONPATH: $SCRIPT_DIR"
 echo ""
 
+# Wir nutzen exec, damit der Prozess die Umgebung übernimmt
 exec linuxcnc "$INI"
