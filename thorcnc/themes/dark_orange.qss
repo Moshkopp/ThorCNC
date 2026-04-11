@@ -13,10 +13,19 @@ QPushButton[objectName^="nav_"]:checked {
     color: #ffffff;
 }
 
-QSlider::handle:horizontal,
 QSlider::sub-page:horizontal {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, 
+        stop:0 #8b4000, stop:1 #e67e22);
+    border: 1px solid #333;
+}
+
+QSlider::handle:horizontal:hover {
+    border: 2px solid #e67e22;
+}
+
+QSlider::handle:horizontal:pressed {
     background-color: #e67e22;
-    border-color: #f39c12;
+    border: 1px solid #ffffff;
 }
 
 QLineEdit:focus {

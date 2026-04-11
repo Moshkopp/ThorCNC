@@ -73,7 +73,11 @@ def main():
              or "dark")
 
     app = QApplication.instance() or QApplication(sys.argv)
+    
+    # Konsistente HiDPI Skalierung erzwingen
     app.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
+    if hasattr(Qt, "HighDpiScaleFactorRoundingPolicy"):
+        app.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
 
     load_theme(app, theme)
 

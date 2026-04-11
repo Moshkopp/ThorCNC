@@ -1,8 +1,8 @@
 /* ThorCNC Dark Theme - Unified Line */
 
 * {
-    font-family: "Noto Sans", "DejaVu Sans", sans-serif;
-    font-size: 12px;
+    font-family: "Noto Sans", "Inter", "Roboto", "DejaVu Sans", "Liberation Sans", sans-serif;
+    font-size: 10pt;
     color: #d0d0d0;
 }
 
@@ -47,7 +47,7 @@ QGroupBox::title {
     subcontrol-position: top left;
     padding: 0 4px;
     color: #888888;
-    font-size: 11px;
+    font-size: 9pt;
 }
 
 /* ── Standard Buttons ── */
@@ -88,7 +88,7 @@ QPushButton[objectName^="nav_"] {
     border-radius: 4px;
     margin: 4px 8px; /* Floating margin */
     min-height: 60px;
-    font-size: 13px;
+    font-size: 11pt;
     font-weight: bold;
     text-align: left;
     padding-left: 16px;
@@ -184,18 +184,45 @@ QScrollBar::handle:vertical:hover {
 }
 
 QSlider::groove:horizontal {
-    height: 4px;
-    background-color: #444444;
-    border-radius: 2px;
+    height: 8px;
+    background-color: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 4px;
+    margin: 4px 0;
+}
+
+QSlider::sub-page:horizontal {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, 
+        stop:0 #2a5a8f, stop:1 #3a7abf);
+    border: 1px solid #333;
+    border-radius: 4px;
+    margin: 4px 0;
+}
+
+QSlider::add-page:horizontal {
+    background: #333;
+    border: 1px solid #222;
+    border-radius: 4px;
+    margin: 4px 0;
 }
 
 QSlider::handle:horizontal {
+    background-color: #f0f0f0;
+    border: 1px solid #777;
+    width: 22px;
+    height: 22px;
+    margin: -8px 0;
+    border-radius: 11px;
+}
+
+QSlider::handle:horizontal:hover {
+    background-color: #ffffff;
+    border: 1px solid #3a7abf;
+}
+
+QSlider::handle:horizontal:pressed {
     background-color: #3a7abf;
-    border: 1px solid #5599dd;
-    width: 18px;
-    height: 18px;
-    margin: -7px 0;
-    border-radius: 9px;
+    border: 1px solid #ffffff;
 }
 
 /* ── Labels (DRO) ── */
@@ -232,23 +259,23 @@ QGroupBox#jogBox {
 
 QGroupBox#spindleGroup QLabel {
     font-weight: bold;
-    font-size: 15px;
+    font-size: 12pt;
 }
 
 QLabel#lbl_spindle_rpm {
-    font-size: 14px;
+    font-size: 11pt;
     color: #f39c12;
 }
 
 /* "Target:" and "Actual:" Labels */
 QGroupBox#spindleGroup QGridLayout > QLabel {
-    font-size: 18px; /* Deutlich größer */
+    font-size: 14pt;
     color: #aaaaaa;
 }
 
 QLabel#lbl_spindle_soll,
 QLabel#lbl_spindle_ist {
-    font-size: 28px; /* Auf 28px vergrößert für Fernlesbarkeit */
+    font-size: 21pt;
     color: #ffffff;
     background-color: #1a1a1a;
     border: 1px solid #444444;
@@ -262,7 +289,7 @@ QProgressBar#spindle_load_bar {
     border-radius: 8px;
     background-color: #1a1a1a;
     text-align: center;
-    font-size: 10px;
+    font-size: 8pt;
     font-weight: bold;
     color: transparent;
 }
@@ -276,6 +303,6 @@ QPushButton#btn_spindle_fwd,
 QPushButton#btn_spindle_rev,
 QPushButton#btn_spindle_stop {
     min-height: 52px; /* Touch-freundliche Höhe */
-    font-size: 14px;
+    font-size: 11pt;
     font-weight: bold;
 }

@@ -236,3 +236,42 @@ QPushButton#btn_spindle_stop {
     font-size: 14px;
     font-weight: bold;
 }
+
+/* ── Sliders (Premium Layout) ── */
+QSlider::groove:horizontal {
+    height: 8px;
+    background-color: #dcdcdc;
+    border: 1px solid #cccccc;
+    border-radius: 4px;
+    margin: 4px 0;
+}
+
+QSlider::sub-page:horizontal {
+    background-color: #2980b9;
+    border-radius: 4px;
+    margin: 4px 0;
+}
+
+QSlider::add-page:horizontal {
+    background: #e8e8e8;
+    border-radius: 4px;
+    margin: 4px 0;
+}
+
+QSlider::handle:horizontal {
+    background-color: #ffffff;
+    border: 1px solid #999999;
+    width: 22px;
+    height: 22px;
+    margin: -8px 0;
+    border-radius: 11px;
+}
+
+QSlider::handle:horizontal:hover {
+    border: 1px solid #2980b9;
+}
+
+QSlider::handle:horizontal:pressed {
+    background-color: #2980b9;
+    border: 1px solid #ffffff;
+}
