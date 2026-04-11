@@ -134,6 +134,30 @@ class ThorCNC(QObject):
         else:
             self.status_bar = self.ui
 
+        # Load Right Panel Modules
+        from PySide6.QtWidgets import QFrame, QSizePolicy, QVBoxLayout
+        right_panel = self.ui.findChild(QFrame, "rightPanel")
+        if right_panel:
+            r_lay = right_panel.layout()
+            if not r_lay:
+                r_lay = QVBoxLayout(right_panel)
+            
+            r_lay.setContentsMargins(0, 0, 0, 0)
+            r_lay.setSpacing(6)
+            
+            for m_name in ["jog_panel", "spindle_panel", "run_controls"]:
+                mod_file = os.path.join(_DIR, "widgets", f"{m_name}.ui")
+                if os.path.exists(mod_file):
+                    sub_w = loader.load(mod_file, self.ui)
+                    if sub_w:
+                        sub_w.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Maximum)
+                        if hasattr(sub_w, 'layout') and sub_w.layout():
+                            sub_w.layout().setContentsMargins(0, 0, 0, 0)
+                        r_lay.addWidget(sub_w)
+                        
+                        if m_name == "spindle_panel":
+                            r_lay.addStretch()
+
     def _replace_custom_widgets(self):
         """Replace GCodeEditor and VTKBackPlot with custom implementations."""
         from PySide6.QtWidgets import (QWidget, QSplitter, QVBoxLayout, QHBoxLayout,
@@ -416,10 +440,10 @@ class ThorCNC(QObject):
         dro_style_work    = ("font: 18pt 'Bebas Kai'; color: #00dd55;"
                              " background: rgb(25,28,30); border-radius:3px;"
                              " padding: 2px 8px;")
-        dro_style_machine = ("font: 14pt 'Bebas Kai'; color: #aaaaaa;"
+        dro_style_machine = ("font: 18pt 'Bebas Kai'; color: #aaaaaa;"
                              " background: rgb(25,28,30); border-radius:3px;"
                              " padding: 2px 8px;")
-        dro_style_dtg     = ("font: 14pt 'Bebas Kai'; color: #e67e22;"
+        dro_style_dtg     = ("font: 18pt 'Bebas Kai'; color: #e67e22;"
                              " background: rgb(25,28,30); border-radius:3px;"
                              " padding: 2px 8px;")
 
@@ -1594,7 +1618,7 @@ class ThorCNC(QObject):
         dro_style_work    = ("font: 16pt 'Bebas Kai'; color: #00dd55;"
                              " background: rgb(30,34,36); border-radius:3px;"
                              " padding: 0 6px;")
-        dro_style_machine = ("font: 14pt 'Bebas Kai'; color: #aaaaaa;"
+        dro_style_machine = ("font: 16pt 'Bebas Kai'; color: #aaaaaa;"
                              " background: rgb(30,34,36); border-radius:3px;"
                              " padding: 0 6px;")
 
@@ -2326,6 +2350,12 @@ class ThorCNC(QObject):
             cb.activated.connect(lambda idx: self.cmd.mode(_MODE_MAP[idx]))
 
         # Overrides & Jog Slider
+        from PySide6.QtWidgets import QLabel
+        from PySide6.QtCore import Qt
+        for lbl_name in ["feed_override_status", "spindle_override_status", "rapid_override_status", "v_override_status", "jog_vel_label"]:
+            if lbl := self._w(QLabel, lbl_name):
+                lbl.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+
         if s := sld("feed_override_slider"):
             s.valueChanged.connect(lambda v: self.cmd.feedrate(v / 100.0))
         if s := sld("spindle_override_slider"):
@@ -2773,7 +2803,7 @@ class ThorCNC(QObject):
         from PySide6.QtWidgets import QLabel
         self._is_spindle_running = (abs(rpm) > 0.1)
         if lbl := self._w(QLabel, "lbl_spindle_soll"):
-            lbl.setText(f"{abs(rpm):.0f}")
+            lbl.setText(f"CMD: {abs(rpm):.0f} RPM")
         self._update_run_buttons()
         self._update_spindle_buttons()
 
@@ -2781,7 +2811,7 @@ class ThorCNC(QObject):
     def _on_spindle_actual(self, rpm: float):
         from PySide6.QtWidgets import QLabel
         if lbl := self._w(QLabel, "lbl_spindle_ist"):
-            lbl.setText(f"{abs(rpm):.0f}")
+            lbl.setText(f"{abs(rpm):.0f} RPM")
 
     @Slot(float)
     def _on_spindle_load(self, load: float):

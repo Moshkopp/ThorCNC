@@ -50,6 +50,23 @@ QGroupBox::title {
     font-size: 9pt;
 }
 
+/* ── Frames and Groups ── */
+QFrame {
+    border: none; /* Let internal widgets handle their own borders unless stated otherwise */
+}
+QGroupBox {
+    border: 1px solid #444444;
+    border-radius: 4px;
+    margin-top: 1ex; /* leave space at the top for the title */
+    background-color: #2a2a2a;
+}
+QGroupBox::title {
+    subcontrol-origin: margin;
+    subcontrol-position: top left;
+    padding: 0 4px;
+    color: #999999;
+}
+
 /* ── Standard Buttons ── */
 QPushButton {
     background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #3d3d3d, stop:1 #2a2a2a);
@@ -60,6 +77,7 @@ QPushButton {
     color: #e0e0e0;
     font-weight: bold;
 }
+
 
 QPushButton:hover {
     background-color: #4a4a4a;

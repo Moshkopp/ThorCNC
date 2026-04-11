@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <ui version="4.0">
  <class>StatusBar</class>
  <widget class="QFrame" name="bottomBarFrame">
@@ -211,7 +211,7 @@
        <number>0</number>
       </property>
       <item>
-       <layout class="QHBoxLayout" name="dro_display_layout"/>
+       <layout class="QHBoxLayout" name="dro_display_layout" />
       </item>
      </layout>
     </widget>
@@ -224,9 +224,9 @@
      <layout class="QVBoxLayout">
       <item>
        <layout class="QHBoxLayout">
-        <item>
+        <item><layout class="QGridLayout"><property name="margin"><number>0</number></property><item row="0" column="0">
          <widget class="QSlider" name="feed_override_slider">
-          <property name="minimum">
+          <property name="minimumSize"><size><width>0</width><height>25</height></size></property><property name="minimum">
            <number>0</number>
           </property>
           <property name="maximum">
@@ -240,23 +240,17 @@
           </property>
          </widget>
         </item>
-        <item>
+        <item row="0" column="0">
          <widget class="QLabel" name="feed_override_status">
-          <property name="minimumSize">
-           <size>
-            <width>60</width>
-            <height>0</height>
-           </size>
-          </property>
           <property name="text">
            <string>F 100%</string>
           </property>
           <property name="alignment">
-           <set>Qt::AlignmentFlag::AlignCenter</set>
+           <set>Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
           </property>
-         </widget>
+         <property name="styleSheet"><string>color: white; background: transparent; padding-left: 6px;</string></property></widget>
         </item>
-        <item>
+        </layout></item><item>
          <widget class="QPushButton" name="feed_override_to_100_button">
           <property name="maximumSize">
            <size>
@@ -273,9 +267,9 @@
       </item>
       <item>
        <layout class="QHBoxLayout">
-        <item>
+        <item><layout class="QGridLayout"><property name="margin"><number>0</number></property><item row="0" column="0">
          <widget class="QSlider" name="spindle_override_slider">
-          <property name="minimum">
+          <property name="minimumSize"><size><width>0</width><height>25</height></size></property><property name="minimum">
            <number>0</number>
           </property>
           <property name="maximum">
@@ -289,23 +283,17 @@
           </property>
          </widget>
         </item>
-        <item>
+        <item row="0" column="0">
          <widget class="QLabel" name="spindle_override_status">
-          <property name="minimumSize">
-           <size>
-            <width>60</width>
-            <height>0</height>
-           </size>
-          </property>
           <property name="text">
            <string>S 100%</string>
           </property>
           <property name="alignment">
-           <set>Qt::AlignmentFlag::AlignCenter</set>
+           <set>Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
           </property>
-         </widget>
+         <property name="styleSheet"><string>color: white; background: transparent; padding-left: 6px;</string></property></widget>
         </item>
-        <item>
+        </layout></item><item>
          <widget class="QPushButton" name="spindle_override_to_100_button">
           <property name="maximumSize">
            <size>
@@ -322,9 +310,9 @@
       </item>
       <item>
        <layout class="QHBoxLayout">
-        <item>
+        <item><layout class="QGridLayout"><property name="margin"><number>0</number></property><item row="0" column="0">
          <widget class="QSlider" name="rapid_override_slider">
-          <property name="minimum">
+          <property name="minimumSize"><size><width>0</width><height>25</height></size></property><property name="minimum">
            <number>0</number>
           </property>
           <property name="maximum">
@@ -338,23 +326,17 @@
           </property>
          </widget>
         </item>
-        <item>
+        <item row="0" column="0">
          <widget class="QLabel" name="rapid_override_status">
-          <property name="minimumSize">
-           <size>
-            <width>60</width>
-            <height>0</height>
-           </size>
-          </property>
           <property name="text">
            <string>R 100%</string>
           </property>
           <property name="alignment">
-           <set>Qt::AlignmentFlag::AlignCenter</set>
+           <set>Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
           </property>
-         </widget>
+         <property name="styleSheet"><string>color: white; background: transparent; padding-left: 6px;</string></property></widget>
         </item>
-        <item>
+        </layout></item><item>
          <widget class="QPushButton" name="rapid_override_to_100_button">
           <property name="maximumSize">
            <size>
@@ -371,9 +353,9 @@
       </item>
       <item>
        <layout class="QHBoxLayout">
-        <item>
+        <item><layout class="QGridLayout"><property name="margin"><number>0</number></property><item row="0" column="0">
          <widget class="QSlider" name="v_override_slider">
-          <property name="minimum">
+          <property name="minimumSize"><size><width>0</width><height>25</height></size></property><property name="minimum">
            <number>0</number>
           </property>
           <property name="maximum">
@@ -387,23 +369,17 @@
           </property>
          </widget>
         </item>
-        <item>
+        <item row="0" column="0">
          <widget class="QLabel" name="v_override_status">
-          <property name="minimumSize">
-           <size>
-            <width>60</width>
-            <height>0</height>
-           </size>
-          </property>
           <property name="text">
            <string>V 100%</string>
           </property>
           <property name="alignment">
-           <set>Qt::AlignmentFlag::AlignCenter</set>
+           <set>Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
           </property>
-         </widget>
+         <property name="styleSheet"><string>color: white; background: transparent; padding-left: 6px;</string></property></widget>
         </item>
-        <item>
+        </layout></item><item>
          <widget class="QPushButton" name="v_override_to_100_button">
           <property name="maximumSize">
            <size>

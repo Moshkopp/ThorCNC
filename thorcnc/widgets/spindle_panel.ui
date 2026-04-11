@@ -1,0 +1,204 @@
+<?xml version='1.0' encoding='utf-8'?>
+<ui version="4.0">
+ <widget class="QGroupBox" name="spindleGroup">
+  <property name="title">
+   <string>Spindle</string>
+  </property>
+  <layout class="QVBoxLayout">
+   <property name="spacing">
+    <number>8</number>
+   </property>
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>4</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
+    <number>4</number>
+   </property>
+
+   <!-- DIGITAL DISPLAY FRAME -->
+   <item>
+    <widget class="QFrame" name="spindle_display_frame">
+     <property name="styleSheet">
+      <string>
+       QFrame#spindle_display_frame {
+           background-color: #0d1117;
+           border: 1px solid #30363d;
+           border-radius: 6px;
+       }
+      </string>
+     </property>
+     <layout class="QVBoxLayout">
+      <property name="spacing">
+       <number>0</number>
+      </property>
+      <property name="leftMargin">
+       <number>6</number>
+      </property>
+      <property name="topMargin">
+       <number>8</number>
+      </property>
+      <property name="rightMargin">
+       <number>6</number>
+      </property>
+      <property name="bottomMargin">
+       <number>8</number>
+      </property>
+      
+      <!-- ACTUAL RPM -->
+      <item>
+       <widget class="QLabel" name="lbl_spindle_ist">
+        <property name="text"><string>0 RPM</string></property>
+        <property name="alignment"><set>Qt::AlignmentFlag::AlignCenter</set></property>
+        <property name="styleSheet">
+         <string>
+          color: #58a6ff;
+          font-size: 26px;
+          font-weight: bold;
+          font-family: monospace;
+          background: transparent;
+          border: none;
+         </string>
+        </property>
+       </widget>
+      </item>
+      
+      <!-- TARGET RPM -->
+      <item>
+       <widget class="QLabel" name="lbl_spindle_soll">
+        <property name="text"><string>CMD: 0 RPM</string></property>
+        <property name="alignment"><set>Qt::AlignmentFlag::AlignCenter</set></property>
+        <property name="styleSheet">
+         <string>
+          color: #8b949e;
+          font-size: 11px;
+          font-weight: bold;
+          background: transparent;
+          border: none;
+         </string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+
+   <!-- LOAD BAR -->
+   <item>
+    <widget class="QProgressBar" name="spindle_load_bar">
+     <property name="minimumSize">
+      <size><width>0</width><height>6</height></size>
+     </property>
+     <property name="maximumSize">
+      <size><width>16777215</width><height>6</height></size>
+     </property>
+     <property name="textVisible"><bool>false</bool></property>
+     <property name="styleSheet">
+      <string>
+       QProgressBar {
+           border: none;
+           border-radius: 3px;
+           background-color: #161b22;
+       }
+       QProgressBar::chunk {
+           background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0, stop:0 #2ea043, stop:0.5 #d29922, stop:1 #f85149);
+           border-radius: 3px;
+       }
+      </string>
+     </property>
+    </widget>
+   </item>
+
+   <!-- BUTTONS -->
+   <item>
+    <layout class="QHBoxLayout">
+     <property name="spacing">
+      <number>6</number>
+     </property>
+     <property name="topMargin">
+      <number>8</number>
+     </property>
+     <item>
+      <widget class="QPushButton" name="btn_spindle_fwd">
+       <property name="minimumSize">
+        <size><width>0</width><height>34</height></size>
+       </property>
+       <property name="text"><string>CW</string></property>
+       <property name="font">
+        <font><pointsize>11</pointsize><bold>true</bold></font>
+       </property>
+       <property name="styleSheet">
+        <string>
+         QPushButton {
+             background-color: #21262d;
+             border: 1px solid #30363d;
+             border-radius: 4px;
+             color: #c9d1d9;
+         }
+         QPushButton:hover {
+             background-color: #30363d;
+         }
+        </string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btn_spindle_stop">
+       <property name="minimumSize">
+        <size><width>0</width><height>34</height></size>
+       </property>
+       <property name="text"><string>STOP</string></property>
+       <property name="font">
+        <font><pointsize>11</pointsize><bold>true</bold></font>
+       </property>
+       <property name="styleSheet">
+        <string>
+         QPushButton {
+             background-color: #21262d;
+             border: 1px solid #30363d;
+             border-radius: 4px;
+             color: #f85149;
+         }
+         QPushButton:hover {
+             background-color: #da3633;
+             color: white;
+         }
+        </string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btn_spindle_rev">
+       <property name="minimumSize">
+        <size><width>0</width><height>34</height></size>
+       </property>
+       <property name="text"><string>CCW</string></property>
+       <property name="font">
+        <font><pointsize>11</pointsize><bold>true</bold></font>
+       </property>
+       <property name="styleSheet">
+        <string>
+         QPushButton {
+             background-color: #21262d;
+             border: 1px solid #30363d;
+             border-radius: 4px;
+             color: #c9d1d9;
+         }
+         QPushButton:hover {
+             background-color: #30363d;
+         }
+        </string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   
+  </layout>
+ </widget>
+</ui>
