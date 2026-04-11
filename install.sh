@@ -25,6 +25,12 @@ for arg in "$@"; do
     esac
 done
 
+# ── PIP Flags (Debian 12+ / PEP 668) ──────────────────────────────────────────
+PIP_BREAK_FLAG=""
+if pip install --help | grep -q 'break-system-packages'; then
+    PIP_BREAK_FLAG="--break-system-packages"
+fi
+
 # ── Farben ────────────────────────────────────────────────────────────────────
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
 BLUE='\033[0;34m'; NC='\033[0m'; BOLD='\033[1m'
@@ -84,11 +90,11 @@ install_thorcnc() {
     
     if $DEV_MODE; then
         info "Editable Install (Entwicklungsmodus) mit Extras $EXTRAS..."
-        pip install -e ".$EXTRAS"
+        pip install $PIP_BREAK_FLAG -e ".$EXTRAS"
         ok "thorcnc im Entwicklungsmodus installiert."
     else
         info "Installiere thorcnc mit Extras $EXTRAS..."
-        pip install ".$EXTRAS"
+        pip install $PIP_BREAK_FLAG ".$EXTRAS"
         ok "thorcnc installiert."
     fi
 }
@@ -113,7 +119,7 @@ EOF
 # ── Deinstallation ────────────────────────────────────────────────────────────
 uninstall_thorcnc() {
     info "Deinstalliere thorcnc..."
-    pip uninstall -y thorcnc 2>/dev/null && ok "thorcnc entfernt." || warn "thorcnc war nicht installiert."
+    pip uninstall $PIP_BREAK_FLAG -y thorcnc 2>/dev/null && ok "thorcnc entfernt." || warn "thorcnc war nicht installiert."
     rm -f "$HOME/.local/share/applications/thorcnc.desktop"
     ok "Desktop-Eintrag entfernt."
 }

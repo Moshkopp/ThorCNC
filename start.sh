@@ -15,6 +15,12 @@ SIM_INI="$SCRIPT_DIR/configs/sim/thorcnc_sim.ini"
 THEME="dark"
 CUSTOM_INI=""
 
+# ── PIP Flags (Debian 12+ / PEP 668) ──────────────────────────────────────────
+PIP_BREAK_FLAG=""
+if pip install --help | grep -q 'break-system-packages'; then
+    PIP_BREAK_FLAG="--break-system-packages"
+fi
+
 for arg in "$@"; do
     case "$arg" in
         --theme=*) THEME="${arg#--theme=}" ;;
@@ -44,8 +50,8 @@ fi
 
 # ── Dev-Install falls thorcnc-Befehl nicht gefunden ─────────────────────────
 if ! command -v thorcnc &>/dev/null; then
-    echo "[start.sh] 'thorcnc' nicht im PATH – führe 'pip install -e .' aus..."
-    pip install -e "$SCRIPT_DIR" --quiet
+    echo "[start.sh] 'thorcnc' nicht im PATH – führe 'pip install $PIP_BREAK_FLAG -e .' aus..."
+    pip install $PIP_BREAK_FLAG -e "$SCRIPT_DIR" --quiet
     echo "[start.sh] Installation abgeschlossen."
 fi
 

@@ -22,6 +22,12 @@ for arg in "$@"; do
     esac
 done
 
+# ── PIP Flags (Debian 12+ / PEP 668) ──────────────────────────────────────────
+PIP_BREAK_FLAG=""
+if pip install --help | grep -q 'break-system-packages'; then
+    PIP_BREAK_FLAG="--break-system-packages"
+fi
+
 # ── Farben ────────────────────────────────────────────────────────────────────
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
 BLUE='\033[0;34m'; NC='\033[0m'; BOLD='\033[1m'
@@ -74,11 +80,11 @@ EXTRAS="[backplot]"
 
 if $DEV_MODE; then
     info "Editable Reinstall (--dev) mit Extras $EXTRAS..."
-    pip install -e ".$EXTRAS"
+    pip install $PIP_BREAK_FLAG -e ".$EXTRAS"
     ok "thorcnc (dev) aktualisiert."
 else
     info "Reinstalliere thorcnc mit Extras $EXTRAS..."
-    pip install ".$EXTRAS"
+    pip install $PIP_BREAK_FLAG ".$EXTRAS"
     ok "thorcnc aktualisiert."
 fi
 
