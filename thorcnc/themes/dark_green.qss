@@ -3,8 +3,9 @@
 
 QPushButton:checked,
 QTabBar::tab:selected {
-    background-color: #1a6e1a;
-    border-color: #27ae60;
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #1a6e1a, stop:1 #27ae60);
+    color: white;
+    border: 1px solid #2ecc71;
 }
 
 QPushButton[objectName^="nav_"]:checked {
@@ -20,7 +21,7 @@ QSlider::sub-page:horizontal {
 }
 
 QSlider::handle:horizontal:hover {
-    border: 2px solid #27ae60;
+    border: 1px solid #27ae60;
 }
 
 QSlider::handle:horizontal:pressed {
@@ -37,3 +38,5 @@ QLabel#lbl_dro_y,
 QLabel#lbl_dro_z {
     color: #2ecc71;
 }
+
+/* Alle Buttons im neuen Look */

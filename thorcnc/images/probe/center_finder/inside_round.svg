@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80">
+  <!-- Round Pocket area (grey circle with cutout) -->
+  <path d="M5,5 H75 V75 H5 Z M40,20 A20,20 0 1,0 40,60 A20,20 0 1,0 40,20" fill="#5a5a5a" fill-rule="evenodd"/>
+  <!-- Z-Probe point on the rim (Top-Left) -->
+  <circle cx="12" cy="12" r="3" fill="#cc22cc" stroke="#ff66ff" stroke-width="1"/>
+  <!-- Center reference (ghost point) -->
+  <circle cx="40" cy="40" r="1.5" fill="#444"/>
+  <!-- Arrow Left -->
+  <line x1="33" y1="40" x2="25" y2="40" stroke="white" stroke-width="2"/>
+  <polygon points="25,37 20,40 25,43" fill="white"/>
+  <!-- Arrow Right -->
+  <line x1="47" y1="40" x2="55" y2="40" stroke="white" stroke-width="2"/>
+  <polygon points="55,37 60,40 55,43" fill="white"/>
+  <!-- Arrow Top -->
+  <line x1="40" y1="33" x2="40" y2="25" stroke="white" stroke-width="2"/>
+  <polygon points="37,25 40,20 43,25" fill="white"/>
+  <!-- Arrow Bottom -->
+  <line x1="40" y1="47" x2="40" y2="55" stroke="white" stroke-width="2"/>
+  <polygon points="37,55 40,60 43,55" fill="white"/>
+</svg>

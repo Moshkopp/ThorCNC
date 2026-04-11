@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80">
+  <!-- Pocket work area (grey border) -->
+  <path d="M5,5 H75 V75 H5 Z M20,20 V60 H60 V20 Z" fill="#5a5a5a"/>
+  <!-- Z-Probe point on the rim (Top-Left) -->
+  <circle cx="12" cy="12" r="3" fill="#cc22cc" stroke="#ff66ff" stroke-width="1"/>
+  <!-- Center reference (ghost point) -->
+  <circle cx="40" cy="40" r="1.5" fill="#444"/>
+  <!-- Arrow Left (towards wall) -->
+  <line x1="32" y1="40" x2="22" y2="40" stroke="white" stroke-width="2"/>
+  <polygon points="22,36 16,40 22,44" fill="white"/>
+  <!-- Arrow Right (towards wall) -->
+  <line x1="48" y1="40" x2="58" y2="40" stroke="white" stroke-width="2"/>
+  <polygon points="58,36 64,40 58,44" fill="white"/>
+</svg>
