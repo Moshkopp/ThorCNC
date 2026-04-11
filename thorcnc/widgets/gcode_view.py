@@ -70,15 +70,15 @@ class GCodeView(QPlainTextEdit):
     """Schreibgeschützter G-Code Viewer mit Zeilennummern und Highlighting."""
 
     line_selected = Signal(int)   # Benutzer klickt auf eine Zeile
+    zoom_changed = Signal(int)    # Font-Größe hat sich geändert
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, editable=False):
         super().__init__(parent)
-        self.setReadOnly(True)
+        self.setReadOnly(not editable)
         self.setLineWrapMode(QPlainTextEdit.LineWrapMode.NoWrap)
 
-        font = QFont("Monospace", 30)
-        font.setStyleHint(QFont.StyleHint.TypeWriter)
-        self.setFont(font)
+        self._font_size = 22 if editable else 30
+        self._apply_style()
 
         self._highlighter = _GCodeHighlighter(self.document())
         self._current_line = -1          # hevorgehobene Zeile (0-basiert)
@@ -184,3 +184,33 @@ class GCodeView(QPlainTextEdit):
                 )
             painter.end()
         super().paintEvent(event)
+
+    def zoomIn(self, range: int = 1):
+        self._font_size += range * 2
+        self._apply_style()
+
+    def zoomOut(self, range: int = 1):
+        self._font_size = max(6, self._font_size - range * 2)
+        self._apply_style()
+
+    def set_font_size(self, size: int):
+        self._font_size = size
+        self._apply_style()
+
+    def _apply_style(self):
+        self.setStyleSheet(
+            f"QPlainTextEdit {{ font-family: 'Monospace'; font-size: {self._font_size}pt; }}"
+        )
+        self.zoom_changed.emit(self._font_size)
+
+    def wheelEvent(self, event):
+        """Handle zooming with Ctrl + Mouse Wheel."""
+        # Check for control modifier (some systems return multiple modifiers, so use &)
+        if event.modifiers() & Qt.ControlModifier:
+            if event.angleDelta().y() > 0:
+                self.zoomIn(1)
+            else:
+                self.zoomOut(1)
+            event.accept()
+        else:
+            super().wheelEvent(event)

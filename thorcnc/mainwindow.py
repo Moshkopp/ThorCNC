@@ -150,8 +150,10 @@ class ThorCNC(QObject):
 
         # Seite 0: GCodeView
         self.gcode_view = GCodeView()
-        self.gcode_view.setStyleSheet(
-            "QPlainTextEdit { font-family: 'Monospace'; font-size: 18px; }")
+        v_size = self.settings.get("viewer_gcode_font_size", 30)
+        self.gcode_view.set_font_size(v_size)
+        self.gcode_view.zoom_changed.connect(
+            lambda s: (self.settings.set("viewer_gcode_font_size", s), self.settings.save()))
         self._gcode_mdi_stack.addWidget(self.gcode_view)
 
         # Seite 1: MDI-Page
@@ -191,6 +193,14 @@ class ThorCNC(QObject):
             self._btn_show_gcode.clicked.connect(lambda: self._switch_gcode_panel(0))
         if self._btn_show_mdi:
             self._btn_show_mdi.clicked.connect(lambda: self._switch_gcode_panel(1))
+
+        # Main Tab Zoom Buttons
+        self._btn_main_zoom_in = self.ui.findChild(QPushButton, "btn_main_zoom_in")
+        self._btn_main_zoom_out = self.ui.findChild(QPushButton, "btn_main_zoom_out")
+        if self._btn_main_zoom_in:
+            self._btn_main_zoom_in.clicked.connect(lambda: self.gcode_view.zoomIn(1))
+        if self._btn_main_zoom_out:
+            self._btn_main_zoom_out.clicked.connect(lambda: self.gcode_view.zoomOut(1))
 
         # Replace placeholder with stack (Stack is in a QVBoxLayout)
         if parent_gc and parent_gc.layout():
@@ -614,14 +624,41 @@ class ThorCNC(QObject):
         self.poller = StatusPoller(interval_ms=100, parent=self)
 
     def _setup_file_manager(self):
-        from PySide6.QtWidgets import QTreeView, QTextBrowser, QPushButton, QFileSystemModel, QLabel
+        from PySide6.QtWidgets import QTreeView, QTextBrowser, QPushButton, QFileSystemModel, QLabel, QWidget
         from PySide6.QtCore import QDir
         import os
 
         tree = self._w(QTreeView, "fileManagerView")
-        self._file_preview = self._w(QTextBrowser, "filePreviewArea")
-        self._btn_load = self._w(QPushButton, "load_gcode_button")
         
+        # Replace filePreviewArea placeholder with GCodeView (editable)
+        old_preview = self.ui.findChild(QWidget, "filePreviewArea")
+        if old_preview:
+            parent = old_preview.parent()
+            lay = parent.layout()
+            idx = lay.indexOf(old_preview)
+            lay.removeWidget(old_preview)
+            old_preview.deleteLater()
+            
+            self._file_preview = GCodeView(editable=True)
+            self._file_preview.setObjectName("filePreviewArea")
+            e_size = self.settings.get("editor_gcode_font_size", 22)
+            self._file_preview.set_font_size(e_size)
+            self._file_preview.zoom_changed.connect(
+                lambda s: (self.settings.set("editor_gcode_font_size", s), self.settings.save()))
+            lay.insertWidget(idx, self._file_preview)
+        else:
+            self._file_preview = self._w(GCodeView, "filePreviewArea")
+
+        self._btn_load = self._w(QPushButton, "load_gcode_button")
+        self._btn_save = self._w(QPushButton, "btn_save_file")
+        self._btn_save_as = self._w(QPushButton, "btn_save_as_file")
+        self._btn_cancel = self._w(QPushButton, "btn_cancel_edit")
+        
+        self._btn_zoom_in = self._w(QPushButton, "btn_zoom_in")
+        self._btn_zoom_out = self._w(QPushButton, "btn_zoom_out")
+        if self._btn_zoom_in: self._btn_zoom_in.clicked.connect(lambda: self._file_preview.zoomIn(1))
+        if self._btn_zoom_out: self._btn_zoom_out.clicked.connect(lambda: self._file_preview.zoomOut(1))
+
         self._btn_nav_up = self._w(QPushButton, "btn_nav_up")
         self._btn_nav_home = self._w(QPushButton, "btn_nav_home")
         self._lbl_current_path = self._w(QLabel, "lbl_current_path")
@@ -671,6 +708,16 @@ class ThorCNC(QObject):
         self._selected_filepath = None
         self._btn_load.clicked.connect(self._load_selected_file)
         self._btn_load.setEnabled(False)
+
+        if self._btn_save:
+            self._btn_save.clicked.connect(self._save_file)
+            self._btn_save.setEnabled(False)
+        if self._btn_save_as:
+            self._btn_save_as.clicked.connect(self._save_as_file)
+            self._btn_save_as.setEnabled(False)
+        if self._btn_cancel:
+            self._btn_cancel.clicked.connect(self._cancel_edit)
+            self._btn_cancel.setEnabled(False)
         
         last_dir = self.settings.get("last_file_dir")
         if last_dir and os.path.exists(last_dir):
@@ -726,14 +773,53 @@ class ThorCNC(QObject):
             self.settings.set("last_file_dir", os.path.dirname(path))
             self._selected_filepath = path
             self._btn_load.setEnabled(True)
+            if self._btn_save: self._btn_save.setEnabled(True)
+            if self._btn_save_as: self._btn_save_as.setEnabled(True)
+            if self._btn_cancel: self._btn_cancel.setEnabled(True)
+            
             try:
+                # Load FULL file for editing
                 with open(path, "r", encoding="utf-8", errors="replace") as f:
-                    head = [next(f) for _ in range(50)]
-                self._file_preview.setText("".join(head))
-            except StopIteration:
-                pass # EOF reached before 50 lines
+                    content = f.read()
+                self._file_preview.setPlainText(content)
             except Exception as e:
-                self._file_preview.setText(f"Error loading:\n{e}")
+                self._file_preview.setPlainText(f"Error loading:\n{e}")
+
+    def _save_file(self):
+        if not self._selected_filepath:
+            return
+        
+        try:
+            content = self._file_preview.toPlainText()
+            with open(self._selected_filepath, "w", encoding="utf-8") as f:
+                f.write(content)
+            self._status(f"Datei gespeichert: {os.path.basename(self._selected_filepath)}")
+        except Exception as e:
+            self._status(f"Error saving file: {e}", error=True)
+
+    def _save_as_file(self):
+        from PySide6.QtWidgets import QFileDialog
+        import os
+        
+        start_dir = self._current_dir if hasattr(self, "_current_dir") else os.path.expanduser("~")
+        path, _ = QFileDialog.getSaveFileName(self.ui, "Speichern unter...", start_dir, "G-Code (*.ngc *.tap *.txt);;All Files (*)")
+        
+        if path:
+            try:
+                content = self._file_preview.toPlainText()
+                with open(path, "w", encoding="utf-8") as f:
+                    f.write(content)
+                self._selected_filepath = path
+                self._status(f"Datei gespeichert unter: {os.path.basename(path)}")
+                # Refresh file tree if possible - fs_model updates automatically usually
+            except Exception as e:
+                self._status(f"Error saving file: {e}", error=True)
+
+    def _cancel_edit(self):
+        if self._selected_filepath:
+            self._on_file_selected()
+        else:
+            self._file_preview.clear()
 
     def _load_selected_file(self):
         if self._selected_filepath:
