@@ -430,8 +430,11 @@ class BackplotWidget(QWidget):
             outer.addWidget(self._impl)
         else:
             lbl = QLabel(
-                "pyqtgraph / OpenGL nicht verfügbar.\n"
-                "Installation: pip install pyqtgraph PyOpenGL",
+                "pyqtgraph / OpenGL nicht verfügbar.\n\n"
+                "Mögliche Lösungen:\n"
+                "1. In VM: '3D-Beschleunigung' aktivieren\n"
+                "2. Debian/Ubuntu: sudo apt install python3-pyqtgraph python3-opengl\n"
+                "3. Pip: pip install pyqtgraph PyOpenGL",
                 self,
             )
             lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
