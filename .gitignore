@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+build/
+dist/
+*.egg-info/
+
+# LinuxCNC Laufzeit-Dateien (werden automatisch erstellt)
+# WICHTIG: .ini, .hal und .var (ohne .bak) werden weiterhin übertragen!
+*.var.bak
+*_pos.txt
+configs/sim/config.prefs
+configs/sim/thorcnc_sim_pos.txt
+configs/sim/thorcnc_sim.var.bak
+
+# ThorCNC lokale Einstellungen (Zoom-Stufen, Fensterpositionen)
+thorcnc.prefs
+
+# IDEs & System
+.vscode/
+.idea/
+.DS_Store
+*.swp
+*.swo

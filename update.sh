@@ -56,13 +56,22 @@ fi
 OLD_REV=$(git rev-parse --short HEAD)
 info "Aktuelle Version: $OLD_REV"
 
-# ── Pull ──────────────────────────────────────────────────────────────────────
+# ── Stash & Pull ──────────────────────────────────────────────────────────────
+info "Sichere lokale Änderungen (Stash)..."
+git stash push -m "update.sh auto-stash"
+
 info "Lade neueste Änderungen von origin..."
 git pull --ff-only origin "$(git rev-parse --abbrev-ref HEAD)" || {
     warn "Fast-forward nicht möglich (lokale Änderungen?)."
     warn "Versuche 'git pull --rebase'..."
-    git pull --rebase origin "$(git rev-parse --abbrev-ref HEAD)"
+    git pull --rebase origin "$(git rev-parse --abbrev-ref HEAD)" || {
+        warn "Konnte nicht automatisch mergen."
+        warn "Versuche lokale Änderungen wiederherzustellen..."
+    }
 }
+
+info "Stelle lokale Änderungen wieder her (Stash pop)..."
+git stash pop || warn "Keine Änderungen zum Wiederherstellen oder Konflikt beim Pop."
 
 NEW_REV=$(git rev-parse --short HEAD)
 
