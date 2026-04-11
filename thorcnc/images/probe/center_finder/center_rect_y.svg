@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80">
+  <!-- Workpiece -->
+  <rect x="22" y="22" width="36" height="36" fill="#5a5a5a" rx="2"/>
+  <!-- Center point -->
+  <circle cx="40" cy="40" r="3" fill="#cc22cc" stroke="#ff66ff" stroke-width="1"/>
+  <!-- Arrow Top -->
+  <line x1="40" y1="4" x2="40" y2="14" stroke="white" stroke-width="2"/>
+  <polygon points="36,14 40,20 44,14" fill="white"/>
+  <!-- Arrow Bottom -->
+  <line x1="40" y1="76" x2="40" y2="66" stroke="white" stroke-width="2"/>
+  <polygon points="36,66 40,60 44,66" fill="white"/>
+</svg>

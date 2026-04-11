@@ -1313,23 +1313,35 @@ class ThorCNC(QObject):
         vl_rect = QVBoxLayout(col_rect)
         vl_rect.setContentsMargins(0, 0, 0, 0)
         vl_rect.setSpacing(6)
-        btn_rect = make_btn("center_rect", grp_cf)
-        btn_rect.setIcon(svg("center_finder", "center_rect.svg"))
-        btn_rect.setToolTip("Find center of rectangular Boss/Pocket (G10 L20)")
-        vl_rect.addWidget(btn_rect, 0, Qt.AlignCenter)
+        
+        # Btn X
+        btn_rect_x = make_btn("center_rect_x", grp_cf)
+        btn_rect_x.setIcon(svg("center_finder", "center_rect_x.svg"))
+        btn_rect_x.setToolTip("Find X center of rectangular Boss/Pocket")
+        vl_rect.addWidget(btn_rect_x, 0, Qt.AlignCenter)
 
-        # X/Y Inputs in column
-        for lbl_txt, obj_name in [("X LENGTH:", "le_probe_center_x"),
-                                   ("Y LENGTH:", "le_probe_center_y")]:
-            lbl = QLabel(lbl_txt); lbl.setStyleSheet(LBL_SS)
-            le  = QLineEdit("0.0000")
-            le.setObjectName(obj_name)
-            le.setAlignment(Qt.AlignCenter)
-            le.setStyleSheet(FLD_SS)
-            le.setFixedWidth(130)
-            le.setToolTip(f"Expected {lbl_txt.split()[0]} size")
-            vl_rect.addWidget(lbl, 0, Qt.AlignCenter)
-            vl_rect.addWidget(le, 0, Qt.AlignCenter)
+        # X input
+        lbl_x = QLabel("X LENGTH:"); lbl_x.setStyleSheet(LBL_SS)
+        le_x = QLineEdit("0.0000"); le_x.setObjectName("le_probe_center_x")
+        le_x.setAlignment(Qt.AlignCenter); le_x.setStyleSheet(FLD_SS); le_x.setFixedWidth(130)
+        le_x.setToolTip("Expected X size")
+        vl_rect.addWidget(lbl_x, 0, Qt.AlignCenter)
+        vl_rect.addWidget(le_x, 0, Qt.AlignCenter)
+
+        # Btn Y
+        btn_rect_y = make_btn("center_rect_y", grp_cf)
+        btn_rect_y.setIcon(svg("center_finder", "center_rect_y.svg"))
+        btn_rect_y.setToolTip("Find Y center of rectangular Boss/Pocket")
+        vl_rect.addWidget(btn_rect_y, 0, Qt.AlignCenter)
+
+        # Y input
+        lbl_y = QLabel("Y LENGTH:"); lbl_y.setStyleSheet(LBL_SS)
+        le_y = QLineEdit("0.0000"); le_y.setObjectName("le_probe_center_y")
+        le_y.setAlignment(Qt.AlignCenter); le_y.setStyleSheet(FLD_SS); le_y.setFixedWidth(130)
+        le_y.setToolTip("Expected Y size")
+        vl_rect.addWidget(lbl_y, 0, Qt.AlignCenter)
+        vl_rect.addWidget(le_y, 0, Qt.AlignCenter)
+
         vl_rect.addStretch()
         hl_cf.addWidget(col_rect)
 
@@ -1739,7 +1751,7 @@ class ThorCNC(QObject):
             from PySide6.QtWidgets import QPushButton
             auto_zero = 1 if self._w(QPushButton, "btn_probe_active").isChecked() else 0
 
-            if ngc_name == "center_rect":
+            if ngc_name in ("center_rect", "center_rect_x", "center_rect_y"):
                 lx = val("le_probe_center_x")
                 ly = val("le_probe_center_y")
                 params = f" [{lx}] [{ly}] [{max_xy}] [{max_z}] [{s_vel}] [{p_vel}] [{z_cl}] [{dep}] [{auto_zero}]"

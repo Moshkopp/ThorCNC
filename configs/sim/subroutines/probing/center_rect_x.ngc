@@ -1,7 +1,7 @@
-( ThorCNC - Center Finder Rectangular Boss )
+( ThorCNC - Center Finder Rectangular Boss - X AXIS ONLY )
 ( Args: )
 ( #1: X Length )
-( #2: Y Length )
+( #2: Y Length - NOT USED in this version, but kept for signature compatibility )
 ( #3: Max XY Search Distance )
 ( #4: Max Z Search Distance )
 ( #5: Search Velocity )
@@ -10,7 +10,7 @@
 ( #8: Probe Depth - Distance below Z0 )
 ( #9: Auto Zero - 1=ON, 0=OFF )
 
-O<center_rect> sub
+O<center_rect_x> sub
     ( Save current state )
     M68 E0 Q0 ( Placeholder for any needed HAL sync )
     
@@ -29,7 +29,7 @@ O<center_rect> sub
     #<search_dist> = [[#1 / 2] + #3]
     
     ( Probe X- side )
-    G0 X-[#<search_dist>] Y0
+    G0 X-[#<search_dist>]
     G1 Z-[#8] F[#5 * 2] ( Move down to probe depth )
     G91
     G38.2 X#3 F#5 ( Search X+ )
@@ -41,10 +41,11 @@ O<center_rect> sub
     G0 Z#7 ( Retract to safe Z )
 
     ( Probe X+ side )
-    G0 X[#<search_dist>] Y0
+    G0 X[#<search_dist>]
     G1 Z-[#8] F[#5 * 2]
     G91
     G38.2 X-#3 F#5 ( Search X- )
+    #<x2> = #5061
     #<x2> = #5061
     G0 X#7 ( Back off )
     G38.2 X-[#7 * 1.5] F#6 ( Fine probe X- )
@@ -54,43 +55,14 @@ O<center_rect> sub
     
     #<x_center> = [[#<x1> + #<x2>] / 2]
 
-    ( 3. Y-Center Finding )
-    #<search_dist_y> = [[#2 / 2] + #3]
-    
-    ( Probe Y- side )
-    G0 X#<x_center> Y-[#<search_dist_y>]
-    G1 Z-[#8] F[#5 * 2]
-    G91
-    G38.2 Y#3 F#5 ( Search Y+ )
-    #<y1> = #5062 ( #5062 is Y position )
-    G0 Y-[#7]
-    G38.2 Y[#7 * 1.5] F#6
-    #<y1> = #5062
-    G90
-    G0 Z#7
-
-    ( Probe Y+ side )
-    G0 X#<x_center> Y[#<search_dist_y>]
-    G1 Z-[#8] F[#5 * 2]
-    G91
-    G38.2 Y-#3 F#5 ( Search Y- )
-    #<y2> = #5062
-    G0 Y#7
-    G38.2 Y-[#7 * 1.5] F#6
-    #<y2> = #5062
-    G90
-    G0 Z#7
-    
-    #<y_center> = [[#<y1> + #<y2>] / 2]
-
-    ( 4. Final Positioning )
-    G0 X#<x_center> Y#<y_center>
+    ( 3. Final Positioning )
+    G0 X#<x_center>
     O102 if [#9 GT 0.5]
-        G10 L20 P0 X0 Y0 ( Zero work offsets for X and Y )
+        G10 L20 P0 X0 ( Zero work offset for X )
     O102 endif
     
     ( Return to safe height )
     G0 Z#7
     
-O<center_rect> endsub
+O<center_rect_x> endsub
 M2
