@@ -31,8 +31,13 @@ class StatusPoller(QObject):
     spindle_override     = Signal(float)
     rapid_override       = Signal(float)  # 0.0-1.0
 
-    spindle_load         = Signal(float)   # HAL: thorcnc.spindle-load (0-100%)
-    tool_change_request  = Signal(int)     # HAL: thorcnc.tool-change-request (value is tool number)
+    # Spindle
+    spindle_speed_cmd    = Signal(float)  # commanded (setpoint) rpm
+    spindle_direction    = Signal(int)    # 1=fwd, -1=rev, 0=stop
+    spindle_at_speed     = Signal(bool)   # HAL: thorcnc.spindle-atspeed
+    spindle_speed_actual = Signal(float)  # HAL: thorcnc.spindle-speed-actual
+    spindle_load         = Signal(float)  # HAL: thorcnc.spindle-load (0-100%)
+    tool_change_request  = Signal(int)    # HAL: thorcnc.tool-change-request (value is tool number)
 
     # Homing
     homed_changed        = Signal(list)   # list of bools per axis
