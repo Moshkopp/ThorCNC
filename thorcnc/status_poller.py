@@ -3,6 +3,10 @@ LinuxCNC Status Poller
 Polls linuxcnc.stat() via QTimer and emits Qt signals on state changes.
 """
 import linuxcnc
+try:
+    import hal as _hal
+except ImportError:
+    _hal = None
 from PySide6.QtCore import QObject, QTimer, Signal
 
 
@@ -49,10 +53,11 @@ class StatusPoller(QObject):
     # Periodic tick (for anything not covered above)
     periodic             = Signal()
 
-    def __init__(self, interval_ms: int = 100, parent=None):
+    def __init__(self, interval_ms: int = 100, parent=None, hal_comp=None):
         super().__init__(parent)
         self.stat = linuxcnc.stat()
         self.error_channel = linuxcnc.error_channel()
+        self._hal_comp = hal_comp
 
         # Shadow values to detect changes
         self._estop          = None
@@ -71,8 +76,8 @@ class StatusPoller(QObject):
         self._spindle_cmd   = None
         self._spindle_dir    = None
         self._spindle_at_spd = None
-        self._spindle_actual = None
-        self._spindle_load   = None
+        self._spindle_actual = -1.0
+        self._spindle_load   = -1.0
         self._tool_change_req = None
         self._homed          = None
         self._gcodes         = None
@@ -202,12 +207,26 @@ class StatusPoller(QObject):
             self._spindle_dir = spindle_dir
             self.spindle_direction.emit(spindle_dir)
 
+        if not _hal:
+            return
+
         try:
-            import hal as _hal
-            at_spd  = bool(_hal.get_value("thorcnc.spindle-atspeed"))
-            actual  = float(_hal.get_value("thorcnc.spindle-speed-actual"))
-            load    = float(_hal.get_value("thorcnc.spindle-load"))
-        except Exception:
+            if self._hal_comp:
+                # Direkter Zugriff auf die eigene Komponente ist zuverlässiger
+                at_spd  = bool(self._hal_comp["spindle-atspeed"])
+                actual  = float(self._hal_comp["spindle-speed-actual"])
+                load    = float(self._hal_comp["spindle-load"])
+            elif _hal:
+                at_spd  = bool(_hal.get_value("thorcnc.spindle-atspeed"))
+                actual  = float(_hal.get_value("thorcnc.spindle-speed-actual"))
+                load    = float(_hal.get_value("thorcnc.spindle-load"))
+            else:
+                at_spd, actual, load = False, 0.0, 0.0
+        except Exception as e:
+            # Nur einmal melden, um Terminal nicht zu fluten
+            if not hasattr(self, "_hal_err_shown"):
+                print(f"[ThorCNC] Fehler beim Lesen der HAL-Pins: {e}")
+                self._hal_err_shown = True
             at_spd = False
             actual = 0.0
             load   = 0.0
@@ -223,7 +242,6 @@ class StatusPoller(QObject):
 
         # Tool Change Request (HAL)
         try:
-            import hal as _hal
             # Wir prüfen, ob der Bit-Pin High ist
             if bool(_hal.get_value("thorcnc.tool-change-request")):
                 t_nr = int(_hal.get_value("thorcnc.tool-number"))

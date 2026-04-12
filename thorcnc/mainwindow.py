@@ -641,7 +641,8 @@ class ThorCNC(QObject):
     # ── StatusPoller ──────────────────────────────────────────────────────────
 
     def _setup_poller(self):
-        self.poller = StatusPoller(interval_ms=100, parent=self)
+        # Wir übergeben die HAL-Komponente, damit der Poller direkt auf die Pins zugreifen kann
+        self.poller = StatusPoller(interval_ms=100, hal_comp=self._hal_comp, parent=self)
 
     def _setup_file_manager(self):
         from PySide6.QtWidgets import QTreeView, QTextBrowser, QPushButton, QFileSystemModel, QLabel, QWidget
@@ -2833,12 +2834,20 @@ class ThorCNC(QObject):
     @Slot(float)
     def _on_spindle_actual(self, rpm: float):
         """Called when the ACTUAL (Feedback) spindle speed changes (from HAL)."""
+        # DEBUG: Wenn du das im Terminal siehst, kommen HAL-Daten in der UI an!
+        if abs(rpm) > 0.1:
+             print(f"[UI-DEBUG] Spindel IST: {rpm:.1f} RPM")
+             
         from PySide6.QtWidgets import QLabel
         if lbl := self._w(QLabel, "lbl_spindle_ist"):
             lbl.setText(f"{abs(rpm):.0f} RPM")
 
     @Slot(float)
     def _on_spindle_load(self, load: float):
+        # DEBUG: Last-Daten Check
+        if load > 0.1:
+            print(f"[UI-DEBUG] Spindel Last: {load:.1f}%")
+            
         from PySide6.QtWidgets import QProgressBar
         if bar := self._w(QProgressBar, "spindle_load_bar"):
             bar.setValue(int(max(0, min(100, load))))
