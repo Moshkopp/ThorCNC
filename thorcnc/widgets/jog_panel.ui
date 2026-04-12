@@ -11,9 +11,6 @@
           <number>0</number>
          </property>
          <widget class="QFrame" name="jog_xyz">
-          <property name="styleSheet">
-           <string>QFrame#jog_xyz { border: 1px solid #444; border-radius: 4px; background-color: #1a1a1a; }</string>
-          </property>
           <layout class="QGridLayout" name="jogGridLayout">
            <property name="leftMargin">
             <number>8</number>
@@ -188,9 +185,6 @@
                   </property>
                   <property name="alignment">
                    <set>Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
-                  </property>
-                  <property name="styleSheet">
-                   <string>color: white; background: transparent; padding-left: 6px;</string>
                   </property>
                  </widget>
                 </item>

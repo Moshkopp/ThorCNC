@@ -163,7 +163,6 @@ class ThorCNC(QObject):
                             sub_w.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
                             sub_w.setMinimumHeight(230)
                             sub_w.setMaximumHeight(230)
-                            sub_w.setStyleSheet("QFrame#runControls { border: 1px solid #444; border-radius: 4px; background-color: #1a1a1a; }")
                         r_lay.addWidget(sub_w)
                         
                         if m_name == "spindle_panel":
@@ -202,19 +201,11 @@ class ThorCNC(QObject):
         self._mdi_input.setObjectName("mdiEntry")
         self._mdi_input.setPlaceholderText("MDI COMMAND...")
         self._mdi_input.setMinimumHeight(40)
-        self._mdi_input.setStyleSheet(
-            "QLineEdit { background:#1e1e1e; color:#eee; border:1px solid #555;"
-            " border-radius:4px; font-size:13pt; padding:2px 8px; }")
         self._mdi_input.returnPressed.connect(
             lambda: self._send_mdi(self._mdi_input.text(), self._mdi_input))
 
         self._mdi_history_widget = QListWidget()
         self._mdi_history_widget.setObjectName("mdiHistory")
-        self._mdi_history_widget.setStyleSheet(
-            "QListWidget { background:#1a1a1a; color:#ccc; border:1px solid #444;"
-            " font-size:12pt; }"
-            "QListWidget::item:hover { background:#2a2a2a; }"
-            "QListWidget::item:selected { background:#2d5fa8; color:white; }")
         self._mdi_history_widget.itemDoubleClicked.connect(
             lambda item: self._mdi_input.setText(item.text()))
 
@@ -264,9 +255,6 @@ class ThorCNC(QObject):
         # Buttons direkt in BackplotWidget's eingebaute Toolbar einfügen
         # (kein Wrapper-Widget → kein GLViewWidget-Reparenting-Problem)
         tb_lay = self.backplot.toolbar_layout()
-        _view_style = ("QPushButton { background:#2a2a2a; color:#aaa; border:1px solid #444; border-radius:4px;"
-                       " font-weight:bold; font-size:11pt; padding:4px 12px; min-height:22px; }"
-                       "QPushButton:hover { background:#3a3a3a; color:white; }")
         # View-Buttons links (vor dem Stretch)
         tb_lay.takeAt(0)   # den initialen Stretch kurz rausnehmen (wird unten neu eingefügt)
         for label, fn in (("ISO",        self.backplot.set_view_iso),
@@ -275,8 +263,8 @@ class ThorCNC(QObject):
                           ("SIDE",       self.backplot.set_view_x),
                           ("CLR TRAIL",  self.backplot.clear_trail)):
             b = QPushButton(label)
+            b.setObjectName("btn_backplot_view")
             b.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-            b.setStyleSheet(_view_style)
             b.clicked.connect(fn)
             tb_lay.addWidget(b)
         tb_lay.addStretch()   # Stretch wieder einfügen (trennt links von rechts)
@@ -305,36 +293,29 @@ class ThorCNC(QObject):
 
     def _switch_gcode_panel(self, idx: int):
         self._gcode_mdi_stack.setCurrentIndex(idx)
-        active   = "background:#2d5fa8; color:white;"
-        inactive = "background:#2a2a2a; color:#aaa;"
         for b, active_idx in ((self._btn_show_gcode, 0), (self._btn_show_mdi, 1)):
             if b is None:
                 continue
             b.setChecked(idx == active_idx)
-            b.setStyleSheet(
-                f"QPushButton {{ {active if idx == active_idx else inactive} border-radius:4px;"
-                " font-weight:bold; font-size:11pt; padding:2px 12px; }")
 
     def _update_goto_home_style(self, all_homed: bool):
         if not hasattr(self, "_btn_go_to_home"):
             return
         in_auto = getattr(self, "_current_mode", None) == linuxcnc.MODE_AUTO
+        btn = self._btn_go_to_home
+        _base = "border-radius:4px; font-weight:bold; font-size:11pt; padding:4px 14px; min-height:22px;"
         if in_auto:
-            self._btn_go_to_home.setEnabled(False)
-            self._btn_go_to_home.setStyleSheet(
-                "QPushButton { background:#444; color:#888; border-radius:4px; border:1px solid #555;"
-                " font-weight:bold; font-size:11pt; padding:4px 14px; min-height:22px; }")
+            btn.setEnabled(False)
+            btn.setStyleSheet(f"QPushButton {{ {_base} }}")
         elif all_homed:
-            self._btn_go_to_home.setEnabled(True)
-            self._btn_go_to_home.setStyleSheet(
-                "QPushButton { background:#2d862d; color:white; border-radius:4px; border:1px solid #1f5f1f;"
-                " font-weight:bold; font-size:11pt; padding:4px 14px; min-height:22px; }"
+            btn.setEnabled(True)
+            btn.setStyleSheet(
+                f"QPushButton {{ background:#2d862d; color:white; border:1px solid #1f5f1f; {_base} }}"
                 "QPushButton:hover { background:#3aa63a; }")
         else:
-            self._btn_go_to_home.setEnabled(True)
-            self._btn_go_to_home.setStyleSheet(
-                "QPushButton { background:#c0392b; color:white; border-radius:4px; border:1px solid #8e2a20;"
-                " font-weight:bold; font-size:11pt; padding:4px 14px; min-height:22px; }"
+            btn.setEnabled(True)
+            btn.setStyleSheet(
+                f"QPushButton {{ background:#c0392b; color:white; border:1px solid #8e2a20; {_base} }}"
                 "QPushButton:hover { background:#e74c3c; }")
 
     def _setup_dro(self):
@@ -364,22 +345,18 @@ class ThorCNC(QObject):
 
         zero_btn_style = (
             "QPushButton { font: bold 10pt 'Bebas Kai'; border-radius:4px;"
-            " background: rgb(52, 101, 164); color: white; }"
-            "QPushButton:hover { background: rgb(70, 130, 200); }"
-            "QPushButton:pressed { background: rgb(32, 74, 135); }")
-        
+            " background: #3464a4; color: white; }"
+            "QPushButton:hover { background: #4682c8; }"
+            "QPushButton:pressed { background: #204a87; }")
+
         ref_all_btn_style = (
             "QPushButton { font: bold 10pt 'Bebas Kai'; border-radius:4px;"
-            " background: rgb(78, 154, 6); color: white; }"
-            "QPushButton:hover { background: rgb(100,180,20); }")
+            " background: #4e9a06; color: white; }"
+            "QPushButton:hover { background: #64b408; }")
 
         ref_btn_style_base = (
-            "QPushButton { font: bold 9pt 'Bebas Kai'; border-radius:4px;"
-            " background: rgb(60,60,60); color: rgb(186,189,182); }"
-            "QPushButton:hover { background: rgb(80,80,80); }"
-            "QPushButton[homed=true] { background: rgb(78,154,6); color: white; }")
-
-        hdr_style = "color: rgb(238,238,236); font: bold 12pt 'Bebas Kai'; padding: 0 4px;"
+            "QPushButton { font: bold 9pt 'Bebas Kai'; border-radius:4px; }"
+            "QPushButton[homed=true] { background: #4e9a06; color: white; }")
 
         # ── Row 0: Header ───────────────────────────────────────────────────
         
@@ -393,8 +370,8 @@ class ThorCNC(QObject):
 
         # AXIS header
         lbl_axis_hdr = QLabel("AXIS")
+        lbl_axis_hdr.setObjectName("dro_header")
         lbl_axis_hdr.setFixedWidth(axis_width)
-        lbl_axis_hdr.setStyleSheet(hdr_style)
         lbl_axis_hdr.setAlignment(Qt.AlignmentFlag.AlignCenter)
         glay.addWidget(lbl_axis_hdr, 0, 1)
 
@@ -406,27 +383,21 @@ class ThorCNC(QObject):
         for label, index in [("G54", 1), ("G55", 2), ("G56", 3), ("G57", 4),
                               ("G58", 5), ("G59", 6), ("G59.1", 7), ("G59.2", 8), ("G59.3", 9)]:
             self._wcs_combo.addItem(label, userData=index)
-        self._wcs_combo.setStyleSheet(
-            "QComboBox { font: bold 12pt 'Bebas Kai'; color: rgb(238,238,236);"
-            " background: rgb(60,68,70); border:1px solid rgb(186,189,182);"
-            " border-radius:4px; padding: 0 6px; }"
-            "QComboBox::drop-down { border: none; }"
-            "QComboBox QAbstractItemView { background: rgb(46,52,54);"
-            " color: rgb(238,238,236); selection-background-color: rgb(78,154,6); }")
+        self._wcs_combo.setObjectName("wcsCombo")
         self._wcs_combo.currentIndexChanged.connect(self._on_wcs_combo_changed)
         glay.addWidget(self._wcs_combo, 0, 2)
 
         # MACHINE header
         lbl_mach_hdr = QLabel("MACHINE")
+        lbl_mach_hdr.setObjectName("dro_header")
         lbl_mach_hdr.setFixedWidth(val_width)
-        lbl_mach_hdr.setStyleSheet(hdr_style)
         lbl_mach_hdr.setAlignment(Qt.AlignmentFlag.AlignCenter)
         glay.addWidget(lbl_mach_hdr, 0, 3)
 
         # DTG header (Distance to Go)
         lbl_dtg_hdr = QLabel("DTG")
+        lbl_dtg_hdr.setObjectName("dro_header")
         lbl_dtg_hdr.setFixedWidth(val_width)
-        lbl_dtg_hdr.setStyleSheet(hdr_style)
         lbl_dtg_hdr.setAlignment(Qt.AlignmentFlag.AlignCenter)
         glay.addWidget(lbl_dtg_hdr, 0, 4)
 
@@ -442,65 +413,55 @@ class ThorCNC(QObject):
         sep = QFrame()
         sep.setFrameShape(QFrame.Shape.HLine)
         sep.setFixedHeight(2)
-        sep.setStyleSheet("background: rgb(80,80,80); margin: 2px 0;")
         glay.addWidget(sep, 1, 0, 1, 6)
 
         # ── Rows 2-4: Axis Rows ──────────────────────────────────────────────
-        self._dro_dtg     = {}   # axis → QLabel (DTG)
-
-        dro_style_work    = ("font: 18pt 'Bebas Kai'; color: #00dd55;"
-                             " background: rgb(25,28,30); border-radius:3px;"
-                             " padding: 2px 8px;")
-        dro_style_machine = ("font: 18pt 'Bebas Kai'; color: #aaaaaa;"
-                             " background: rgb(25,28,30); border-radius:3px;"
-                             " padding: 2px 8px;")
-        dro_style_dtg     = ("font: 18pt 'Bebas Kai'; color: #e67e22;"
-                             " background: rgb(25,28,30); border-radius:3px;"
-                             " padding: 2px 8px;")
+        self._dro_dtg = {}   # axis → QLabel (DTG)
 
         for i, (axis, joint) in enumerate([("X", 0), ("Y", 1), ("Z", 2)], start=2):
             # ZERO button
-            if True: # dummy for scope
-                btn_zero = QPushButton(f"ZERO\n{axis}")
-                btn_zero.setFixedSize(btn_width, 42)
-                btn_zero.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-                btn_zero.setStyleSheet(zero_btn_style)
-                btn_zero.clicked.connect(lambda _=False, a=axis: self._zero_axis(a))
-                glay.addWidget(btn_zero, i, 0)
+            btn_zero = QPushButton(f"ZERO\n{axis}")
+            btn_zero.setObjectName("dro_zero_btn")
+            btn_zero.setFixedSize(btn_width, 42)
+            btn_zero.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+            btn_zero.setStyleSheet(zero_btn_style)
+            btn_zero.clicked.connect(lambda _=False, a=axis: self._zero_axis(a))
+            glay.addWidget(btn_zero, i, 0)
 
             # Axis label
             lbl_axis = QLabel(axis)
+            lbl_axis.setObjectName("dro_axis_label")
             lbl_axis.setFixedWidth(axis_width)
             lbl_axis.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            lbl_axis.setStyleSheet("font: bold 20pt 'Bebas Kai'; color: rgb(238,238,236);")
             glay.addWidget(lbl_axis, i, 1)
 
             # WORK position
             lbl_work = QLabel("+0.000")
+            lbl_work.setObjectName("dro_work")
             lbl_work.setFixedWidth(val_width)
             lbl_work.setFixedHeight(42)
             lbl_work.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-            lbl_work.setStyleSheet(dro_style_work)
             glay.addWidget(lbl_work, i, 2)
 
             # MACHINE position
             lbl_mach = QLabel("+0.000")
+            lbl_mach.setObjectName("dro_machine")
             lbl_mach.setFixedWidth(val_width)
             lbl_mach.setFixedHeight(42)
             lbl_mach.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-            lbl_mach.setStyleSheet(dro_style_machine)
             glay.addWidget(lbl_mach, i, 3)
 
             # DTG position
             lbl_dtg = QLabel("+0.000")
+            lbl_dtg.setObjectName("dro_dtg")
             lbl_dtg.setFixedWidth(val_width)
             lbl_dtg.setFixedHeight(42)
             lbl_dtg.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-            lbl_dtg.setStyleSheet(dro_style_dtg)
             glay.addWidget(lbl_dtg, i, 4)
 
             # REF button
             btn_ref = QPushButton(f"REF {axis}")
+            btn_ref.setObjectName("dro_ref_btn")
             btn_ref.setFixedSize(btn_width, 42)
             btn_ref.setFocusPolicy(Qt.FocusPolicy.NoFocus)
             btn_ref.setStyleSheet(ref_btn_style_base)
@@ -1120,7 +1081,7 @@ class ThorCNC(QObject):
 
         # Titel
         title = QLabel("Work Coordinate Offsets (G54 – G59.3)")
-        title.setStyleSheet("font-size:16pt; font-weight:bold; color:#eee; margin-bottom: 5px;")
+        title.setObjectName("section_title")
         outer.addWidget(title)
 
         # Table
@@ -1131,22 +1092,8 @@ class ThorCNC(QObject):
         tbl.verticalHeader().setVisible(False)
         tbl.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         tbl.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
+        tbl.setObjectName("offsetsTable")
         tbl.setFocusPolicy(_Qt.FocusPolicy.NoFocus)
-        tbl.setStyleSheet("""
-            QTableWidget {
-                background: #252525; color: #eeeeee;
-                gridline-color: #333333;
-                font-size: 13pt;
-                border: 1px solid #444; border-radius: 4px;
-            }
-            QHeaderView::section {
-                background: #1e1e1e; color: #888;
-                font-size: 11pt; font-weight: bold;
-                border: none; border-bottom: 1px solid #444; border-right: 1px solid #2a2a2a;
-                padding: 6px;
-            }
-            QTableWidget::item { padding: 4px 10px; border-bottom: 1px solid #222; }
-        """)
 
         hdr = tbl.horizontalHeader()
         hdr.setSectionResizeMode(0, QHeaderView.ResizeMode.Fixed)
@@ -1175,12 +1122,9 @@ class ThorCNC(QObject):
                 tbl.setItem(row, col, it)
             # Clear-Button
             btn = QPushButton("CLEAR")
+            btn.setObjectName("wcs_clear_btn")
             btn.setFocusPolicy(_Qt.FocusPolicy.NoFocus)
             btn.setFixedSize(80, 30)
-            btn.setStyleSheet(
-                "QPushButton { background:#a32c2c; color:#eee; border-radius:3px; border:none;"
-                " font-weight:bold; font-size:10pt; }"
-                "QPushButton:hover { background:#c0392b; color:white; }")
             btn.clicked.connect(lambda _=False, n=p_idx: self._clear_wcs(n))
             tbl.setCellWidget(row, 4, btn)
 
@@ -1278,20 +1222,14 @@ class ThorCNC(QObject):
 
         BTN_SZ  = QSize(130, 130)
         ICON_SZ = QSize(118, 108)
-        BTN_SS  = ("QPushButton{background:#3a3a3a;border:2px solid #555;border-radius:8px;}"
-                   "QPushButton:hover{border-color:#888;background:#444;}"
-                   "QPushButton:checked{border-color:#00cc44;border-width:3px;background:#2a3a2a;}")
-        LBL_SS  = "color:#aaa;font-size:9pt;font-weight:bold;"
-        FLD_SS  = ("background:#1a1a1a;color:#cccccc;border:1px solid #555;"
-                   "border-radius:4px;font-size:11pt;padding:2px 6px;")
 
         def make_btn(ngc_name, btn_group):
             btn = QPushButton()
+            btn.setObjectName("probe_grid_btn")
             btn.setMinimumSize(BTN_SZ)
             btn.setMaximumSize(BTN_SZ)
             btn.setIconSize(ICON_SZ)
             btn.setCheckable(True)
-            btn.setStyleSheet(BTN_SS)
             btn.clicked.connect(lambda _=False, n=ngc_name: self._probe_run_sequence(n))
             btn_group.addButton(btn)
             return btn
@@ -1367,12 +1305,9 @@ class ThorCNC(QObject):
         # Header: Inside/Outside Toggle
         hl_toggle = QHBoxLayout()
         self._btn_probe_center_mode = QPushButton("MODE: OUTSIDE")
+        self._btn_probe_center_mode.setObjectName("btn_probe_center_mode")
         self._btn_probe_center_mode.setCheckable(True)
         self._btn_probe_center_mode.setMinimumHeight(45)
-        self._btn_probe_center_mode.setStyleSheet(
-            "QPushButton { background: #333; border: 2px solid #555; border-radius: 6px; font-weight: bold; color: #aaa; }"
-            "QPushButton:checked { background: #2a3a2a; border-color: #00cc44; color: #00cc44; }"
-        )
         self._btn_probe_center_mode.toggled.connect(self._on_probe_center_mode_toggled)
         hl_toggle.addStretch()
         hl_toggle.addWidget(self._btn_probe_center_mode)
@@ -1396,15 +1331,15 @@ class ThorCNC(QObject):
         # Btn X
         self._btn_rect_x = QPushButton()
         self._btn_rect_x.setMinimumSize(BTN_SZ); self._btn_rect_x.setMaximumSize(BTN_SZ)
-        self._btn_rect_x.setIconSize(ICON_SZ); self._btn_rect_x.setCheckable(True); self._btn_rect_x.setStyleSheet(BTN_SS)
+        self._btn_rect_x.setIconSize(ICON_SZ); self._btn_rect_x.setCheckable(True); self._btn_rect_x.setObjectName("probe_grid_btn")
         self._btn_rect_x.clicked.connect(lambda: self._run_center_probe("rect_x"))
         grp_cf.addButton(self._btn_rect_x)
         vl_rect.addWidget(self._btn_rect_x, 0, Qt.AlignCenter)
 
         # X input
-        lbl_x = QLabel("X LENGTH:"); lbl_x.setStyleSheet(LBL_SS)
+        lbl_x = QLabel("X LENGTH:"); lbl_x
         le_x = QLineEdit("0.0000"); le_x.setObjectName("le_probe_center_x")
-        le_x.setAlignment(Qt.AlignCenter); le_x.setStyleSheet(FLD_SS); le_x.setFixedWidth(130)
+        le_x.setAlignment(Qt.AlignCenter); le_x.setFixedWidth(130)
         le_x.setToolTip("Expected X size")
         vl_rect.addWidget(lbl_x, 0, Qt.AlignCenter)
         vl_rect.addWidget(le_x, 0, Qt.AlignCenter)
@@ -1412,15 +1347,15 @@ class ThorCNC(QObject):
         # Btn Y
         self._btn_rect_y = QPushButton()
         self._btn_rect_y.setMinimumSize(BTN_SZ); self._btn_rect_y.setMaximumSize(BTN_SZ)
-        self._btn_rect_y.setIconSize(ICON_SZ); self._btn_rect_y.setCheckable(True); self._btn_rect_y.setStyleSheet(BTN_SS)
+        self._btn_rect_y.setIconSize(ICON_SZ); self._btn_rect_y.setCheckable(True); self._btn_rect_y.setObjectName("probe_grid_btn")
         self._btn_rect_y.clicked.connect(lambda: self._run_center_probe("rect_y"))
         grp_cf.addButton(self._btn_rect_y)
         vl_rect.addWidget(self._btn_rect_y, 0, Qt.AlignCenter)
 
         # Y input
-        lbl_y = QLabel("Y LENGTH:"); lbl_y.setStyleSheet(LBL_SS)
+        lbl_y = QLabel("Y LENGTH:"); lbl_y
         le_y = QLineEdit("0.0000"); le_y.setObjectName("le_probe_center_y")
-        le_y.setAlignment(Qt.AlignCenter); le_y.setStyleSheet(FLD_SS); le_y.setFixedWidth(130)
+        le_y.setAlignment(Qt.AlignCenter); le_y.setFixedWidth(130)
         le_y.setToolTip("Expected Y size")
         vl_rect.addWidget(lbl_y, 0, Qt.AlignCenter)
         vl_rect.addWidget(le_y, 0, Qt.AlignCenter)
@@ -1436,17 +1371,16 @@ class ThorCNC(QObject):
         
         self._btn_rect_round = QPushButton()
         self._btn_rect_round.setMinimumSize(BTN_SZ); self._btn_rect_round.setMaximumSize(BTN_SZ)
-        self._btn_rect_round.setIconSize(ICON_SZ); self._btn_rect_round.setCheckable(True); self._btn_rect_round.setStyleSheet(BTN_SS)
+        self._btn_rect_round.setIconSize(ICON_SZ); self._btn_rect_round.setCheckable(True); self._btn_rect_round.setObjectName("probe_grid_btn")
         self._btn_rect_round.clicked.connect(lambda: self._run_center_probe("round"))
         grp_cf.addButton(self._btn_rect_round)
         vl_round.addWidget(self._btn_rect_round, 0, Qt.AlignCenter)
 
         # Diameter Input
-        lbl_dia = QLabel("DIAMETER:"); lbl_dia.setStyleSheet(LBL_SS)
+        lbl_dia = QLabel("DIAMETER:"); lbl_dia
         le_dia = QLineEdit("0.0000")
         le_dia.setObjectName("le_probe_center_diam")
         le_dia.setAlignment(Qt.AlignCenter)
-        le_dia.setStyleSheet(FLD_SS)
         le_dia.setFixedWidth(130)
         le_dia.setToolTip("Diameter of the round workpiece/pocket for safety")
         vl_round.addWidget(lbl_dia, 0, Qt.AlignCenter)
@@ -1626,13 +1560,6 @@ class ThorCNC(QObject):
         vbox.setContentsMargins(8, 4, 8, 4)
         vbox.setSpacing(4)
 
-        dro_style_work    = ("font: 16pt 'Bebas Kai'; color: #00dd55;"
-                             " background: rgb(30,34,36); border-radius:3px;"
-                             " padding: 0 6px;")
-        dro_style_machine = ("font: 16pt 'Bebas Kai'; color: #aaaaaa;"
-                             " background: rgb(30,34,36); border-radius:3px;"
-                             " padding: 0 6px;")
-
         for axis in ("X", "Y", "Z"):
             row = QWidget()
             row.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
@@ -1641,21 +1568,21 @@ class ThorCNC(QObject):
             hl.setSpacing(6)
 
             lbl_axis = QLabel(axis)
+            lbl_axis.setObjectName("dro_axis_label")
             lbl_axis.setFixedWidth(36)
             lbl_axis.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            lbl_axis.setStyleSheet("font: bold 18pt 'Bebas Kai'; color: rgb(238,238,236);")
             hl.addWidget(lbl_axis)
 
             lbl_work = QLabel("+0.000")
+            lbl_work.setObjectName("dro_work")
             lbl_work.setFixedWidth(110)
             lbl_work.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-            lbl_work.setStyleSheet(dro_style_work)
             hl.addWidget(lbl_work)
 
             lbl_mach = QLabel("+0.000")
+            lbl_mach.setObjectName("dro_machine")
             lbl_mach.setFixedWidth(110)
             lbl_mach.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-            lbl_mach.setStyleSheet(dro_style_machine)
             hl.addWidget(lbl_mach)
 
             hl.addStretch()
@@ -2516,26 +2443,22 @@ class ThorCNC(QObject):
         self._status(f"ESTOP {'AKTIV' if active else 'ZURÜCKGESETZT'}")
         from PySide6.QtWidgets import QPushButton
         if b := self._w(QPushButton, "estop_button"):
-            style_base = "border-radius: 6px; font-weight: bold; font-size: 14pt; min-height: 70px; "
+            _base = "border-radius: 6px; font-weight: bold; font-size: 14pt; min-height: 70px;"
             if active:
-                # E-Stop gedrückt (aus): roter Rahmen
-                b.setStyleSheet(style_base + "border: 2px solid #ff4444; background-color: #2a2a2a; color: white;")
+                b.setStyleSheet(f"QPushButton {{ border: 2px solid #ff4444; color: #cc0000; {_base} }}")
             else:
-                # E-Stop ready (ON): solid red
-                b.setStyleSheet(style_base + "background-color: #cc0000; color: white;")
+                b.setStyleSheet(f"QPushButton {{ background-color: #cc0000; color: white; {_base} }}")
 
     @Slot(bool)
     def _on_machine_on(self, on: bool):
         from PySide6.QtWidgets import QPushButton
         self._is_machine_on = on
         if b := self._w(QPushButton, "power_button"):
-            style_base = "border-radius: 6px; font-weight: bold; font-size: 14pt; min-height: 70px; "
+            _base = "border-radius: 6px; font-weight: bold; font-size: 14pt; min-height: 70px;"
             if on:
-                # Power an: vollflächig grün
-                b.setStyleSheet(style_base + "background-color: #27ae60; color: white;")
+                b.setStyleSheet(f"QPushButton {{ background-color: #27ae60; color: white; {_base} }}")
             else:
-                # Power aus: grüner Rahmen
-                b.setStyleSheet(style_base + "border: 2px solid #27ae60; background-color: #2a2a2a; color: white;")
+                b.setStyleSheet(f"QPushButton {{ border: 2px solid #27ae60; color: #27ae60; {_base} }}")
         self._update_run_buttons()
         # GO TO HOME: only green if machine is ON AND all joints are homed
         self._update_goto_home_style(on and getattr(self, "_all_joints_homed", False))
@@ -2587,39 +2510,38 @@ class ThorCNC(QObject):
         
         if not (btn_run and btn_pause and btn_stop): return
         
-        style_base = "border-radius: 6px; font-weight: bold; font-size: 14pt; min-height: 70px; "
-        
+        _base = "border-radius: 6px; font-weight: bold; font-size: 14pt; min-height: 70px;"
+
         if not self._is_machine_on:
-            btn_run.setStyleSheet(style_base + "background-color: #444; color: #888;")
-            btn_pause.setStyleSheet(style_base + "background-color: #444; color: #888;")
-            btn_stop.setStyleSheet(style_base + "background-color: #444; color: #888;")
+            for btn in (btn_run, btn_pause, btn_stop):
+                btn.setStyleSheet(f"QPushButton {{ {_base} }}")
             return
-            
+
         is_running = self._interp_state in (linuxcnc.INTERP_READING, linuxcnc.INTERP_WAITING)
         is_paused = self._interp_state == linuxcnc.INTERP_PAUSED
         is_idle = self._interp_state == linuxcnc.INTERP_IDLE
-        
+
         # Cycle Start (btn_run)
         if is_running:
-            btn_run.setStyleSheet(style_base + "background-color: #27ae60; color: white;")
+            btn_run.setStyleSheet(f"QPushButton {{ background-color: #27ae60; color: white; {_base} }}")
         elif (is_idle or is_paused) and self._has_file:
-            btn_run.setStyleSheet(style_base + "border: 2px solid #27ae60; background-color: #222; color: #27ae60;")
+            btn_run.setStyleSheet(f"QPushButton {{ border: 2px solid #27ae60; color: #27ae60; {_base} }}")
         else:
-            btn_run.setStyleSheet(style_base + "background-color: #444; color: #888;")
-            
+            btn_run.setStyleSheet(f"QPushButton {{ {_base} }}")
+
         # Feedhold (btn_pause_mdi)
         if is_paused:
-            btn_pause.setStyleSheet(style_base + "background-color: #f39c12; color: white;")
+            btn_pause.setStyleSheet(f"QPushButton {{ background-color: #f39c12; color: white; {_base} }}")
         elif is_running:
-            btn_pause.setStyleSheet(style_base + "border: 2px solid #f39c12; background-color: #222; color: #f39c12;")
+            btn_pause.setStyleSheet(f"QPushButton {{ border: 2px solid #f39c12; color: #f39c12; {_base} }}")
         else:
-            btn_pause.setStyleSheet(style_base + "background-color: #444; color: #888;")
-            
+            btn_pause.setStyleSheet(f"QPushButton {{ {_base} }}")
+
         # Stop (stop_button)
         if is_running or is_paused:
-            btn_stop.setStyleSheet(style_base + "background-color: #c0392b; color: white;")
+            btn_stop.setStyleSheet(f"QPushButton {{ background-color: #c0392b; color: white; {_base} }}")
         else:
-            btn_stop.setStyleSheet(style_base + "background-color: #444; color: #888;")
+            btn_stop.setStyleSheet(f"QPushButton {{ {_base} }}")
 
     @Slot(list)
     def _on_position(self, pos: list):
@@ -2806,22 +2728,20 @@ class ThorCNC(QObject):
             # DRO work label: grün wenn gehomed, rot wenn nicht
             if axis in self._dro_work:
                 color = "#00dd55" if is_homed else "#e74c3c"
+                self._dro_work[axis].setProperty("homed", is_homed)
                 self._dro_work[axis].setStyleSheet(
-                    f"font: 18pt 'Bebas Kai'; color: {color};"
-                    " background: rgb(25,28,30); border-radius:3px; padding: 2px 8px;")
+                    f"QLabel {{ font: 18pt 'Bebas Kai'; color: {color}; border-radius:3px; padding: 2px 8px; }}")
             # REF button: grün wenn gehomed
             if axis in self._dro_ref_btn:
                 btn = self._dro_ref_btn[axis]
                 if is_homed:
                     btn.setStyleSheet(
                         "QPushButton { font: bold 10pt 'Bebas Kai'; border-radius:4px;"
-                        " background: rgb(78,154,6); color: white; }"
-                        "QPushButton:hover { background: rgb(100,180,20); }")
+                        " background: #4e9a06; color: white; }"
+                        "QPushButton:hover { background: #64b408; }")
                 else:
                     btn.setStyleSheet(
-                        "QPushButton { font: bold 9pt 'Bebas Kai'; border-radius:4px;"
-                        " background: rgb(60,60,60); color: rgb(186,189,182); }"
-                        "QPushButton:hover { background: rgb(80,80,80); }")
+                        "QPushButton { font: bold 9pt 'Bebas Kai'; border-radius:4px; }")
 
     @Slot(float)
     def _on_feed_override(self, val: float):
@@ -2921,8 +2841,8 @@ class ThorCNC(QObject):
             rev_style = _base + "background-color: #27ae60; color: white; }"
         elif running:
             # Grüner Rahmen: läuft, aber noch nicht auf Drehzahl
-            fwd_style = _base + "border: 2px solid #27ae60; background-color: #1a1a1a; color: white; }"
-            rev_style = _base + "border: 2px solid #27ae60; background-color: #1a1a1a; color: white; }"
+            fwd_style = _base + "border: 2px solid #27ae60; color: #27ae60; }"
+            rev_style = _base + "border: 2px solid #27ae60; color: #27ae60; }"
         else:
             fwd_style = ""
             rev_style = ""

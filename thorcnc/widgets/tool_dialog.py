@@ -15,33 +15,6 @@ class ToolSelectionDialog(QDialog):
         self._selected_tool = None
         self._data = tool_data  # List of dicts or tuples
         
-        # Style
-        self.setStyleSheet("""
-            QDialog { background-color: #1a1a1a; color: #eee; }
-            QLabel { color: #aaa; font-weight: bold; }
-            QLineEdit { 
-                background-color: #2a2a2a; color: white; 
-                border: 1px solid #444; border-radius: 4px; 
-                padding: 8px; font-size: 14pt;
-            }
-            QTableWidget { 
-                background-color: #1a1a1a; gridline-color: #333; 
-                border: 1px solid #444; color: #eee;
-                font-size: 11pt;
-            }
-            QTableWidget::item:selected { background-color: #2D5FA8; color: white; }
-            QHeaderView::section { 
-                background-color: #2a2a2a; color: #888; 
-                padding: 6px; border: none; font-weight: bold;
-            }
-            QPushButton { 
-                background-color: #333; color: white; border: 1px solid #555; 
-                border-radius: 4px; padding: 8px 20px; min-width: 80px;
-            }
-            QPushButton#btnConfirm { background-color: #2D5FA8; border: none; font-weight: bold; }
-            QPushButton:hover { background-color: #444; }
-            QPushButton#btnConfirm:hover { background-color: #3a75cc; }
-        """)
 
         layout = QVBoxLayout(self)
         layout.setSpacing(12)

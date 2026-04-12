@@ -412,7 +412,6 @@ class BackplotWidget(QFrame):
     def __init__(self, parent=None, msaa_samples: int = 4):
         super().__init__(parent)
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-        self.setStyleSheet("BackplotWidget { border: 1px solid #444; border-radius: 4px; background-color: #1a1a1a; }")
         
         from PySide6.QtWidgets import QHBoxLayout
         outer = QVBoxLayout(self)
@@ -423,7 +422,6 @@ class BackplotWidget(QFrame):
         toolbar_widget = QFrame(self)
         toolbar_widget.setObjectName("backplotToolbar")
         toolbar_widget.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-        toolbar_widget.setStyleSheet("#backplotToolbar { background-color: transparent; border: none; border-bottom: 1px solid #444; }")
         toolbar_widget.setFixedHeight(40)
         self._toolbar_lay = QHBoxLayout(toolbar_widget)
         self._toolbar_lay.setContentsMargins(6, 2, 6, 2)
@@ -444,7 +442,7 @@ class BackplotWidget(QFrame):
                 self,
             )
             lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            lbl.setStyleSheet("color: #888; border: 1px dashed #555;")
+            lbl.setObjectName("backplot_unavailable_label")
             outer.addWidget(lbl)
             self._impl = None
 

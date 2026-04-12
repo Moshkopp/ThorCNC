@@ -13,26 +13,6 @@
   <property name="windowTitle">
    <string>ThorCNC</string>
   </property>
-  <property name="styleSheet">
-   <string>
-    QTabWidget::pane { border: 1px solid #444; }
-    QTabBar::tab { height: 0px; width: 0px; margin: 0px; padding: 0px; border: none; }
-    QGroupBox { font-weight: bold; }
-    QTabWidget#settings_tabs::pane { border: 1px solid #555; }
-    QTabWidget#settings_tabs &gt; QTabBar::tab {
-        height: 32px; width: 120px; margin: 0px 2px 0px 0px;
-        padding: 4px 12px; border: 1px solid #555;
-        border-bottom: none; border-radius: 4px 4px 0 0;
-        background: #2a2a2a; color: #aaa; font-weight: bold;
-    }
-    QTabWidget#settings_tabs &gt; QTabBar::tab:selected {
-        background: #1e5a8a; color: white;
-    }
-    QTabWidget#settings_tabs &gt; QTabBar::tab:hover:!selected {
-        background: #3a3a3a;
-    }
-   </string>
-  </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QHBoxLayout" name="mainLayout">
     <item>
@@ -235,9 +215,6 @@
            <height>230</height>
           </size>
          </property>
-         <property name="styleSheet">
-          <string>QFrame#estopPowerGroup { border: 1px solid #444; border-radius: 4px; background-color: #1a1a1a; }</string>
-         </property>
          <layout class="QVBoxLayout" name="estopPowerLayout">
           <property name="leftMargin"><number>8</number></property>
           <property name="topMargin"><number>8</number></property>
@@ -395,9 +372,6 @@
                     <height>35</height>
                    </size>
                   </property>
-                  <property name="styleSheet">
-                   <string>background-color: #444; color: white; border: 1px solid #666; font-weight: bold; font-size: 12pt;</string>
-                  </property>
                   <property name="text">
                    <string>-</string>
                   </property>
@@ -416,9 +390,6 @@
                     <width>35</width>
                     <height>35</height>
                    </size>
-                  </property>
-                  <property name="styleSheet">
-                   <string>background-color: #444; color: white; border: 1px solid #666; font-weight: bold; font-size: 12pt;</string>
                   </property>
                   <property name="text">
                    <string>+</string>
@@ -444,9 +415,6 @@
                <width>90</width>
                <height>16777215</height>
               </size>
-             </property>
-             <property name="styleSheet">
-              <string>background: #2a2a2a; border-radius: 4px;</string>
              </property>
              <layout class="QVBoxLayout">
               <item>
@@ -522,9 +490,6 @@
                     <height>30</height>
                    </size>
                   </property>
-                  <property name="styleSheet">
-                   <string>background-color: #333; color: white; border-radius: 4px; font-weight: bold;</string>
-                  </property>
                   <property name="text">
                    <string>UP</string>
                   </property>
@@ -538,9 +503,6 @@
                     <height>30</height>
                    </size>
                   </property>
-                  <property name="styleSheet">
-                   <string>background-color: #333; color: white; border-radius: 4px; font-weight: bold;</string>
-                  </property>
                   <property name="text">
                    <string>HOME</string>
                   </property>
@@ -548,9 +510,6 @@
                 </item>
                 <item>
                  <widget class="QLabel" name="lbl_current_path">
-                  <property name="styleSheet">
-                   <string>color: #aaa; font-size: 11pt;</string>
-                  </property>
                   <property name="text">
                    <string>/</string>
                   </property>
@@ -565,9 +524,6 @@
                   <width>350</width>
                   <height>0</height>
                  </size>
-                </property>
-                <property name="styleSheet">
-                 <string>background-color: #222; color: #eee; font-size: 13pt;</string>
                 </property>
                </widget>
               </item>
@@ -601,9 +557,6 @@
                     <height>35</height>
                    </size>
                   </property>
-                  <property name="styleSheet">
-                   <string>background-color: #444; color: white; font-weight: bold; font-size: 12pt; border: 1px solid #666; border-radius: 4px;</string>
-                  </property>
                   <property name="text">
                    <string>-</string>
                   </property>
@@ -616,9 +569,6 @@
                     <width>35</width>
                     <height>35</height>
                    </size>
-                  </property>
-                  <property name="styleSheet">
-                   <string>background-color: #444; color: white; font-weight: bold; font-size: 12pt; border: 1px solid #666; border-radius: 4px;</string>
                   </property>
                   <property name="text">
                    <string>+</string>
@@ -649,9 +599,6 @@
                     <height>40</height>
                    </size>
                   </property>
-                  <property name="styleSheet">
-                   <string>background-color: #27ae60; color: white; font-weight: bold;</string>
-                  </property>
                   <property name="text">
                    <string>SAVE</string>
                   </property>
@@ -665,9 +612,6 @@
                     <height>40</height>
                    </size>
                   </property>
-                  <property name="styleSheet">
-                   <string>background-color: #2980b9; color: white; font-weight: bold;</string>
-                  </property>
                   <property name="text">
                    <string>SAVE AS</string>
                   </property>
@@ -680,9 +624,6 @@
                     <width>100</width>
                     <height>40</height>
                    </size>
-                  </property>
-                  <property name="styleSheet">
-                   <string>background-color: #c0392b; color: white; font-weight: bold;</string>
                   </property>
                   <property name="text">
                    <string>CANCEL</string>
@@ -699,9 +640,6 @@
                   <pointsize>11</pointsize>
                  </font>
                 </property>
-                <property name="styleSheet">
-                 <string>background-color: #111; color: #0f0;</string>
-                </property>
                 <property name="lineWrapMode">
                  <enum>QPlainTextEdit::LineWrapMode::NoWrap</enum>
                 </property>
@@ -714,9 +652,6 @@
                   <width>0</width>
                   <height>70</height>
                  </size>
-                </property>
-                <property name="styleSheet">
-                 <string>background-color: #2980b9; color: white; border-radius: 4px; font-weight: bold; font-size: 15pt;</string>
                 </property>
                 <property name="text">
                  <string>LOAD TO MACHINE</string>
@@ -750,9 +685,6 @@
                 <height>35</height>
                </size>
               </property>
-              <property name="styleSheet">
-               <string>background-color: #2a2a2a; color: white; border-radius: 4px; font-weight: bold;</string>
-              </property>
               <property name="text">
                <string>+ Add Tool</string>
               </property>
@@ -779,9 +711,6 @@
                 <height>35</height>
                </size>
               </property>
-              <property name="styleSheet">
-               <string>background-color: #f39c12; color: white; border-radius: 4px; font-weight: bold;</string>
-              </property>
               <property name="text">
                <string>↺ Reload File</string>
               </property>
@@ -795,9 +724,6 @@
                 <height>35</height>
                </size>
               </property>
-              <property name="styleSheet">
-               <string>background-color: #27ae60; color: white; border-radius: 4px; font-weight: bold;</string>
-              </property>
               <property name="text">
                <string>💾 Save &amp; Apply</string>
               </property>
@@ -807,12 +733,6 @@
           </item>
           <item>
            <widget class="QTableWidget" name="toolTable">
-            <property name="styleSheet">
-             <string>
-             QTableWidget { background-color: #222; color: #eee; font-size: 13pt; gridline-color: #444; }
-             QHeaderView::section { background-color: #333; color: white; font-weight: bold; font-size: 11pt; padding: 4px; border: 1px solid #444; }
-            </string>
-            </property>
             <column>
              <property name="text">
               <string>Tool (T)</string>
@@ -876,9 +796,6 @@
                   <height>16777215</height>
                  </size>
                 </property>
-                <property name="styleSheet">
-                 <string>QFrame { background-color: #2a2a2a; border: 1px solid #444; border-radius: 4px; } QLabel { color: #ccc; font-size: 9pt; } QDoubleSpinBox, QSpinBox, QComboBox { background: #333; color: white; border: 1px solid #555; border-radius: 3px; padding: 2px 4px; min-width: 55px; max-width: 78px; } QPushButton { border-radius: 3px; }</string>
-                </property>
                 <property name="frameShape">
                  <enum>QFrame::Shape::StyledPanel</enum>
                 </property>
@@ -891,9 +808,6 @@
                  </property>
                  <item row="0" column="0" colspan="4">
                   <widget class="QLabel" name="label">
-                   <property name="styleSheet">
-                    <string>color: white; font-weight: bold; font-size: 10pt;</string>
-                   </property>
                    <property name="text">
                     <string>PROBING PARAMETERS</string>
                    </property>
@@ -1163,9 +1077,6 @@
                   <height>16777215</height>
                  </size>
                 </property>
-                <property name="styleSheet">
-                 <string>QFrame { background-color: #2a2a2a; border: 1px solid #444; border-radius: 4px; } QLabel { color: #aaa; font-size: 9pt; } QLineEdit { background: #1a1a1a; color: #00ff88; border: 1px solid #555; border-radius: 2px; font-weight: bold; font-size: 10pt; padding: 2px; min-width: 55px; } QPushButton { border-radius: 3px; font-weight: bold; }</string>
-                </property>
                 <property name="frameShape">
                  <enum>QFrame::Shape::StyledPanel</enum>
                 </property>
@@ -1178,9 +1089,6 @@
                  </property>
                  <item row="0" column="0">
                   <widget class="QPushButton" name="btn_probe_clear_x">
-                   <property name="styleSheet">
-                    <string>background: #3a1a1a; color: #ff6666; border: 1px solid #cc3333; border-radius: 3px; font-weight: bold;</string>
-                   </property>
                    <property name="text">
                     <string>CLEAR X</string>
                    </property>
@@ -1280,9 +1188,6 @@
                  </item>
                  <item row="1" column="0">
                   <widget class="QPushButton" name="btn_probe_clear_y">
-                   <property name="styleSheet">
-                    <string>background: #3a1a1a; color: #ff6666; border: 1px solid #cc3333; border-radius: 3px; font-weight: bold;</string>
-                   </property>
                    <property name="text">
                     <string>CLEAR Y</string>
                    </property>
@@ -1382,9 +1287,6 @@
                  </item>
                  <item row="2" column="0">
                   <widget class="QPushButton" name="btn_probe_clear_all">
-                   <property name="styleSheet">
-                    <string>background: #3a1a1a; color: #ff6666; border: 1px solid #cc3333; border-radius: 3px; font-weight: bold;</string>
-                   </property>
                    <property name="text">
                     <string>CLEAR ALL</string>
                    </property>
@@ -1505,9 +1407,6 @@
                     <height>36</height>
                    </size>
                   </property>
-                  <property name="styleSheet">
-                   <string>QToolButton { background-color: #444; color: white; font-weight: bold; border-radius: 4px; padding: 4px 8px; border: 1px solid #666; } QToolButton::menu-button { border-left: 1px solid #666; width: 16px; }</string>
-                  </property>
                   <property name="text">
                    <string>OUTSIDE CORNERS</string>
                   </property>
@@ -1534,9 +1433,6 @@
                 </item>
                 <item>
                  <widget class="QLabel" name="lbl_probe_section_title">
-                  <property name="styleSheet">
-                   <string>color: #aaa; font-weight: bold; font-size: 12pt;</string>
-                  </property>
                   <property name="text">
                    <string>OUTSIDE MEASUREMENTS</string>
                   </property>
@@ -1595,9 +1491,6 @@
                     <width>432</width>
                     <height>432</height>
                    </size>
-                  </property>
-                  <property name="styleSheet">
-                   <string>QFrame#frm_probe_grid { background-color: #2a2a2a; border: 1px solid #555; border-radius: 25px; } QPushButton { background: #3a3a3a; border: 2px solid #555; border-radius: 8px; } QPushButton:hover { border-color: #888; background: #444; } QPushButton:checked { border-color: #00cc44; border-width: 3px; background: #2a3a2a; }</string>
                   </property>
                   <property name="frameShape">
                    <enum>QFrame::Shape::NoFrame</enum>
@@ -1788,9 +1681,6 @@
                     <height>432</height>
                    </size>
                   </property>
-                  <property name="styleSheet">
-                   <string>QFrame#frm_probe_pre_post { background-color: #2a2a2a; border: 1px solid #555; border-radius: 25px; } QLabel { color: #aaa; font-size: 9pt; font-weight: bold; } QTextEdit { background: #1a1a1a; color: #cccccc; border: 1px solid #555; border-radius: 6px; font-family: monospace; font-size: 10pt; }</string>
-                  </property>
                   <property name="frameShape">
                    <enum>QFrame::Shape::NoFrame</enum>
                   </property>
@@ -1803,9 +1693,6 @@
                    </property>
                    <item>
                     <widget class="QLabel" name="label">
-                     <property name="styleSheet">
-                      <string>color: #f39c12; font-weight: bold; font-size: 9pt; letter-spacing: 1px;</string>
-                     </property>
                      <property name="text">
                       <string>BEFORE PROBING</string>
                      </property>
@@ -1826,9 +1713,6 @@
                    </item>
                    <item>
                     <widget class="QLabel" name="label">
-                     <property name="styleSheet">
-                      <string>color: #2ecc71; font-weight: bold; font-size: 9pt; letter-spacing: 1px;</string>
-                     </property>
                      <property name="text">
                       <string>AFTER PROBING</string>
                      </property>
@@ -2121,17 +2005,11 @@
                       <property name="spacing"><number>5</number></property>
                       <item row="0" column="0">
                        <widget class="QLabel" name="lbl_ts_before">
-                        <property name="styleSheet">
-                         <string>color: #f39c12; font-weight: bold; font-size: 8pt;</string>
-                        </property>
                         <property name="text"><string>BEFORE</string></property>
                        </widget>
                       </item>
                       <item row="0" column="1">
                        <widget class="QLabel" name="lbl_ts_after">
-                        <property name="styleSheet">
-                         <string>color: #2ecc71; font-weight: bold; font-size: 8pt;</string>
-                        </property>
                         <property name="text"><string>AFTER</string></property>
                        </widget>
                       </item>
@@ -2165,9 +2043,6 @@
                      <property name="wordWrap"><bool>true</bool></property>
                      <property name="alignment">
                       <set>Qt::AlignmentFlag::AlignTop|Qt::AlignmentFlag::AlignLeft</set>
-                     </property>
-                     <property name="styleSheet">
-                      <string>font-size: 9pt; color: #d8d8d8;</string>
                      </property>
                      <property name="text">
                       <string>&lt;b&gt;Wechselposition X / Y / Z&lt;/b&gt;&lt;br&gt;Sicherheitsposition für den manuellen Werkzeugwechsel (Maschinenkoordinaten). Die Maschine fährt diese Position an bevor M6 den Wechsel ausführt.&lt;br&gt;&lt;br&gt;&lt;b&gt;Messposition X / Y / Z&lt;/b&gt;&lt;br&gt;Exakte XY-Position des Werkzeugmessers sowie Z-Höhe der Tasteroberfläche (Maschinenkoordinaten).&lt;br&gt;&lt;br&gt;&lt;b&gt;Spindle Zero&lt;/b&gt;&lt;br&gt;Messwert des Referenzwerkzeugs am Taster (G59.3). Alle weiteren Werkzeuglängen werden relativ dazu berechnet.&lt;br&gt;&lt;br&gt;&lt;b&gt;MAX Probe&lt;/b&gt;&lt;br&gt;Maximaler Messweg ab Startposition (negativ = nach unten). Sicherheitslimit verhindert Kollision.&lt;br&gt;&lt;br&gt;&lt;b&gt;Retract&lt;/b&gt;&lt;br&gt;Rückzug nach erstem Kontakt vor der Feinmessung (mm).&lt;br&gt;&lt;br&gt;&lt;b&gt;Search Vel&lt;/b&gt;&lt;br&gt;Geschwindigkeit für die schnelle Vorpositionierung zum Taster (mm/min).&lt;br&gt;&lt;br&gt;&lt;b&gt;Probe Vel&lt;/b&gt;&lt;br&gt;Langsame Antastgeschwindigkeit für die genaue Längenmessung (mm/min).&lt;br&gt;&lt;br&gt;&lt;b&gt;Before / After&lt;/b&gt;&lt;br&gt;G-Code der vor bzw. nach der Messung ausgeführt wird (z.B. Digitalausgänge schalten).</string>
@@ -2353,9 +2228,6 @@
              <layout class="QVBoxLayout">
               <item>
                <widget class="QLabel" name="label">
-                <property name="styleSheet">
-                 <string>color: #555; font-size: 13pt;</string>
-                </property>
                 <property name="text">
                  <string>Advanced Settings – Coming soon.</string>
                 </property>
@@ -2377,9 +2249,6 @@
          <layout class="QVBoxLayout" name="tab_status_layout">
           <item>
            <widget class="QListWidget" name="status_log">
-            <property name="styleSheet">
-             <string>QListWidget { font-family: monospace; font-size: 11px; } QListWidget::item { padding: 3px 6px; border-bottom: 1px solid #333; }</string>
-            </property>
             <property name="editTriggers">
              <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
             </property>
