@@ -2327,7 +2327,15 @@ class ThorCNC(QObject):
             speed = abs(self.poller.stat.spindle[0]['speed'])
             # Fallback if no speed was ever set
             if speed < 1:
+                # Versuche Standardwert aus INI zu lesen, sonst 1000
                 speed = 1000
+                if self.ini:
+                    try:
+                        val = self.ini.find("DISPLAY", "DEFAULT_SPINDLE_SPEED")
+                        if val:
+                            speed = float(val)
+                    except:
+                        pass
             self.cmd.mode(linuxcnc.MODE_MANUAL)
             self.cmd.spindle(direction, speed)
 
