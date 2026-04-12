@@ -801,20 +801,20 @@
                 </property>
                 <layout class="QGridLayout" name="gl_probe_params">
                  <property name="margin" stdset="0">
-                  <number>8</number>
+                  <number>0</number>
                  </property>
                  <property name="spacing">
-                  <number>5</number>
+                  <number>0</number>
                  </property>
                  <item row="0" column="0" colspan="4">
-                  <widget class="QLabel" name="label">
+                  <widget class="QLabel" name="lbl_probe_params_title">
                    <property name="text">
                     <string>PROBING PARAMETERS</string>
                    </property>
                   </widget>
                  </item>
                  <item row="1" column="0">
-                  <widget class="QLabel" name="label">
+                  <widget class="QLabel" name="lbl_probe_param_tool">
                    <property name="text">
                     <string>PROBE TOOL</string>
                    </property>
@@ -834,7 +834,7 @@
                   </widget>
                  </item>
                  <item row="1" column="2">
-                  <widget class="QLabel" name="label">
+                  <widget class="QLabel" name="lbl_probe_param_step_off">
                    <property name="text">
                     <string>STEP OFF</string>
                    </property>
@@ -851,7 +851,7 @@
                   </widget>
                  </item>
                  <item row="2" column="0">
-                  <widget class="QLabel" name="label">
+                  <widget class="QLabel" name="lbl_probe_param_dia">
                    <property name="text">
                     <string>PROBE DIA</string>
                    </property>
@@ -868,7 +868,7 @@
                   </widget>
                  </item>
                  <item row="2" column="2">
-                  <widget class="QLabel" name="label">
+                  <widget class="QLabel" name="lbl_probe_param_max_xy">
                    <property name="text">
                     <string>MAX XY DIST</string>
                    </property>
@@ -888,7 +888,7 @@
                   </widget>
                  </item>
                  <item row="3" column="0">
-                  <widget class="QLabel" name="label">
+                  <widget class="QLabel" name="lbl_probe_param_rapid">
                    <property name="text">
                     <string>PROBE RAPID</string>
                    </property>
@@ -908,7 +908,7 @@
                   </widget>
                  </item>
                  <item row="3" column="2">
-                  <widget class="QLabel" name="label">
+                  <widget class="QLabel" name="lbl_probe_param_max_z">
                    <property name="text">
                     <string>MAX Z DIST</string>
                    </property>
@@ -928,7 +928,7 @@
                   </widget>
                  </item>
                  <item row="4" column="0">
-                  <widget class="QLabel" name="label">
+                  <widget class="QLabel" name="lbl_probe_param_search">
                    <property name="text">
                     <string>PROBE SEARCH</string>
                    </property>
@@ -948,7 +948,7 @@
                   </widget>
                  </item>
                  <item row="4" column="2">
-                  <widget class="QLabel" name="label">
+                  <widget class="QLabel" name="lbl_probe_param_xy_clearance">
                    <property name="text">
                     <string>XY CLEARANCE</string>
                    </property>
@@ -965,7 +965,7 @@
                   </widget>
                  </item>
                  <item row="5" column="0">
-                  <widget class="QLabel" name="label">
+                  <widget class="QLabel" name="lbl_probe_param_feed">
                    <property name="text">
                     <string>PROBE FEED</string>
                    </property>
@@ -985,7 +985,7 @@
                   </widget>
                  </item>
                  <item row="5" column="2">
-                  <widget class="QLabel" name="label">
+                  <widget class="QLabel" name="lbl_probe_param_z_clearance">
                    <property name="text">
                     <string>Z CLEARANCE</string>
                    </property>
@@ -1002,7 +1002,7 @@
                   </widget>
                  </item>
                  <item row="6" column="0">
-                  <widget class="QLabel" name="label">
+                  <widget class="QLabel" name="lbl_probe_param_extra_depth">
                    <property name="text">
                     <string>EXTRA DEPTH</string>
                    </property>
@@ -1019,7 +1019,7 @@
                   </widget>
                  </item>
                  <item row="6" column="2">
-                  <widget class="QLabel" name="label">
+                  <widget class="QLabel" name="lbl_probe_param_edge_width">
                    <property name="text">
                     <string>EDGE WIDTH</string>
                    </property>
@@ -1036,7 +1036,7 @@
                   </widget>
                  </item>
                  <item row="7" column="0">
-                  <widget class="QLabel" name="label">
+                  <widget class="QLabel" name="lbl_probe_param_motion_type">
                    <property name="text">
                     <string>MOTION TYPE</string>
                    </property>

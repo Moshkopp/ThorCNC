@@ -511,6 +511,41 @@ QFrame#frm_probe_pre_post {
     background-color: #2a2a2a;
     border: 1px solid #444444;
     border-radius: 12px;
+    padding: 10px; /* Outer margin for the grid layout */
+}
+
+/* Compact Probing Parameter Grid */
+QLabel#lbl_probe_params_title {
+    font-weight: bold;
+    font-size: 11pt;
+    color: #aaaaaa;
+    margin-bottom: 8px; /* Gap between title and first row */
+    letter-spacing: 1px;
+}
+
+QFrame#frm_probe_params QLabel[objectName^="lbl_probe_param_"] {
+    margin: 2px 4px;
+    font-size: 9pt;
+    color: #bbbbbb;
+}
+
+QFrame#frm_probe_params QSpinBox, 
+QFrame#frm_probe_params QDoubleSpinBox,
+QFrame#frm_probe_params QComboBox {
+    margin: 2px 0px;
+    min-height: 24px;
+    max-height: 24px;
+    padding: 0px 4px;
+    font-size: 9pt;
+}
+
+/* Auto Zero Master Button in the grid */
+QPushButton#btn_auto_zero_master {
+    margin: 2px 0px;
+    min-height: 24px;
+    font-size: 9pt;
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #3d3d3d, stop:1 #2a2a2a);
+    color: #e0e0e0;
 }
 
 QFrame#frm_probe_grid {

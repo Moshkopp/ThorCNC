@@ -53,3 +53,13 @@ QPushButton#btn_set_taster_pos:hover {
     color: #ffffff;
     background-color: #1a4a2a;
 }
+
+/* ── Probing ── */
+QPushButton#btn_auto_zero_master {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #1a6e1a, stop:1 #27ae60);
+    border: 1px solid #2ecc71;
+    color: white;
+}
+QPushButton#btn_auto_zero_master:hover {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #1e8e2e, stop:1 #2ecc71);
+}
