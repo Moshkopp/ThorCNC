@@ -2884,7 +2884,23 @@ class ThorCNC(QObject):
             
         from PySide6.QtWidgets import QProgressBar
         if bar := self._w(QProgressBar, "spindle_load_bar"):
-            bar.setValue(int(max(0, min(100, load))))
+            val = int(max(0, min(100, load)))
+            bar.setValue(val)
+            
+            # Dynamische Farbe basierend auf Auslastung ändern (via Style-Property)
+            if val >= 80:
+                state = "critical"
+            elif val >= 60:
+                state = "warning"
+            else:
+                state = "normal"
+                
+            if bar.property("loadState") != state:
+                bar.setProperty("loadState", state)
+                # Aktualisiert das Styling der ProgressBar zur Laufzeit!
+                bar.style().unpolish(bar)
+                bar.style().polish(bar)
+
 
     @Slot(bool)
     def _on_spindle_at_speed(self, at_speed: bool):

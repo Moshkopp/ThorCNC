@@ -253,10 +253,9 @@ QProgressBar#spindle_load_bar {
     color: transparent;
 }
 
-QProgressBar#spindle_load_bar::chunk {
-    background-color: #3498db;
-    border-radius: 7px;
-}
+QProgressBar#spindle_load_bar[loadState="normal"]::chunk { background-color: #2ea043; border-radius: 7px; }
+QProgressBar#spindle_load_bar[loadState="warning"]::chunk { background-color: #d29922; border-radius: 7px; }
+QProgressBar#spindle_load_bar[loadState="critical"]::chunk { background-color: #f85149; border-radius: 7px; }
 
 QPushButton#btn_spindle_fwd,
 QPushButton#btn_spindle_rev,
