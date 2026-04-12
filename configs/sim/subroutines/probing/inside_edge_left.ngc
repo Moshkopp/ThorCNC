@@ -1,5 +1,5 @@
 ( ThorCNC - Inside Left Edge )
-( #1: Edge Width, #3: Max XY, #4: Max Z, #5: Search Vel, #6: Probe Vel, #7: Z Cl, #8: Depth, #9: Auto Zero )
+( #1: Edge Width, #3: Max XY, #4: Max Z, #5: Search Vel, #6: Probe Vel, #7: Z Cl, #8: Depth, #9: Auto Zero, #10: Probe Dia, #11: Probe Rapid )
 
 O<inside_edge_left> sub
     ( 1. Z-Probe )

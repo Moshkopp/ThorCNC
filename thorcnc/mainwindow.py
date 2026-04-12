@@ -1244,18 +1244,19 @@ class ThorCNC(QObject):
 
         self._probe_img_dir = os.path.join(_DIR, "images", "probe")
 
-        # ── Mode-Dropdown Menu ────────────────────────────────────────────────
-        MODES = ["OUTSIDE CORNERS", "INSIDE CORNERS",
-                 "CENTER FINDER", "EDGE ANGLE"]
-        mode_btn = self._w(QToolButton, "btn_probe_mode")
-        if mode_btn:
-            menu = QMenu(mode_btn)
-            for mode in MODES:
-                act = QAction(mode, menu)
-                act.triggered.connect(
-                    lambda _=False, m=mode: self._probe_set_mode(m))
-                menu.addAction(act)
-            mode_btn.setMenu(menu)
+        # ── Mode Selection Buttons ──────────────────────────────────────────
+        from PySide6.QtWidgets import QButtonGroup
+        self._probe_mode_grp = QButtonGroup(self)
+        self._probe_mode_grp.setExclusive(True)
+
+        for obj_name, mode in [
+            ("btn_mode_outside", "OUTSIDE CORNERS"),
+            ("btn_mode_inside",  "INSIDE CORNERS"),
+            ("btn_mode_center",  "CENTER FINDER")
+        ]:
+            if btn := self._w(QPushButton, obj_name):
+                self._probe_mode_grp.addButton(btn)
+                btn.clicked.connect(lambda _=False, m=mode: self._probe_set_mode(m))
 
         # ── QStackedWidget Setup ───────────────────────────────────────────
         self._probe_stack = QStackedWidget()
@@ -1435,10 +1436,7 @@ class ThorCNC(QObject):
         self._probe_stack.addWidget(p)
         self._probe_pages["CENTER FINDER"] = p
 
-        # Page 4 – Edge Angle (3×3, angle/ subfolder)
-        p = make_grid_page("angle", GRID_3x3)
-        self._probe_stack.addWidget(p)
-        self._probe_pages["EDGE ANGLE"] = p
+
 
 
 
@@ -1495,11 +1493,11 @@ class ThorCNC(QObject):
         self._btn_probe_auto_zero = self.ui.findChild(QPushButton, "btn_auto_zero_master")
         if self._btn_probe_auto_zero:
             self._btn_probe_auto_zero.setCheckable(True)
-            val = self.settings.get("probe_auto_zero")
-            is_on = True if val is None else str(val).lower() in ['true', '1', 'on']
-            self._btn_probe_auto_zero.setChecked(is_on)
-            QTimer.singleShot(150, lambda: self._btn_probe_auto_zero.setChecked(is_on))
-            self._btn_probe_auto_zero.toggled.connect(self._on_probe_auto_zero_toggled)
+            # Loading of Auto Zero is now handled within _probe_prefs_load()
+
+        # ── Load and Connect Prefs ───────────────────────────────────────────
+        self._probe_prefs_load()
+        self._probe_prefs_connect()
 
     def _on_probe_center_mode_toggled(self, inside: bool):
         """Umschaltung zwischen OUTSIDE und INSIDE."""
@@ -1564,6 +1562,8 @@ class ThorCNC(QObject):
 
         # ── Setup Probe DRO ────────────────────────────────────────────────
         self._setup_probe_dro()
+
+
 
 
     def _update_probe_marker_pos(self):
@@ -1650,6 +1650,10 @@ class ThorCNC(QObject):
         ("probe_motion",     "combo_probe_motion",     "ComboBox"),
         ("probe_before",     "te_probe_before",        "TextEdit"),
         ("probe_after",      "te_probe_after",         "TextEdit"),
+        ("probe_auto_zero",  "btn_auto_zero_master",   "CheckButton"),
+        ("probe_center_x",   "le_probe_center_x",      "LineEdit"),
+        ("probe_center_y",   "le_probe_center_y",      "LineEdit"),
+        ("probe_center_dia", "le_probe_center_diam",   "LineEdit"),
     ]
 
     def _probe_prefs_load(self):
@@ -1715,10 +1719,10 @@ class ThorCNC(QObject):
 
         
     def _on_probe_auto_zero_toggled(self, on: bool):
-        """Handler für den Master Auto-Zero Button: Speichern der Einstellung."""
-        # Wir speichern es als String, um mit dem Rest der Prefs konsistent zu sein
-        self.settings.set("probe_auto_zero", "true" if on else "false")
-        self.settings.save()
+        """Handler für den Master Auto-Zero Button: (Zusatzlogik falls nötig)."""
+        # Falls später noch Logik nötig ist, hier einfügen.
+        # Das eigentliche Speichern wird jetzt über _probe_prefs_connect() via 'CheckButton' erledigt.
+        pass
 
     def _probe_pref_save(self, key: str, value):
         self.settings.set(key, value)
@@ -1747,11 +1751,20 @@ class ThorCNC(QObject):
         self.cmd.spindleoverride(1.0)
 
     def _probe_set_mode(self, mode: str):
-        from PySide6.QtWidgets import QToolButton, QLabel
-        if btn := self._w(QToolButton, "btn_probe_mode"):
-            btn.setText(mode)
+        from PySide6.QtWidgets import QLabel, QPushButton
         if lbl := self._w(QLabel, "lbl_probe_section_title"):
             lbl.setText(mode)
+
+        # Update button highlights
+        btn_map = {
+            "OUTSIDE CORNERS": "btn_mode_outside",
+            "INSIDE CORNERS":  "btn_mode_inside",
+            "CENTER FINDER":   "btn_mode_center"
+        }
+        if mode in btn_map:
+            if btn := self._w(QPushButton, btn_map[mode]):
+                btn.setChecked(True)
+
         if hasattr(self, "_probe_pages") and mode in self._probe_pages:
             self._probe_stack.setCurrentWidget(self._probe_pages[mode])
 
@@ -1854,18 +1867,22 @@ class ThorCNC(QObject):
             if btn := getattr(self, "_btn_probe_auto_zero", None):
                 auto_zero = 1 if btn.isChecked() else 0
 
+            dia    = val("dsb_probe_dia")
+
+            rapid  = val("dsb_probe_rapid")
+
             if ngc_name in ("center_rect", "center_rect_x", "center_rect_y",
                             "inside_rect", "inside_rect_x", "inside_rect_y"):
                 lx = val("le_probe_center_x")
                 ly = val("le_probe_center_y")
-                params = f" [{lx}] [{ly}] [{max_xy}] [{max_z}] [{s_vel}] [{p_vel}] [{z_cl}] [{dep}] [{auto_zero}]"
+                params = f" [{lx}] [{ly}] [{max_xy}] [{max_z}] [{s_vel}] [{p_vel}] [{z_cl}] [{dep}] [{auto_zero}] [{dia}] [{rapid}]"
             elif ngc_name in ("center_round", "inside_round"):
-                dia = val("le_probe_center_diam")
-                params = f" [{dia}] [0] [{max_xy}] [{max_z}] [{s_vel}] [{p_vel}] [{z_cl}] [{dep}] [{auto_zero}]"
+                cdia = val("le_probe_center_diam")
+                params = f" [{cdia}] [0] [{max_xy}] [{max_z}] [{s_vel}] [{p_vel}] [{z_cl}] [{dep}] [{auto_zero}] [{dia}] [{rapid}]"
             elif is_corner_edge:
-                # For corners and edges, #1 is Edge Width
+                # For corners and edges: #1 Width, #2-9 as usual, #10 Dia, #11 Rapid
                 ew = val("dsb_probe_edge_width")
-                params = f" [{ew}] [0] [{max_xy}] [{max_z}] [{s_vel}] [{p_vel}] [{z_cl}] [{dep}] [{auto_zero}]"
+                params = f" [{ew}] [0] [{max_xy}] [{max_z}] [{s_vel}] [{p_vel}] [{z_cl}] [{dep}] [{auto_zero}] [{dia}] [{rapid}]"
 
         # Wrapper-Datei erzeugen: ruft alle drei nacheinander auf
         run_path = os.path.join(ngc_dir, "probe_run.ngc")

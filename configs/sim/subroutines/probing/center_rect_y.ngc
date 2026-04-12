@@ -8,7 +8,9 @@
 ( #6: Probe Velocity )
 ( #7: Z Clearance / Retract )
 ( #8: Probe Depth - Distance below Z0 )
-( #9: Auto Zero - 1=ON, 0=OFF )
+#9: Auto Zero - 1=ON, 0=OFF )
+( #10: Probe Diameter )
+( #11: Probe Rapid )
 
 O<center_rect_y> sub
     ( Save current state )
@@ -25,43 +27,53 @@ O<center_rect_y> sub
     G0 Z#7 ( Safe retract )
     G90 ( Absolute mode )
 
+    #<dia> = #10
+    O<check_dia> if [#<dia> LE 0]
+        #<dia> = #5410
+    O<check_dia> endif
+    #<rapid> = #11
+    O<check_rapid> if [#<rapid> LE 0]
+        #<rapid> = [#5 * 2]
+    O<check_rapid> endif
+    #<rad> = [#<dia> / 2]
+
     ( 2. Y-Center Finding )
     #<search_dist_y> = [[#2 / 2] + #3]
     
     ( Probe Y- side )
-    G0 Y-[#<search_dist_y>]
-    G1 Z-[#8] F[#5 * 2]
+G1 Y-[#<search_dist_y>] F#<rapid>
+G1 Z-[#<rad> + #8] F#<rapid>
     G91
     G38.2 Y#3 F#5 ( Search Y+ )
     #<y1> = #5062 ( #5062 is Y position )
-    G0 Y-[#7]
+G1 Y-[#7] F#<rapid>
     G38.2 Y[#7 * 1.5] F#6
     #<y1> = #5062
     G90
-    G0 Z#7
+G1 Z#7 F#<rapid>
 
     ( Probe Y+ side )
-    G0 Y[#<search_dist_y>]
-    G1 Z-[#8] F[#5 * 2]
+G1 Y[#<search_dist_y>] F#<rapid>
+G1 Z-[#<rad> + #8] F#<rapid>
     G91
     G38.2 Y-#3 F#5 ( Search Y- )
     #<y2> = #5062
-    G0 Y#7
+G1 Y#7 F#<rapid>
     G38.2 Y-[#7 * 1.5] F#6
     #<y2> = #5062
     G90
-    G0 Z#7
+G1 Z#7 F#<rapid>
     
     #<y_center> = [[#<y1> + #<y2>] / 2]
 
     ( 3. Final Positioning )
-    G0 Y#<y_center>
+G1 Y#<y_center> F#<rapid>
     O102 if [#9 GT 0.5]
         G10 L20 P0 Y0 ( Zero work offset for Y )
     O102 endif
     
     ( Return to safe height )
-    G0 Z#7
+G1 Z#7 F#<rapid>
     
 O<center_rect_y> endsub
 M2

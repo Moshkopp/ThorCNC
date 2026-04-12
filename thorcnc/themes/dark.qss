@@ -536,28 +536,58 @@ QLabel#lbl_probe_params_title {
 }
 
 QFrame#frm_probe_params QLabel[objectName^="lbl_probe_param_"] {
-    margin: 2px 4px;
-    font-size: 9pt;
-    color: #bbbbbb;
+    margin: 2px 0px;
+    font-size: 11pt;
+    font-weight: bold;
+    color: #000000;
+    background-color: #e0e0e0;
+    border: 1px solid #ffffff;
+    border-radius: 4px;
+    padding: 6px 12px;
+    height: 42px;
+    min-height: 42px;
+    max-height: 42px;
 }
 
 QFrame#frm_probe_params QSpinBox, 
 QFrame#frm_probe_params QDoubleSpinBox,
 QFrame#frm_probe_params QComboBox {
     margin: 2px 0px;
-    min-height: 24px;
-    max-height: 24px;
-    padding: 0px 4px;
-    font-size: 9pt;
+    padding: 6px 8px;
+    font-size: 11pt;
+    font-weight: bold;
+    color: #000000;
+    background-color: #e0e0e0;
+    border: 1px solid #999999;
+    border-radius: 4px;
+    height: 42px;
+    min-height: 42px;
+    max-height: 42px;
+}
+
+QFrame#frm_probe_params QSpinBox:hover, 
+QFrame#frm_probe_params QDoubleSpinBox:hover,
+QFrame#frm_probe_params QComboBox:hover {
+    background-color: #ffffff;
+    border-color: #3a7abf;
 }
 
 /* Auto Zero Master Button in the grid */
 QPushButton#btn_auto_zero_master {
     margin: 2px 0px;
-    min-height: 24px;
-    font-size: 9pt;
+    min-height: 42px;
+    font-size: 11pt;
+    font-weight: bold;
     background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #3d3d3d, stop:1 #2a2a2a);
     color: #e0e0e0;
+    border: 1px solid #4a4a4a;
+    border-radius: 4px;
+}
+
+QPushButton#btn_auto_zero_master:checked {
+    background-color: #3a7abf;
+    border-color: #5599dd;
+    color: #ffffff;
 }
 
 QFrame#frm_probe_grid {
