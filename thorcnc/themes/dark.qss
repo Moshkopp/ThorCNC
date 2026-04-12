@@ -331,10 +331,7 @@ QProgressBar#spindle_load_bar {
     color: transparent;
 }
 
-QProgressBar#spindle_load_bar::chunk {
-    background-color: #3b88d8; /* Kontrastreicheres Blau */
-    border-radius: 7px;
-}
+
 
 QPushButton#btn_spindle_fwd,
 QPushButton#btn_spindle_rev,
@@ -661,11 +658,9 @@ QPushButton#btn_spindle_stop:hover {
     color: white;
 }
 
-QProgressBar#spindle_load_bar::chunk {
-    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0,
-        stop:0 #2ea043, stop:0.5 #d29922, stop:1 #f85149);
-    border-radius: 3px;
-}
+QProgressBar#spindle_load_bar[loadState="normal"]::chunk { background-color: #2ea043; border-radius: 7px; }
+QProgressBar#spindle_load_bar[loadState="warning"]::chunk { background-color: #d29922; border-radius: 7px; }
+QProgressBar#spindle_load_bar[loadState="critical"]::chunk { background-color: #f85149; border-radius: 7px; }
 
 /* ── DRO ── */
 QLabel#section_title {
