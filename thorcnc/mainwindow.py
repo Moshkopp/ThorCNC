@@ -1013,7 +1013,7 @@ class ThorCNC(QObject):
 
             # Pins für Manuellen Werkzeugwechsler (M6)
             self._hal_comp.newpin("tool-change-request", hal.HAL_BIT,   hal.HAL_IN)
-            self._hal_comp.newpin("tool-number",         hal.HAL_FLOAT, hal.HAL_IN)
+            self._hal_comp.newpin("tool-number",         hal.HAL_S32,   hal.HAL_IN)
             self._hal_comp.newpin("tool-changed-confirm", hal.HAL_BIT,  hal.HAL_OUT)
             
             # Pins für TsHW / Handrad Integration (falls gewünscht)
