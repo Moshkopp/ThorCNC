@@ -2942,22 +2942,28 @@ class ThorCNC(QObject):
     @Slot(int)
     def _on_tool_change_request(self, tool_nr: int):
         """Called via HAL tool-change-request pin."""
-        from PySide6.QtWidgets import QMessageBox
+        from thorcnc.widgets.m6_dialog import M6Dialog
         
-        msg = QMessageBox(self.ui)
-        msg.setIcon(QMessageBox.Icon.Information)
-        msg.setWindowTitle("Manueller Werkzeugwechsel")
-        msg.setText(f"Bitte Werkzeug <b>T{tool_nr}</b> einsetzen.")
-        msg.setInformativeText("Drücke OK, wenn der Wechsel abgeschlossen ist.")
-        msg.setStandardButtons(QMessageBox.StandardButton.Ok)
+        # Tool-Kommentar aus der Tabelle suchen (falls vorhanden)
+        tool_comment = ""
+        try:
+            for t in self.poller.stat.tool_table:
+                if t.id == tool_nr:
+                    # LinuxCNC 2.9+ hat oft ein 'comment' Attribut
+                    tool_comment = getattr(t, 'comment', "")
+                    break
+        except:
+            pass
+
+        dlg = M6Dialog(tool_nr, tool_comment, self.ui)
         
-        # Bestätigung an HAL senden
-        msg.exec()
-        
-        if self._hal_comp:
-            self._hal_comp["tool-changed-confirm"] = True
-            # Nach kurzer Zeit wieder auf False, damit der nächste Wechsel sauber triggert
-            QTimer.singleShot(1000, lambda: self._set_hal_pin("tool-changed-confirm", False))
+        # Bestätigung an HAL senden, wenn der User den Button klickt
+        if dlg.exec():
+            if self._hal_comp:
+                self._hal_comp["tool-changed-confirm"] = True
+                # Nach kurzer Zeit wieder auf False, damit der nächste Wechsel sauber triggert
+                from PySide6.QtCore import QTimer
+                QTimer.singleShot(1000, lambda: self._set_hal_pin("tool-changed-confirm", False))
 
     @Slot(str)
     def _on_file_loaded(self, path: str):
