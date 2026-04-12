@@ -2278,10 +2278,19 @@ class ThorCNC(QObject):
             b.clicked.connect(self._toggle_estop)
 
         # Spindle Controls
+        def _start_spindle(direction):
+            # Get current programmed speed (S value)
+            speed = abs(self.poller.stat.spindle[0]['speed'])
+            # Fallback if no speed was ever set
+            if speed < 1:
+                speed = 1000
+            self.cmd.mode(linuxcnc.MODE_MANUAL)
+            self.cmd.spindle(direction, speed)
+
         if b := btn("btn_spindle_fwd"):
-            b.clicked.connect(lambda: self.cmd.spindle(linuxcnc.SPINDLE_FORWARD, 1000))  # Default 1000 RPM unless specified
+            b.clicked.connect(lambda: _start_spindle(linuxcnc.SPINDLE_FORWARD))
         if b := btn("btn_spindle_rev"):
-            b.clicked.connect(lambda: self.cmd.spindle(linuxcnc.SPINDLE_REVERSE, 1000))
+            b.clicked.connect(lambda: _start_spindle(linuxcnc.SPINDLE_REVERSE))
         if b := btn("btn_spindle_stop"):
             b.clicked.connect(lambda: self.cmd.spindle(linuxcnc.SPINDLE_OFF))
 
