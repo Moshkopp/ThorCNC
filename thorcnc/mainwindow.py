@@ -57,6 +57,10 @@ class ThorCNC(QObject):
         self._setup_html_tab()
         self._setup_settings_tab()
         self._connect_signals()
+        
+        # Tool-Change Handler
+        self.poller.tool_change_request.connect(self._on_tool_change_request)
+        
         self._apply_ini_settings()
         
         # Start in MAIN tab
@@ -1003,6 +1007,11 @@ class ThorCNC(QObject):
             self._hal_comp.newpin("spindle-atspeed",    hal.HAL_BIT,   hal.HAL_IN)
             self._hal_comp.newpin("spindle-speed-actual", hal.HAL_FLOAT, hal.HAL_IN)
             self._hal_comp.newpin("spindle-load",       hal.HAL_FLOAT, hal.HAL_IN)
+
+            # Pins für Manuellen Werkzeugwechsler (M6)
+            self._hal_comp.newpin("tool-change-request", hal.HAL_BIT,   hal.HAL_IN)
+            self._hal_comp.newpin("tool-number",         hal.HAL_FLOAT, hal.HAL_IN)
+            self._hal_comp.newpin("tool-changed-confirm", hal.HAL_BIT,  hal.HAL_OUT)
             
             # Pins für TsHW / Handrad Integration (falls gewünscht)
             self._hal_comp.newpin("jog-vel-final",      hal.HAL_FLOAT, hal.HAL_OUT)
@@ -2863,6 +2872,33 @@ class ThorCNC(QObject):
             b.setStyleSheet(fwd_style if direction == 1 else "")
         if b := self._w(QPushButton, "btn_spindle_rev"):
             b.setStyleSheet(rev_style if direction == -1 else "")
+
+    def _set_hal_pin(self, name: str, val):
+        if self._hal_comp:
+            try:
+                self._hal_comp[name] = val
+            except Exception:
+                pass
+
+    @Slot(int)
+    def _on_tool_change_request(self, tool_nr: int):
+        """Called via HAL tool-change-request pin."""
+        from PySide6.QtWidgets import QMessageBox
+        
+        msg = QMessageBox(self.ui)
+        msg.setIcon(QMessageBox.Icon.Information)
+        msg.setWindowTitle("Manueller Werkzeugwechsel")
+        msg.setText(f"Bitte Werkzeug <b>T{tool_nr}</b> einsetzen.")
+        msg.setInformativeText("Drücke OK, wenn der Wechsel abgeschlossen ist.")
+        msg.setStandardButtons(QMessageBox.StandardButton.Ok)
+        
+        # Bestätigung an HAL senden
+        msg.exec()
+        
+        if self._hal_comp:
+            self._hal_comp["tool-changed-confirm"] = True
+            # Nach kurzer Zeit wieder auf False, damit der nächste Wechsel sauber triggert
+            QTimer.singleShot(1000, lambda: self._set_hal_pin("tool-changed-confirm", False))
 
     @Slot(str)
     def _on_file_loaded(self, path: str):

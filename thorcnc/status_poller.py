@@ -31,12 +31,8 @@ class StatusPoller(QObject):
     spindle_override     = Signal(float)
     rapid_override       = Signal(float)  # 0.0-1.0
 
-    # Spindle
-    spindle_speed_cmd    = Signal(float)  # commanded (setpoint) rpm
-    spindle_direction    = Signal(int)    # 1=fwd, -1=rev, 0=stop
-    spindle_at_speed     = Signal(bool)    # HAL: thorcnc.spindle-atspeed
-    spindle_speed_actual = Signal(float)   # HAL: thorcnc.spindle-speed-actual
     spindle_load         = Signal(float)   # HAL: thorcnc.spindle-load (0-100%)
+    tool_change_request  = Signal(int)     # HAL: thorcnc.tool-change-request (value is tool number)
 
     # Homing
     homed_changed        = Signal(list)   # list of bools per axis
@@ -72,6 +68,7 @@ class StatusPoller(QObject):
         self._spindle_at_spd = None
         self._spindle_actual = None
         self._spindle_load   = None
+        self._tool_change_req = None
         self._homed          = None
         self._gcodes         = None
         self._mcodes         = None
@@ -218,6 +215,20 @@ class StatusPoller(QObject):
         if round(load) != self._spindle_load:
             self._spindle_load = round(load)
             self.spindle_load.emit(load)
+
+        # Tool Change Request (HAL)
+        try:
+            import hal as _hal
+            # Wir prüfen, ob der Bit-Pin High ist
+            if bool(_hal.get_value("thorcnc.tool-change-request")):
+                t_nr = int(_hal.get_value("thorcnc.tool-number"))
+                if self._tool_change_req != t_nr:
+                    self._tool_change_req = t_nr
+                    self.tool_change_request.emit(t_nr)
+            else:
+                self._tool_change_req = None
+        except Exception:
+            pass
 
         homed = list(s.homed[:3])
         if homed != self._homed:
