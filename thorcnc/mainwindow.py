@@ -1023,6 +1023,10 @@ class ThorCNC(QObject):
             print(f"[HAL] Komponente 'thorcnc' ist READY.")
             self._status("HAL component 'thorcnc' ready.")
             
+            # LinuxCNC Core lädt keine Post-GUI Dateien. Dies ist Aufgabe der GUI!
+            self._load_postgui_hal()
+            
+            
             # Sim-Parameter + Net-Verbindung per halcmd (nur Simulation)
             if "sim" in self.ini_path.lower():
                 import subprocess
@@ -1035,6 +1039,33 @@ class ThorCNC(QObject):
         except Exception as e:
             print(f"[ThorCNC] HAL-Initialisierung übersprungen: {e}")
             self._hal_comp = None
+
+    def _load_postgui_hal(self):
+        """Liest alle POSTGUI_HALFILE Einträge aus der INI und führt sie aus."""
+        if not self.ini:
+            return
+            
+        postgui_files = self.ini.findall("HAL", "POSTGUI_HALFILE")
+        if not postgui_files:
+            return
+            
+        import subprocess
+        ini_dir = os.path.dirname(self.ini_path) if self.ini_path else ""
+        if not ini_dir:
+            ini_dir = os.getcwd()
+            
+        for pfile in postgui_files:
+            hal_path = os.path.join(ini_dir, pfile)
+            print(f"[HAL] Lade Post-GUI Datei: {hal_path}")
+            if os.path.exists(hal_path):
+                # Nutzen von -i um die ini an das halcmd weiterzugeben (für [ ] variablen)
+                res = subprocess.run(["halcmd", "-i", self.ini_path, "-f", hal_path], capture_output=True, text=True)
+                if res.returncode != 0:
+                    print(f"[HAL] Fehler beim Laden von {pfile}:\n{res.stderr}")
+                else:
+                    print(f"[HAL] {pfile} erfolgreich geladen.")
+            else:
+                print(f"[HAL] FEHLER: Post-GUI Datei nicht gefunden: {hal_path}")
 
     # ── WCS Offset Table ────────────────────────────────────────────────────
 
