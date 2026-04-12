@@ -11,13 +11,14 @@ dist/
 # LinuxCNC Laufzeit-Dateien (werden automatisch erstellt)
 # WICHTIG: .ini, .hal und .var (ohne .bak) werden weiterhin übertragen!
 *.var.bak
-*_pos.txt
-configs/sim/config.prefs
-configs/sim/thorcnc_sim_pos.txt
+# configs/sim/config.prefs und Positionsdaten werden nun mit übertragen (Sync für VM)
+# *_pos.txt
+# configs/sim/config.prefs
+# configs/sim/thorcnc_sim_pos.txt
 configs/sim/thorcnc_sim.var.bak
 
-# ThorCNC lokale Einstellungen (Zoom-Stufen, Fensterpositionen)
-thorcnc.prefs
+# ThorCNC lokale Einstellungen (jetzt mit übertragen für Sync)
+# thorcnc.prefs
 
 # IDEs & System
 .vscode/

@@ -11,10 +11,12 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DEV_MODE=false
+FORCE_MODE=false
 
 for arg in "$@"; do
     case "$arg" in
-        --dev) DEV_MODE=true ;;
+        --dev)   DEV_MODE=true ;;
+        --force) FORCE_MODE=true ;;
         -h|--help)
             sed -n '2,8p' "$0" | sed 's/^# //; s/^#//'
             exit 0
@@ -57,8 +59,26 @@ OLD_REV=$(git rev-parse --short HEAD)
 info "Aktuelle Version: $OLD_REV"
 
 # ── Stash & Pull ──────────────────────────────────────────────────────────────
-info "Sichere lokale Änderungen (Stash)..."
-git stash push -m "update.sh auto-stash"
+if $FORCE_MODE; then
+    warn "FORCE MODE: Verwerfe lokale Änderungen und setze auf origin zurück..."
+    git fetch origin &>/dev/null
+    git reset --hard "origin/$(git rev-parse --abbrev-ref HEAD)"
+else
+    info "Bereite Repository vor (Index-Reparatur)..."
+    # Fallback-Strategie für beschädigte Indizes auf VMs
+    if ! git update-index --refresh &>/dev/null; then
+        warn "Index ist beschädigt. Starte Deep-Repair..."
+        rm -f .git/index.lock &>/dev/null || true
+        rm -f .git/index &>/dev/null || true
+        git reset HEAD -- . &>/dev/null || true
+        git update-index --refresh &>/dev/null || true
+    fi
+
+    info "Sichere lokale Änderungen (Stash)..."
+    git stash push -m "update.sh auto-stash" || {
+        err "Stash fehlgeschlagen. Nutze './update.sh --force' um lokale Änderungen zu verwerfen."
+    }
+fi
 
 info "Lade neueste Änderungen von origin..."
 git pull --ff-only origin "$(git rev-parse --abbrev-ref HEAD)" || {
@@ -70,8 +90,10 @@ git pull --ff-only origin "$(git rev-parse --abbrev-ref HEAD)" || {
     }
 }
 
-info "Stelle lokale Änderungen wieder her (Stash pop)..."
-git stash pop || warn "Keine Änderungen zum Wiederherstellen oder Konflikt beim Pop."
+if ! $FORCE_MODE; then
+    info "Stelle lokale Änderungen wieder her (Stash pop)..."
+    git stash pop || warn "Keine Änderungen zum Wiederherstellen oder Konflikt beim Pop."
+fi
 
 NEW_REV=$(git rev-parse --short HEAD)
 
