@@ -1006,7 +1006,7 @@ class ThorCNC(QObject):
             # Standard pins for status & control
             self._hal_comp.newpin("probe-sim",          hal.HAL_BIT,   hal.HAL_OUT)
             self._hal_comp.newpin("spindle-atspeed",    hal.HAL_BIT,   hal.HAL_IN)
-            print(f"[HAL] Erzeuge Pins für Komponente '{self._hal_comp.name}'...")
+            print(f"[HAL] Erzeuge Pins für Komponente 'thorcnc'...")
             self._hal_comp.newpin("spindle-speed-actual", hal.HAL_FLOAT, hal.HAL_IN)
             self._hal_comp.newpin("spindle-load",       hal.HAL_FLOAT, hal.HAL_IN)
 
