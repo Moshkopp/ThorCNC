@@ -996,6 +996,7 @@ class ThorCNC(QObject):
         """Initialisiert die HAL-Komponente so früh wie möglich (Timing-Fix)."""
         try:
             import hal
+            from PySide6.QtCore import QTimer
             self._hal_comp = hal.component("thorcnc")
             
             # Pins für Tool-Sensor (aus Settings/VCP-Style)
