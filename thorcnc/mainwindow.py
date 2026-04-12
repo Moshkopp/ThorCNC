@@ -2944,18 +2944,36 @@ class ThorCNC(QObject):
         """Called via HAL tool-change-request pin."""
         from thorcnc.widgets.m6_dialog import M6Dialog
         
-        # Tool-Kommentar aus der Tabelle suchen (falls vorhanden)
-        tool_comment = ""
+        # Alle Tool-Daten aus der Tabelle suchen
+        tool_data = {'id': tool_nr, 'comment': '', 'diameter': 0.0, 'zoffset': 0.0}
         try:
             for t in self.poller.stat.tool_table:
                 if t.id == tool_nr:
-                    # LinuxCNC 2.9+ hat oft ein 'comment' Attribut
-                    tool_comment = getattr(t, 'comment', "")
+                    tool_data['comment'] = getattr(t, 'comment', "").strip()
+                    tool_data['diameter'] = getattr(t, 'diameter', 0.0)
+                    tool_data['zoffset'] = getattr(t, 'zoffset', 0.0)
                     break
-        except:
-            pass
+            
+            # FALLBACK: Falls LinuxCNC keinen Kommentar liefert, direkt aus der Datei lesen
+            if not tool_data['comment'] and self.ini:
+                tbl_path = self.ini.find("EMCIO", "TOOL_TABLE")
+                if tbl_path:
+                    # Pfad korrigieren falls relativ
+                    if not os.path.isabs(tbl_path):
+                        tbl_path = os.path.join(os.path.dirname(self.ini_path), tbl_path)
+                    
+                    if os.path.exists(tbl_path):
+                        with open(tbl_path, 'r') as f:
+                            for line in f:
+                                # Suche Zeile die mit T<nummer> startet
+                                if line.strip().startswith(f"T{tool_nr} "):
+                                    if ";" in line:
+                                        tool_data['comment'] = line.split(";", 1)[1].strip()
+                                        break
+        except Exception as e:
+            print(f"[M6] Fehler beim Laden der Werkzeug-Details: {e}")
 
-        dlg = M6Dialog(tool_nr, tool_comment, self.ui)
+        dlg = M6Dialog(tool_nr, tool_data, self.ui)
         
         # Bestätigung an HAL senden, wenn der User den Button klickt
         if dlg.exec():

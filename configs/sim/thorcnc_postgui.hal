@@ -1,7 +1,10 @@
-# ThorCNC PostGUI HAL
-# Spindel-Sim-Parameter und Net-Verbindungen werden von Python gesetzt (nach hal.ready()).
-# Diese Datei bleibt als Platzhalter für weitere manuelle HAL-Verbindungen.
+# ThorCNC PostGUI HAL (Simulation Test Configuration)
 
-# Simulation: Spindel-Anlauf beschleunigen (maxa = Beschleunigung, maxv = Max-Speed)
-setp spindle-ramp.maxa 2500
-setp spindle-ramp.maxv 12000
+# Simulation: Automatischen Werkzeugwechsel unterbrechen für ThorCNC-Test
+unlinkp iocontrol.0.tool-change
+unlinkp iocontrol.0.tool-changed
+
+# Neu verdrahten mit ThorCNC Dialog
+net tool-change-request    iocontrol.0.tool-change           thorcnc.tool-change-request
+net tool-change-confirmed  thorcnc.tool-changed-confirm      iocontrol.0.tool-changed
+net tool-number            iocontrol.0.tool-prep-number      thorcnc.tool-number

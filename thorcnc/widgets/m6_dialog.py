@@ -5,21 +5,21 @@ class M6Dialog(QDialog):
     """
     A premium, industrial-style dialog for manual tool changes.
     """
-    def __init__(self, tool_number: int, tool_name: str = "", parent=None):
+    def __init__(self, tool_number: int, tool_data: dict = None, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Manual Tool Change")
-        self.setMinimumSize(450, 350)
+        self.setMinimumSize(500, 450)
         self.setWindowFlags(Qt.WindowType.Dialog | Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
 
         self._tool_number = tool_number
-        self._tool_name = tool_name
+        self._tool_data = tool_data or {}
 
         self._setup_ui()
         self._apply_styling()
 
     def _setup_ui(self):
-        # Main Container (for the border and background)
+        # Main Container
         self.container = QFrame(self)
         self.container.setObjectName("m6Container")
         
@@ -37,7 +37,7 @@ class M6Dialog(QDialog):
         header_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         content_layout.addWidget(header_label)
 
-        # Tool indicator frame
+        # Tool indicator frame (The "Big Number")
         self.tool_frame = QFrame()
         self.tool_frame.setObjectName("toolFrame")
         tool_layout = QVBoxLayout(self.tool_frame)
@@ -46,26 +46,33 @@ class M6Dialog(QDialog):
         self.lbl_tool_num.setObjectName("toolNumLarge")
         self.lbl_tool_num.setAlignment(Qt.AlignmentFlag.AlignCenter)
         tool_layout.addWidget(self.lbl_tool_num)
-        
-        if self._tool_name:
-            self.lbl_tool_name = QLabel(self._tool_name)
-            self.lbl_tool_name.setObjectName("toolName")
-            self.lbl_tool_name.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            self.lbl_tool_name.setWordWrap(True)
-            tool_layout.addWidget(self.lbl_tool_name)
-        
         content_layout.addWidget(self.tool_frame)
         
-        # Instruction
-        instruction = QLabel("Insert tool and secure the spindle.")
-        instruction.setObjectName("m6Instruction")
-        instruction.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        content_layout.addWidget(instruction)
-
+        # Details section
+        details_layout = QVBoxLayout()
+        details_layout.setSpacing(10)
+        
+        # Description (Comment)
+        comment = self._tool_data.get('comment', '--- No Description ---')
+        self.lbl_desc = QLabel(comment)
+        self.lbl_desc.setObjectName("toolDescription")
+        self.lbl_desc.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.lbl_desc.setWordWrap(True)
+        details_layout.addWidget(self.lbl_desc)
+        
+        # Diameter Badge (Centered)
+        dia = self._tool_data.get('diameter', 0.0)
+        self.lbl_dia = QLabel(f"DIAMETER: {dia:.2f} mm")
+        self.lbl_dia.setObjectName("toolSpec")
+        self.lbl_dia.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        details_layout.addWidget(self.lbl_dia, 0, Qt.AlignmentFlag.AlignCenter)
+        
+        content_layout.addLayout(details_layout)
+        
         content_layout.addStretch()
 
         # Confirm Button
-        self.btn_confirm = QPushButton("CONFIRM CHANGE")
+        self.btn_confirm = QPushButton("LOADED & SECURED")
         self.btn_confirm.setObjectName("m6ConfirmBtn")
         self.btn_confirm.setMinimumHeight(60)
         self.btn_confirm.clicked.connect(self.accept)
@@ -90,19 +97,28 @@ class M6Dialog(QDialog):
                 margin: 10px 0;
             }
             QLabel#toolNumLarge {
-                color: white;
-                font-size: 64pt;
+                color: #f0883e;
+                font-size: 72pt;
                 font-weight: 900;
                 font-family: 'Bebas Kai', 'DejaVu Sans', sans-serif;
+                margin-bottom: -10px;
             }
-            QLabel#toolName {
+            QLabel#toolDescription {
+                color: #f0883e;
+                font-size: 24pt;
+                font-weight: 900;
+                font-style: italic;
+                padding: 10px;
+                background-color: #25262b;
+                border: 1px solid #333333;
+                border-radius: 6px;
+            }
+            QLabel#toolSpec {
                 color: #aaaaaa;
                 font-size: 12pt;
-                font-style: italic;
-            }
-            QLabel#m6Instruction {
-                color: #eeeeee;
-                font-size: 11pt;
+                background-color: #25262b;
+                padding: 4px 12px;
+                border-radius: 4px;
             }
             QPushButton#m6ConfirmBtn {
                 background-color: #2ea043;

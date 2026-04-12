@@ -1,11 +1,11 @@
-T1   P1   D+6.000000 Z+77.222750 ;Gravierfraeser 1mm
+T1   P1   D+6.000000 ;Gravierfraeser 1mm
 T2   P2   D+2.000000 Z+19.320000 ;Schaftfraeser 2mm
 T3   P3   D+3.000000 Z+35.780000 ;Schaftfraeser 3mm
 T4   P4   D+4.000000 ;Schaftfraeser 4mm
 T5   P5   D+5.000000 Z+41.000000 ;Schaftfraeser 5mm
-T6   P6   D+6.000000 Z+22.640000 ;Schaftfraeser 6mm
-T7   P7   D+8.000000 Z+77.812083 ;Schaftfraeser 8mm
-T8   P8   D+10.000000 Z+18.200000 ;Schaftfraeser 10mm
+T6   P6   D+6.000000 ;Schaftfraeser 6mm
+T7   P7   D+8.000000 ;Schaftfraeser 8mm
+T8   P8   D+10.000000 ;Schaftfraeser 10mm
 T9   P9   D+12.000000 Z+38.550000 ;Schaftfraeser 12mm
 T10  P10  D+14.000000 Z+25.070000 ;Schaftfraeser 14mm
 T11  P11  D+16.000000 Z+30.880000 ;Schaftfraeser 16mm
