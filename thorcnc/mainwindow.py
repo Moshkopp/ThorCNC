@@ -162,8 +162,8 @@ class ThorCNC(QObject):
                             sub_w.setObjectName("runControls")
                             from PySide6.QtCore import Qt
                             sub_w.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-                            sub_w.setMinimumHeight(230)
-                            sub_w.setMaximumHeight(230)
+                            sub_w.setMinimumHeight(180)
+                            # Keine harte MaximumHeight mehr, damit das Layout flexibler ist
                         r_lay.addWidget(sub_w)
                         
                         if m_name == "spindle_panel":
