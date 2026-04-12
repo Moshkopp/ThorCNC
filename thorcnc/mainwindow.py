@@ -152,7 +152,18 @@ class ThorCNC(QObject):
                     if sub_w:
                         sub_w.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Maximum)
                         if hasattr(sub_w, 'layout') and sub_w.layout():
-                            sub_w.layout().setContentsMargins(0, 0, 0, 0)
+                            if m_name == "run_controls":
+                                sub_w.layout().setContentsMargins(8, 8, 8, 8)
+                            else:
+                                sub_w.layout().setContentsMargins(0, 0, 0, 0)
+                                
+                        if m_name == "run_controls":
+                            sub_w.setObjectName("runControls")
+                            from PySide6.QtCore import Qt
+                            sub_w.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+                            sub_w.setMinimumHeight(230)
+                            sub_w.setMaximumHeight(230)
+                            sub_w.setStyleSheet("QFrame#runControls { border: 1px solid #444; border-radius: 4px; background-color: #1a1a1a; }")
                         r_lay.addWidget(sub_w)
                         
                         if m_name == "spindle_panel":
@@ -253,9 +264,9 @@ class ThorCNC(QObject):
         # Buttons direkt in BackplotWidget's eingebaute Toolbar einfügen
         # (kein Wrapper-Widget → kein GLViewWidget-Reparenting-Problem)
         tb_lay = self.backplot.toolbar_layout()
-        _view_style = ("QPushButton { background:#333; color:#ccc; border-radius:4px;"
-                       " font-weight:bold; padding:1px 10px; }"
-                       "QPushButton:hover { background:#555; }")
+        _view_style = ("QPushButton { background:#2a2a2a; color:#aaa; border:1px solid #444; border-radius:4px;"
+                       " font-weight:bold; font-size:11pt; padding:4px 12px; min-height:22px; }"
+                       "QPushButton:hover { background:#3a3a3a; color:white; }")
         # View-Buttons links (vor dem Stretch)
         tb_lay.takeAt(0)   # den initialen Stretch kurz rausnehmen (wird unten neu eingefügt)
         for label, fn in (("ISO",        self.backplot.set_view_iso),
@@ -311,19 +322,19 @@ class ThorCNC(QObject):
         if in_auto:
             self._btn_go_to_home.setEnabled(False)
             self._btn_go_to_home.setStyleSheet(
-                "QPushButton { background:#444; color:#888; border-radius:4px;"
-                " font-weight:bold; padding:1px 10px; }")
+                "QPushButton { background:#444; color:#888; border-radius:4px; border:1px solid #555;"
+                " font-weight:bold; font-size:11pt; padding:4px 14px; min-height:22px; }")
         elif all_homed:
             self._btn_go_to_home.setEnabled(True)
             self._btn_go_to_home.setStyleSheet(
-                "QPushButton { background:#2d862d; color:white; border-radius:4px;"
-                " font-weight:bold; padding:1px 10px; }"
+                "QPushButton { background:#2d862d; color:white; border-radius:4px; border:1px solid #1f5f1f;"
+                " font-weight:bold; font-size:11pt; padding:4px 14px; min-height:22px; }"
                 "QPushButton:hover { background:#3aa63a; }")
         else:
             self._btn_go_to_home.setEnabled(True)
             self._btn_go_to_home.setStyleSheet(
-                "QPushButton { background:#c0392b; color:white; border-radius:4px;"
-                " font-weight:bold; padding:1px 10px; }"
+                "QPushButton { background:#c0392b; color:white; border-radius:4px; border:1px solid #8e2a20;"
+                " font-weight:bold; font-size:11pt; padding:4px 14px; min-height:22px; }"
                 "QPushButton:hover { background:#e74c3c; }")
 
     def _setup_dro(self):
@@ -1123,18 +1134,18 @@ class ThorCNC(QObject):
         tbl.setFocusPolicy(_Qt.FocusPolicy.NoFocus)
         tbl.setStyleSheet("""
             QTableWidget {
-                background: #1e1e1e; color: #eee;
-                gridline-color: #333;
-                font-size: 14pt;
-                border: 1px solid #444;
+                background: #252525; color: #eeeeee;
+                gridline-color: #333333;
+                font-size: 13pt;
+                border: 1px solid #444; border-radius: 4px;
             }
             QHeaderView::section {
-                background: #2a2a2a; color: #aaa;
+                background: #1e1e1e; color: #888;
                 font-size: 11pt; font-weight: bold;
-                border: none; border-bottom: 2px solid #555;
+                border: none; border-bottom: 1px solid #444; border-right: 1px solid #2a2a2a;
                 padding: 6px;
             }
-            QTableWidget::item { padding: 4px 10px; }
+            QTableWidget::item { padding: 4px 10px; border-bottom: 1px solid #222; }
         """)
 
         hdr = tbl.horizontalHeader()
@@ -1145,7 +1156,7 @@ class ThorCNC(QObject):
         hdr.setSectionResizeMode(4, QHeaderView.ResizeMode.Fixed)
         tbl.setColumnWidth(0, 100)
         tbl.setColumnWidth(4, 110)
-        tbl.verticalHeader().setDefaultSectionSize(65)
+        tbl.verticalHeader().setDefaultSectionSize(48)
 
         _bold = QFont()
         _bold.setBold(True)
@@ -1165,11 +1176,11 @@ class ThorCNC(QObject):
             # Clear-Button
             btn = QPushButton("CLEAR")
             btn.setFocusPolicy(_Qt.FocusPolicy.NoFocus)
-            btn.setFixedSize(74, 35)
+            btn.setFixedSize(80, 30)
             btn.setStyleSheet(
-                "QPushButton { background:#7b241c; color:white; border-radius:4px;"
-                " font-weight:bold; }"
-                "QPushButton:hover { background:#a93226; }")
+                "QPushButton { background:#a32c2c; color:#eee; border-radius:3px; border:none;"
+                " font-weight:bold; font-size:10pt; }"
+                "QPushButton:hover { background:#c0392b; color:white; }")
             btn.clicked.connect(lambda _=False, n=p_idx: self._clear_wcs(n))
             tbl.setCellWidget(row, 4, btn)
 
@@ -1206,7 +1217,7 @@ class ThorCNC(QObject):
                 it = tbl.item(row, col + 1)
                 if it:
                     it.setText(f"{val:+.4f}")
-                    it.setForeground(QColor("#e74c3c" if val != 0.0 else "#555"))
+                    it.setForeground(QColor("#3db2ff" if val != 0.0 else "#999999"))
 
     def _on_offset_wcs_changed(self, index: int):
         """Hebt die aktive WCS-Zeile hervor."""
@@ -1216,7 +1227,7 @@ class ThorCNC(QObject):
         tbl = self._offset_table
         for row, (_, p_idx, _) in enumerate(self._WCS_LIST):
             active = p_idx == index
-            bg = QColor("#1a3a5c") if active else QColor("#1e1e1e")
+            bg = QColor("#194a82") if active else QColor("#252525")
             for col in range(4):
                 it = tbl.item(row, col)
                 if it:

@@ -13,7 +13,7 @@ hint label is displayed instead of an error.
 """
 
 import numpy as np
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel
+from PySide6.QtWidgets import QWidget, QFrame, QVBoxLayout, QLabel
 from PySide6.QtCore import Qt
 
 try:
@@ -403,7 +403,7 @@ class _BackplotGL(QWidget):
 
 # ── Öffentliche Klasse ────────────────────────────────────────────────────
 
-class BackplotWidget(QWidget):
+class BackplotWidget(QFrame):
     """
     Wrapper um _BackplotGL.
     Bei fehlendem pyqtgraph/OpenGL wird ein Fallback-Label gezeigt.
@@ -411,16 +411,22 @@ class BackplotWidget(QWidget):
 
     def __init__(self, parent=None, msaa_samples: int = 4):
         super().__init__(parent)
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        self.setStyleSheet("BackplotWidget { border: 1px solid #444; border-radius: 4px; background-color: #1a1a1a; }")
+        
         from PySide6.QtWidgets import QHBoxLayout
         outer = QVBoxLayout(self)
-        outer.setContentsMargins(0, 0, 0, 0)
+        outer.setContentsMargins(1, 1, 1, 1)
         outer.setSpacing(0)
 
         # Toolbar – wird von außen befüllt via toolbar_layout()
-        toolbar_widget = QWidget(self)
-        toolbar_widget.setFixedHeight(32)
+        toolbar_widget = QFrame(self)
+        toolbar_widget.setObjectName("backplotToolbar")
+        toolbar_widget.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        toolbar_widget.setStyleSheet("#backplotToolbar { background-color: transparent; border: none; border-bottom: 1px solid #444; }")
+        toolbar_widget.setFixedHeight(40)
         self._toolbar_lay = QHBoxLayout(toolbar_widget)
-        self._toolbar_lay.setContentsMargins(4, 2, 4, 2)
+        self._toolbar_lay.setContentsMargins(6, 2, 6, 2)
         self._toolbar_lay.setSpacing(4)
         self._toolbar_lay.addStretch()   # rechts ausrichten per default
         outer.addWidget(toolbar_widget)

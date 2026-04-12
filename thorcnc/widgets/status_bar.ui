@@ -252,15 +252,9 @@
         </item>
         </layout></item><item>
          <widget class="QPushButton" name="feed_override_to_100_button">
-          <property name="maximumSize">
-           <size>
-            <width>50</width>
-            <height>16777215</height>
-           </size>
-          </property>
-          <property name="text">
-           <string>100%</string>
-          </property>
+          <property name="minimumSize"><size><width>65</width><height>26</height></size></property>
+          <property name="maximumSize"><size><width>65</width><height>16777215</height></size></property>
+          <property name="text"><string>100%</string></property>
          </widget>
         </item>
        </layout>
@@ -295,15 +289,9 @@
         </item>
         </layout></item><item>
          <widget class="QPushButton" name="spindle_override_to_100_button">
-          <property name="maximumSize">
-           <size>
-            <width>50</width>
-            <height>16777215</height>
-           </size>
-          </property>
-          <property name="text">
-           <string>100%</string>
-          </property>
+          <property name="minimumSize"><size><width>65</width><height>26</height></size></property>
+          <property name="maximumSize"><size><width>65</width><height>16777215</height></size></property>
+          <property name="text"><string>100%</string></property>
          </widget>
         </item>
        </layout>
@@ -338,15 +326,9 @@
         </item>
         </layout></item><item>
          <widget class="QPushButton" name="rapid_override_to_100_button">
-          <property name="maximumSize">
-           <size>
-            <width>50</width>
-            <height>16777215</height>
-           </size>
-          </property>
-          <property name="text">
-           <string>100%</string>
-          </property>
+          <property name="minimumSize"><size><width>65</width><height>26</height></size></property>
+          <property name="maximumSize"><size><width>65</width><height>16777215</height></size></property>
+          <property name="text"><string>100%</string></property>
          </widget>
         </item>
        </layout>
@@ -381,15 +363,9 @@
         </item>
         </layout></item><item>
          <widget class="QPushButton" name="v_override_to_100_button">
-          <property name="maximumSize">
-           <size>
-            <width>50</width>
-            <height>16777215</height>
-           </size>
-          </property>
-          <property name="text">
-           <string>100%</string>
-          </property>
+          <property name="minimumSize"><size><width>65</width><height>26</height></size></property>
+          <property name="maximumSize"><size><width>65</width><height>16777215</height></size></property>
+          <property name="text"><string>100%</string></property>
          </widget>
         </item>
        </layout>
