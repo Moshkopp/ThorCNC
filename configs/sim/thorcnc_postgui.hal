@@ -1,3 +1,7 @@
 # ThorCNC PostGUI HAL
 # Spindel-Sim-Parameter und Net-Verbindungen werden von Python gesetzt (nach hal.ready()).
 # Diese Datei bleibt als Platzhalter für weitere manuelle HAL-Verbindungen.
+
+# Simulation: Spindel-Anlauf beschleunigen (maxa = Beschleunigung, maxv = Max-Speed)
+setp spindle-ramp.maxa 2500
+setp spindle-ramp.maxv 12000

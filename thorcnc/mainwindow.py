@@ -152,10 +152,7 @@ class ThorCNC(QObject):
                     if sub_w:
                         sub_w.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Maximum)
                         if hasattr(sub_w, 'layout') and sub_w.layout():
-                            if m_name == "run_controls":
-                                sub_w.layout().setContentsMargins(8, 8, 8, 8)
-                            else:
-                                sub_w.layout().setContentsMargins(0, 0, 0, 0)
+                            sub_w.layout().setContentsMargins(0, 0, 0, 0)
                                 
                         if m_name == "run_controls":
                             sub_w.setObjectName("runControls")
@@ -2243,7 +2240,7 @@ class ThorCNC(QObject):
         p.spindle_override.connect(self._on_spindle_override)
         if hasattr(p, 'rapid_override'):
             p.rapid_override.connect(self._on_rapid_override)
-        p.spindle_speed.connect(self._on_spindle_speed)
+        p.spindle_speed_cmd.connect(self._on_spindle_speed)
         p.homed_changed.connect(self._on_homed)
         p.g5x_index_changed.connect(self._on_g5x_index)
         p.g5x_offset_changed.connect(self._on_g5x_offset)
@@ -2510,11 +2507,15 @@ class ThorCNC(QObject):
         
         if not (btn_run and btn_pause and btn_stop): return
         
-        _base = "border-radius: 6px; font-weight: bold; font-size: 14pt; min-height: 70px;"
+        def set_status(w, status):
+            if w.property("status") != status:
+                w.setProperty("status", status)
+                self.ui.style().unpolish(w)
+                self.ui.style().polish(w)
 
         if not self._is_machine_on:
             for btn in (btn_run, btn_pause, btn_stop):
-                btn.setStyleSheet(f"QPushButton {{ {_base} }}")
+                set_status(btn, "disabled")
             return
 
         is_running = self._interp_state in (linuxcnc.INTERP_READING, linuxcnc.INTERP_WAITING)
@@ -2523,25 +2524,25 @@ class ThorCNC(QObject):
 
         # Cycle Start (btn_run)
         if is_running:
-            btn_run.setStyleSheet(f"QPushButton {{ background-color: #27ae60; color: white; {_base} }}")
+            set_status(btn_run, "running")
         elif (is_idle or is_paused) and self._has_file:
-            btn_run.setStyleSheet(f"QPushButton {{ border: 2px solid #27ae60; color: #27ae60; {_base} }}")
+            set_status(btn_run, "ready")
         else:
-            btn_run.setStyleSheet(f"QPushButton {{ {_base} }}")
+            set_status(btn_run, "idle")
 
         # Feedhold (btn_pause_mdi)
         if is_paused:
-            btn_pause.setStyleSheet(f"QPushButton {{ background-color: #f39c12; color: white; {_base} }}")
+            set_status(btn_pause, "paused")
         elif is_running:
-            btn_pause.setStyleSheet(f"QPushButton {{ border: 2px solid #f39c12; color: #f39c12; {_base} }}")
+            set_status(btn_pause, "running")
         else:
-            btn_pause.setStyleSheet(f"QPushButton {{ {_base} }}")
+            set_status(btn_pause, "idle")
 
         # Stop (stop_button)
         if is_running or is_paused:
-            btn_stop.setStyleSheet(f"QPushButton {{ background-color: #c0392b; color: white; {_base} }}")
+            set_status(btn_stop, "active")
         else:
-            btn_stop.setStyleSheet(f"QPushButton {{ {_base} }}")
+            set_status(btn_stop, "idle")
 
     @Slot(list)
     def _on_position(self, pos: list):
@@ -2803,6 +2804,7 @@ class ThorCNC(QObject):
 
     @Slot(float)
     def _on_spindle_speed(self, rpm: float):
+        """Called when the COMMANDED/TARGET spindle speed changes."""
         from PySide6.QtWidgets import QLabel
         self._is_spindle_running = (abs(rpm) > 0.1)
         if lbl := self._w(QLabel, "lbl_spindle_soll"):
@@ -2812,6 +2814,7 @@ class ThorCNC(QObject):
 
     @Slot(float)
     def _on_spindle_actual(self, rpm: float):
+        """Called when the ACTUAL (Feedback) spindle speed changes (from HAL)."""
         from PySide6.QtWidgets import QLabel
         if lbl := self._w(QLabel, "lbl_spindle_ist"):
             lbl.setText(f"{abs(rpm):.0f} RPM")

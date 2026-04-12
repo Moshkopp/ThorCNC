@@ -32,7 +32,7 @@ class StatusPoller(QObject):
     rapid_override       = Signal(float)  # 0.0-1.0
 
     # Spindle
-    spindle_speed        = Signal(float)  # actual rpm
+    spindle_speed_cmd    = Signal(float)  # commanded (setpoint) rpm
     spindle_direction    = Signal(int)    # 1=fwd, -1=rev, 0=stop
     spindle_at_speed     = Signal(bool)    # HAL: thorcnc.spindle-atspeed
     spindle_speed_actual = Signal(float)   # HAL: thorcnc.spindle-speed-actual
@@ -67,7 +67,7 @@ class StatusPoller(QObject):
         self._line           = None
         self._feed_override  = None
         self._spindle_over   = None
-        self._spindle_speed  = None
+        self._spindle_cmd   = None
         self._spindle_dir    = None
         self._spindle_at_spd = None
         self._spindle_actual = None
@@ -187,10 +187,13 @@ class StatusPoller(QObject):
             self._rapid_over = rapid_over
             self.rapid_override.emit(rapid_over)
 
-        spindle_speed = s.spindle[0]['speed']
-        if spindle_speed != self._spindle_speed:
-            self._spindle_speed = spindle_speed
-            self.spindle_speed.emit(spindle_speed)
+        # We use 'speed' as the commanded setpoint here if no better key exists,
+        # but in many configs 'speed' is actually feedback.
+        # So we emit it as 'commanded' and let HAL provide 'actual'.
+        spindle_cmd = s.spindle[0]['speed']
+        if spindle_cmd != self._spindle_cmd:
+            self._spindle_cmd = spindle_cmd
+            self.spindle_speed_cmd.emit(spindle_cmd)
 
         spindle_dir = s.spindle[0]['direction']
         if spindle_dir != self._spindle_dir:

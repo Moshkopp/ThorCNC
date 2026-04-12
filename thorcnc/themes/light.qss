@@ -89,6 +89,40 @@ QPushButton:checked {
     color: #ffffff;
 }
 
+/* ── Run Controls ── */
+QPushButton#btn_run,
+QPushButton#btn_pause_mdi,
+QPushButton#stop_button {
+    min-height: 55px;
+    font-size: 14pt;
+    border-radius: 6px;
+    border: 1px solid #888888;
+    margin: 2px 20px; /* 20px Horizontal Padding/Margin */
+}
+
+QPushButton#btn_run[status="running"] {
+    background-color: #27ae60;
+    color: white;
+}
+QPushButton#btn_run[status="ready"] {
+    border: 2px solid #2ecc71;
+    color: #2ecc71;
+}
+
+QPushButton#btn_pause_mdi[status="paused"] {
+    background-color: #f39c12;
+    color: white;
+}
+QPushButton#btn_pause_mdi[status="running"] {
+    border: 2px solid #f39c12;
+    color: #f39c12;
+}
+
+QPushButton#stop_button[status="active"] {
+    background-color: #c0392b;
+    color: white;
+}
+
 /* ── Navigation Sidebar ── */
 QPushButton[objectName^="nav_"] {
     background-color: transparent;
@@ -206,21 +240,7 @@ QLabel#lbl_spindle_rpm {
     color: #e67e22;
 }
 
-/* "Soll:" und "Ist:" Labels */
-QGroupBox#spindleGroup QGridLayout > QLabel {
-    font-size: 18px;
-    color: #cccccc;
-}
-
-QLabel#lbl_spindle_soll,
-QLabel#lbl_spindle_ist {
-    font-size: 28px;
-    color: #ffffff;
-    background-color: #1e1e1e;
-    border: 1px solid #888888;
-    padding: 6px;
-    min-width: 100px;
-}
+/* Alte Spindle-Labels entfernt */
 
 QProgressBar#spindle_load_bar {
     min-height: 16px;
@@ -545,28 +565,33 @@ QLabel#lbl_probe_section_title {
     color: #444444;
 }
 
-/* ── Spindle Display ── */
+/* ── Spindle Display (Digital Focus) ── */
 QFrame#spindle_display_frame {
-    background-color: #1e1e1e;
-    border: 1px solid #888888;
+    background-color: #f7f9fc;
+    border: 1px solid #d1d9e6;
     border-radius: 6px;
+    min-height: 100px;
 }
 
-QLabel#lbl_spindle_ist {
-    font-size: 26px;
+/* Primary Display for Actual Value (IST) */
+QFrame#spindle_display_frame > QLabel#lbl_spindle_ist {
+    font-size: 28pt;
     font-weight: bold;
     font-family: monospace;
-    color: #78909c;
+    color: #3498db;
     background: transparent;
     border: none;
+    margin-top: 5px;
 }
 
-QLabel#lbl_spindle_soll {
-    font-size: 11px;
-    font-weight: bold;
-    color: #888888;
+/* Secondary display for Command (CMD) */
+QFrame#spindle_display_frame > QLabel#lbl_spindle_soll {
+    font-size: 10pt;
+    font-weight: normal;
+    color: #7f8c8d;
     background: transparent;
     border: none;
+    margin-bottom: 5px;
 }
 
 /* ── DRO ── */

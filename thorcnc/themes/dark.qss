@@ -107,6 +107,40 @@ QPushButton:checked {
     color: #ffffff;
 }
 
+/* ── Run Controls ── */
+QPushButton#btn_run,
+QPushButton#btn_pause_mdi,
+QPushButton#stop_button {
+    min-height: 55px;
+    font-size: 14pt;
+    border-radius: 6px;
+    border: 1px solid #4a4a4a;
+    margin: 2px 20px; /* 20px Horizontal Padding/Margin */
+}
+
+QPushButton#btn_run[status="running"] {
+    background-color: #27ae60;
+    color: white;
+}
+QPushButton#btn_run[status="ready"] {
+    border: 2px solid #27ae60;
+    color: #2ecc71;
+}
+
+QPushButton#btn_pause_mdi[status="paused"] {
+    background-color: #f39c12;
+    color: white;
+}
+QPushButton#btn_pause_mdi[status="running"] {
+    border: 2px solid #f39c12;
+    color: #f39c12;
+}
+
+QPushButton#stop_button[status="active"] {
+    background-color: #c0392b;
+    color: white;
+}
+
 /* ── Navigation Sidebar (Floating Card Style) ── */
 QPushButton[objectName^="nav_"] {
     background-color: transparent;
@@ -284,26 +318,7 @@ QGroupBox#spindleGroup QLabel {
     font-size: 12pt;
 }
 
-QLabel#lbl_spindle_rpm {
-    font-size: 11pt;
-    color: #f39c12;
-}
-
-/* "Target:" and "Actual:" Labels */
-QGroupBox#spindleGroup QGridLayout > QLabel {
-    font-size: 14pt;
-    color: #aaaaaa;
-}
-
-QLabel#lbl_spindle_soll,
-QLabel#lbl_spindle_ist {
-    font-size: 21pt;
-    color: #ffffff;
-    background-color: #1a1a1a;
-    border: 1px solid #444444;
-    padding: 6px;
-    min-width: 100px;
-}
+/* Alte Labels entfernt – konsolidiert am Ende des Files */
 
 QProgressBar#spindle_load_bar {
     min-height: 16px; /* Dickere Bar */
@@ -594,28 +609,33 @@ QLabel#lbl_probe_section_title {
     color: #aaaaaa;
 }
 
-/* ── Spindle Display ── */
+/* ── Spindle Display (Digital Focus) ── */
 QFrame#spindle_display_frame {
     background-color: #0d1117;
     border: 1px solid #30363d;
     border-radius: 6px;
+    min-height: 100px;
 }
 
-QLabel#lbl_spindle_ist {
-    font-size: 26px;
+/* Primary Display for Actual Value (IST) */
+QFrame#spindle_display_frame > QLabel#lbl_spindle_ist {
+    font-size: 25pt;
     font-weight: bold;
     font-family: monospace;
     color: #58a6ff;
     background: transparent;
     border: none;
+    margin-top: 5px;
 }
 
-QLabel#lbl_spindle_soll {
-    font-size: 11px;
-    font-weight: bold;
+/* Secondary display for Command (CMD) */
+QFrame#spindle_display_frame > QLabel#lbl_spindle_soll {
+    font-size: 12pt;
+    font-weight: normal;
     color: #8b949e;
     background: transparent;
     border: none;
+    margin-bottom: 5px;
 }
 
 QPushButton#btn_spindle_fwd,
