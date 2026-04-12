@@ -2328,7 +2328,7 @@ class ThorCNC(QObject):
             # Fallback if no speed was ever set
             if speed < 1:
                 # Versuche Standardwert aus INI zu lesen, sonst 1000
-                speed = 1000
+                speed = 6000
                 if self.ini:
                     try:
                         val = self.ini.find("DISPLAY", "DEFAULT_SPINDLE_SPEED")
