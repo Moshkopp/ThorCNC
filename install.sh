@@ -67,9 +67,11 @@ install_deps() {
         debian|ubuntu)
             info "Installiere System-Pakete (apt)..."
             sudo apt-get update -qq || true
-            # Versuche PySide6 via apt, aber ignoriere Fehler falls es fehlt
-            sudo apt-get install -y python3-pyside6 python3-pyqtgraph python3-opengl 2>/dev/null || \
-                warn "Konnte python3-pyside6 nicht via apt finden. Wird später via pip installiert."
+            # Installiere PySide6 + OpenGL Support via apt (Debian 12+ benötigt oft qtopenglwidgets separat)
+            sudo apt-get install -y python3-pyside6 python3-pyside6.qtopenglwidgets \
+                                   python3-pyqtgraph python3-opengl \
+                                   libopengl0 libegl1 2>/dev/null || \
+                warn "Einige System-Pakete konnten nicht via apt installiert werden. Wird später via pip versucht."
             
             sudo apt-get install -y python3-pip python3-hatchling linuxcnc-uspace 2>/dev/null || true
             ok "System-Checks abgeschlossen."

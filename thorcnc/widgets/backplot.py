@@ -255,7 +255,7 @@ class _BackplotGL(QWidget):
             f.append([bc_idx, nxt, i])
             f.append([tc_idx, cols + i, cols + nxt])
 
-        return gl.MeshData(vertexes=new_v, faces=np.array(f))
+        return gl.MeshData(vertexes=new_v, faces=np.array(f, dtype=np.int32))
 
     def set_tool_geometry(self, dia: float, length: float):
         r = dia / 2.0
