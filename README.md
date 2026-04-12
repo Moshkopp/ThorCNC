@@ -18,29 +18,33 @@ A modern LinuxCNC graphical interface (VCP) for 3-axis milling machines, built w
 ---
 
 ![ThorCNC Screenshot](thorcnc/images/screen_main.png)
+![Tool Change Dialog](thorcnc/images/screen_toolchange.png)
 
 ---
 
 ## Features
 
-- **3D Backplot** — OpenGL-accelerated toolpath visualization via pyqtgraph, with real-time tool position, live trail, and machine envelope display
+- **Industrial M6 Dialog** — Premium, touch-optimized manual tool change interface with automatic tool data lookup (Comment, Diameter, Offset).
+- **Smart Spindle Load** — Real-time load bar with dynamic color feedback (Green: 0-60%, Yellow: 60-80%, Red: >80%).
+- **3D Backplot** — OpenGL-accelerated toolpath visualization via pyqtgraph, with real-time tool position, live trail, and machine envelope display.
   - View presets: ISO, TOP, FRONT, SIDE
   - Clear trail button in toolbar
   - Mouse: left drag = orbit, middle drag = pan, Ctrl+middle drag = zoom
-- **GO TO HOME** — Toolbar button with color feedback: red = not homed / machine off, green = homed + machine on, gray = AUTO mode
-- **Machine Mode** — Combobox in the left panel to switch between MANUAL / AUTO / MDI
-- **G-Code / MDI Panel** — Toggle between G-code viewer and MDI input with persistent command history (last 50 entries, no consecutive duplicates)
-- **DRO** — Digital readout for work (G54–G59.3) and machine coordinates, with per-axis zero and reference buttons
-- **OFFSETS Tab** — Full WCS table (G54–G59.3) with X/Y/Z values read live from the `.var` file, plus per-row CLEAR button (sends `G10 L2`)
-- **Tool Table** — Editable tool table with diameter and length, live-updated after M6 tool changes
-- **M6 Remap support** — Integrates with custom NGC tool-measurement routines; automatic tool geometry update in backplot after probing
-- **Spindle control** — Forward/reverse/stop, speed and override display, load indicator
-- **Jog panel** — Continuous and incremental jog for X/Y/Z with configurable velocity and step sizes
-- **HAL integration** — Reads and writes HAL pins directly; compatible with standard LinuxCNC HAL components
-- **WCS selector** — Quick switch between G54–G59.3 via dropdown in the DRO panel
-- **Simulation support** — Works with LinuxCNC sim configurations; no real hardware required for development
-- **Settings** — Four sub-tabs: Toolsetter, UI (live theme + language switching), Maschine, Erweitert
-- **Themes** — Dark (default), light, dark_green, dark_orange — switchable at runtime
+- **GO TO HOME** — Toolbar button with color feedback: red = not homed / machine off, green = homed + machine on, gray = AUTO mode.
+- **Machine Mode** — Combobox in the left panel to switch between MANUAL / AUTO / MDI.
+- **G-Code / MDI Panel** — Toggle between G-code viewer and MDI input with persistent command history.
+- **DRO** — Digital readout for work (G54–G59.3) and machine coordinates, with per-axis zero and reference buttons.
+- **OFFSETS Tab** — Full WCS table (G54–G59.3) with X/Y/Z values read live from the `.var` file.
+- **Tool Table** — Editable tool table with diameter and length, live-updated after M6 tool changes.
+- **M6 Remap Support** — Full integration with custom NGC measurement routines and ThorCNC's own manual fallback dialog.
+- **Spindle Control** — Forward/reverse/stop, speed and override display, load indicator.
+- **Jog Panel** — Continuous and incremental jog for X/Y/Z with configurable velocity and step sizes.
+- **HAL Integration** — Reads and writes HAL pins directly; compatible with standard LinuxCNC HAL components.
+- **INI-Driven Defaults** — Automatically synchronizes spindle start speeds, increments, and file paths.
+- **Splash Screen** — Support for custom industrial startup graphics via `INTRO_GRAPHIC` and `INTRO_TIME`.
+- **WCS Selector** — Quick switch between G54–G59.3 via dropdown in the DRO panel.
+- **Settings** — Four sub-tabs: Toolsetter, UI (live theme + language switching), Maschine, Erweitert.
+- **Themes** — Dark (default), light, dark_green, dark_orange — switchable at runtime.
 
 ---
 
