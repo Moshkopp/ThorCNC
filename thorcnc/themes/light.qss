@@ -275,3 +275,16 @@ QSlider::handle:horizontal:pressed {
     background-color: #2980b9;
     border: 1px solid #ffffff;
 }
+
+/* ── Toolsetter position buttons ── */
+QPushButton#btn_set_wechsel_pos,
+QPushButton#btn_set_taster_pos {
+    border: 2px solid #2980b9;
+    color: #2980b9;
+}
+QPushButton#btn_set_wechsel_pos:hover,
+QPushButton#btn_set_taster_pos:hover {
+    border-color: #1a6a9f;
+    color: #ffffff;
+    background-color: #2980b9;
+}

@@ -44,3 +44,16 @@ QLabel#lbl_spindle_rpm {
 }
 
 /* Alle Buttons im neuen Look */
+
+/* ── Toolsetter position buttons ── */
+QPushButton#btn_set_wechsel_pos,
+QPushButton#btn_set_taster_pos {
+    border: 1px solid #e67e22;
+    color: #e67e22;
+}
+QPushButton#btn_set_wechsel_pos:hover,
+QPushButton#btn_set_taster_pos:hover {
+    border-color: #f39c12;
+    color: #ffffff;
+    background-color: #4a2a0a;
+}

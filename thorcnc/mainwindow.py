@@ -2028,12 +2028,13 @@ class ThorCNC(QObject):
 
         # ── UI Tab: Theme & Language ───────────────────────────────────────────
         if cb := self._w(QComboBox, "combo_theme"):
-            # Gespeichertes Theme vorauswählen
+            # Gespeichertes Theme vorauswählen und sofort anwenden
             saved = self.settings.get("theme", "dark")
             idx = cb.findText(saved)
             if idx >= 0:
                 cb.setCurrentIndex(idx)
             cb.currentTextChanged.connect(self._apply_theme)
+            self._apply_theme(saved)
 
         if cb := self._w(QComboBox, "combo_language"):
             saved_lang = self.settings.get("language", "Deutsch")
@@ -2119,6 +2120,19 @@ class ThorCNC(QObject):
         if b := self._w(QPushButton, "btn_set_taster_pos"):
             b.clicked.connect(self._set_taster_pos_from_machine)
 
+        # Before / After Toolsetter TextEdits
+        from PySide6.QtWidgets import QTextEdit
+        for key, wname in (("ts_before", "te_ts_before"), ("ts_after", "te_ts_after")):
+            if te := self._w(QTextEdit, wname):
+                val = self.settings.get(key, "")
+                te.blockSignals(True)
+                te.setPlainText(str(val) if val else "")
+                te.blockSignals(False)
+                te.textChanged.connect(
+                    lambda k=key, widget=te: self._on_ts_text_save(k, widget)
+                )
+        self._write_ts_before_after()
+
         # Probe Sim Button (Sim only)
         if b := self._w(QPushButton, "btn_probe_sim"):
             b.pressed.connect(lambda: self._set_sim_probe(True))
@@ -2148,6 +2162,64 @@ class ThorCNC(QObject):
         self.settings.set(key, value)
         self.settings.save()
         self._hal_set(key, value)
+
+    def _on_ts_text_save(self, key: str, widget):
+        """Callback: Before/After-Toolsetter TextEdit geändert → Prefs speichern + NGC schreiben."""
+        self.settings.set(key, widget.toPlainText())
+        self.settings.save()
+        self._write_ts_before_after()
+        from PySide6.QtWidgets import QTextEdit
+        before = self.settings.get("ts_before", "") or ""
+        after  = self.settings.get("ts_after",  "") or ""
+        before_str = before.strip() or "—"
+        after_str  = after.strip()  or "—"
+        self._status(f"Toolsetter  BEFORE: [{before_str}]  |  AFTER: [{after_str}]")
+
+    def _ts_ngc_dir(self) -> str:
+        """Gibt das NGC-Verzeichnis für Toolsetter-Subroutinen zurück."""
+        if self.ini_path:
+            ini_dir = os.path.dirname(os.path.abspath(self.ini_path))
+            sub_tools = os.path.join(ini_dir, "subroutines", "tools")
+            if os.path.isdir(sub_tools):
+                return sub_tools
+        d = os.path.expanduser("~/linuxcnc/nc_files")
+        if self.ini:
+            cfg = self.ini.find("DISPLAY", "PROGRAM_PREFIX")
+            if cfg:
+                cfg = os.path.expanduser(cfg)
+                if not os.path.isabs(cfg):
+                    cfg = os.path.abspath(
+                        os.path.join(os.path.dirname(self.ini_path), cfg))
+                d = cfg
+        return d
+
+    def _write_ts_before_after(self):
+        """Schreibt before_toolsetter.ngc und after_toolsetter.ngc ins Tools-Verzeichnis."""
+        from PySide6.QtWidgets import QTextEdit
+        ngc_dir = self._ts_ngc_dir()
+        before_code = ""
+        after_code = ""
+        if te := self._w(QTextEdit, "te_ts_before"):
+            before_code = te.toPlainText().strip()
+        if te := self._w(QTextEdit, "te_ts_after"):
+            after_code = te.toPlainText().strip()
+        try:
+            before_path = os.path.join(ngc_dir, "before_toolsetter.ngc")
+            with open(before_path, "w") as f:
+                f.write("O<before_toolsetter> sub\n")
+                if before_code:
+                    f.write(f"  {before_code}\n")
+                f.write("O<before_toolsetter> endsub\n")
+                f.write("M2\n")
+            after_path = os.path.join(ngc_dir, "after_toolsetter.ngc")
+            with open(after_path, "w") as f:
+                f.write("O<after_toolsetter> sub\n")
+                if after_code:
+                    f.write(f"  {after_code}\n")
+                f.write("O<after_toolsetter> endsub\n")
+                f.write("M2\n")
+        except Exception as e:
+            self._status(f"Could not write toolsetter NGC files: {e}", error=True)
 
     def _on_aa_toggled(self, enabled: bool):
         """Callback: Antialiasing Checkbox geändert."""
@@ -2601,7 +2673,7 @@ class ThorCNC(QObject):
         from PySide6.QtWidgets import QLineEdit, QTableWidget, QLabel
         if tool == 0:
             return  # Tool 0 = no/unknown tool, do not overwrite display
-            
+
         # Update modular status bar label
         lbl = self.status_bar.findChild(QLabel, "label_tool_nr")
         if lbl:
@@ -2933,7 +3005,7 @@ class ThorCNC(QObject):
         if hasattr(self, "status_bar") and self.status_bar:
             self.status_bar.setVisible(not is_simple)
                 
-        self._status(f"Modus: {'SIMPLE' if is_simple else 'Vollständig'}")
+        pass
 
         # Modus-Umschaltung basierend auf Tab (Auto vs Manual)
         # Tab 0: Main (Auto), Tab 1: File (Auto), Rest: Manual

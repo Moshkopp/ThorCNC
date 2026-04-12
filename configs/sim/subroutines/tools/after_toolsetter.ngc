@@ -1,0 +1,5 @@
+O<after_toolsetter> sub
+  M65 P2
+(DEBUG, ausssssss)
+O<after_toolsetter> endsub
+M2

@@ -40,3 +40,16 @@ QLabel#lbl_dro_z {
 }
 
 /* Alle Buttons im neuen Look */
+
+/* ── Toolsetter position buttons ── */
+QPushButton#btn_set_wechsel_pos,
+QPushButton#btn_set_taster_pos {
+    border: 1px solid #2ecc71;
+    color: #2ecc71;
+}
+QPushButton#btn_set_wechsel_pos:hover,
+QPushButton#btn_set_taster_pos:hover {
+    border-color: #55dd88;
+    color: #ffffff;
+    background-color: #1a4a2a;
+}

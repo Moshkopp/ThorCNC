@@ -1,5 +1,7 @@
 o<messe> sub
 
+O<before_toolsetter> call
+
 (--- 1. CONFIGURATION FROM HAL-PINS ThorCNC GUI ---)
 #<wechsel_x>           = #<_hal[thorcnc.ts-wechsel-x]>
 #<wechsel_y>           = #<_hal[thorcnc.ts-wechsel-y]>
@@ -86,5 +88,7 @@ o104 if [#1900 EQ 580]
 o104 endif
 
 T#5400 G43 H#5400
+
+O<after_toolsetter> call
 o<messe> endsub
 M2

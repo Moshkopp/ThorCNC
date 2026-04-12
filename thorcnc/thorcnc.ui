@@ -1930,274 +1930,266 @@
               <string>Toolsetter</string>
              </attribute>
              <layout class="QVBoxLayout">
+              <property name="spacing"><number>10</number></property>
+              <property name="margin" stdset="0"><number>10</number></property>
+              <!-- Hauptzeile: Einstellungen (links) + Beschreibung (rechts) -->
               <item>
-               <widget class="QGroupBox" name="groupBoxToolSensor">
-                <property name="title">
-                 <string>Tool Probe Settings (M6 Remap)</string>
-                </property>
-                <layout class="QGridLayout" name="gl_toolsensor">
-                 <item row="0" column="0">
-                  <widget class="QLabel" name="lbl_dsb_ts_wechsel_x">
-                   <property name="text">
-                    <string>Change Position X:</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="0" column="1">
-                  <widget class="QDoubleSpinBox" name="dsb_ts_wechsel_x">
-                   <property name="decimals">
-                    <number>3</number>
-                   </property>
-                   <property name="minimum">
-                    <double>-10000.000000000000000</double>
-                   </property>
-                   <property name="maximum">
-                    <double>10000.000000000000000</double>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="0" column="2" rowspan="3">
-                  <widget class="QPushButton" name="btn_set_wechsel_pos">
-                   <property name="text">
-                    <string>Current Pos.</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="1" column="0">
-                  <widget class="QLabel" name="lbl_dsb_ts_wechsel_y">
-                   <property name="text">
-                    <string>Change Position Y:</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="1" column="1">
-                  <widget class="QDoubleSpinBox" name="dsb_ts_wechsel_y">
-                   <property name="decimals">
-                    <number>3</number>
-                   </property>
-                   <property name="minimum">
-                    <double>-10000.000000000000000</double>
-                   </property>
-                   <property name="maximum">
-                    <double>10000.000000000000000</double>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="2" column="0">
-                  <widget class="QLabel" name="lbl_dsb_ts_wechsel_z">
-                   <property name="text">
-                    <string>Change Position Z:</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="2" column="1">
-                  <widget class="QDoubleSpinBox" name="dsb_ts_wechsel_z">
-                   <property name="decimals">
-                    <number>3</number>
-                   </property>
-                   <property name="minimum">
-                    <double>-10000.000000000000000</double>
-                   </property>
-                   <property name="maximum">
-                    <double>10000.000000000000000</double>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="3" column="0" colspan="3">
-                  <widget class="Line" name="line1_ts">
-                   <property name="orientation">
-                    <enum>Qt::Orientation::Horizontal</enum>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="4" column="0">
-                  <widget class="QLabel" name="lbl_dsb_ts_x">
-                   <property name="text">
-                    <string>Probe Position X:</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="4" column="1">
-                  <widget class="QDoubleSpinBox" name="dsb_ts_x">
-                   <property name="decimals">
-                    <number>3</number>
-                   </property>
-                   <property name="minimum">
-                    <double>-10000.000000000000000</double>
-                   </property>
-                   <property name="maximum">
-                    <double>10000.000000000000000</double>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="4" column="2" rowspan="3">
-                  <widget class="QPushButton" name="btn_set_taster_pos">
-                   <property name="text">
-                    <string>Current Pos.</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="5" column="0">
-                  <widget class="QLabel" name="lbl_dsb_ts_y">
-                   <property name="text">
-                    <string>Probe Position Y:</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="5" column="1">
-                  <widget class="QDoubleSpinBox" name="dsb_ts_y">
-                   <property name="decimals">
-                    <number>3</number>
-                   </property>
-                   <property name="minimum">
-                    <double>-10000.000000000000000</double>
-                   </property>
-                   <property name="maximum">
-                    <double>10000.000000000000000</double>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="6" column="0">
-                  <widget class="QLabel" name="lbl_dsb_ts_z">
-                   <property name="text">
-                    <string>Probe Position Z:</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="6" column="1">
-                  <widget class="QDoubleSpinBox" name="dsb_ts_z">
-                   <property name="decimals">
-                    <number>3</number>
-                   </property>
-                   <property name="minimum">
-                    <double>-10000.000000000000000</double>
-                   </property>
-                   <property name="maximum">
-                    <double>10000.000000000000000</double>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="7" column="0" colspan="3">
-                  <widget class="Line" name="line2_ts">
-                   <property name="orientation">
-                    <enum>Qt::Orientation::Horizontal</enum>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="8" column="0">
-                  <widget class="QLabel" name="lbl_dsb_ts_spindle_zero">
-                   <property name="text">
-                    <string>Spindle Zero (Z):</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="8" column="1">
-                  <widget class="QDoubleSpinBox" name="dsb_ts_spindle_zero">
-                   <property name="decimals">
-                    <number>3</number>
-                   </property>
-                   <property name="minimum">
-                    <double>-10000.000000000000000</double>
-                   </property>
-                   <property name="maximum">
-                    <double>10000.000000000000000</double>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="9" column="0">
-                  <widget class="QLabel" name="lbl_dsb_ts_max_probe">
-                   <property name="text">
-                    <string>MAX_PROBE Distance:</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="9" column="1">
-                  <widget class="QDoubleSpinBox" name="dsb_ts_max_probe">
-                   <property name="decimals">
-                    <number>3</number>
-                   </property>
-                   <property name="minimum">
-                    <double>-10000.000000000000000</double>
-                   </property>
-                   <property name="maximum">
-                    <double>10000.000000000000000</double>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="10" column="0">
-                  <widget class="QLabel" name="lbl_dsb_ts_retract">
-                   <property name="text">
-                    <string>Retract (RETRACT):</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="10" column="1">
-                  <widget class="QDoubleSpinBox" name="dsb_ts_retract">
-                   <property name="decimals">
-                    <number>3</number>
-                   </property>
-                   <property name="minimum">
-                    <double>-10000.000000000000000</double>
-                   </property>
-                   <property name="maximum">
-                    <double>10000.000000000000000</double>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="11" column="0">
-                  <widget class="QLabel" name="lbl_dsb_ts_search_vel">
-                   <property name="text">
-                    <string>Search Vel (SEARCH_VEL):</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="11" column="1">
-                  <widget class="QDoubleSpinBox" name="dsb_ts_search_vel">
-                   <property name="decimals">
-                    <number>1</number>
-                   </property>
-                   <property name="minimum">
-                    <double>0.000000000000000</double>
-                   </property>
-                   <property name="maximum">
-                    <double>10000.000000000000000</double>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="12" column="0">
-                  <widget class="QLabel" name="lbl_dsb_ts_probe_vel">
-                   <property name="text">
-                    <string>Probe Vel (PROBE_VEL):</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="12" column="1">
-                  <widget class="QDoubleSpinBox" name="dsb_ts_probe_vel">
-                   <property name="decimals">
-                    <number>1</number>
-                   </property>
-                   <property name="minimum">
-                    <double>0.000000000000000</double>
-                   </property>
-                   <property name="maximum">
-                    <double>10000.000000000000000</double>
-                   </property>
-                  </widget>
-                 </item>
-                </layout>
-               </widget>
+               <layout class="QHBoxLayout">
+                <property name="spacing"><number>10</number></property>
+                <!-- LINKE SPALTE: alle Eingaben -->
+                <item>
+                 <widget class="QFrame" name="frame_ts_inputs">
+                  <property name="maximumWidth"><number>460</number></property>
+                  <property name="frameShape"><enum>QFrame::Shape::NoFrame</enum></property>
+                  <layout class="QVBoxLayout">
+                   <property name="spacing"><number>6</number></property>
+                   <property name="margin" stdset="0"><number>0</number></property>
+                   <!-- Wechselposition -->
+                   <item>
+                    <widget class="QGroupBox" name="groupBox_ts_wechsel">
+                     <property name="title"><string>Wechselposition</string></property>
+                     <layout class="QGridLayout">
+                      <property name="spacing"><number>5</number></property>
+                      <item row="0" column="0">
+                       <widget class="QLabel" name="lbl_dsb_ts_wechsel_x">
+                        <property name="text"><string>X:</string></property>
+                       </widget>
+                      </item>
+                      <item row="0" column="1">
+                       <widget class="QDoubleSpinBox" name="dsb_ts_wechsel_x">
+                        <property name="decimals"><number>3</number></property>
+                        <property name="minimum"><double>-10000.000000000000000</double></property>
+                        <property name="maximum"><double>10000.000000000000000</double></property>
+                       </widget>
+                      </item>
+                      <item row="1" column="0">
+                       <widget class="QLabel" name="lbl_dsb_ts_wechsel_y">
+                        <property name="text"><string>Y:</string></property>
+                       </widget>
+                      </item>
+                      <item row="1" column="1">
+                       <widget class="QDoubleSpinBox" name="dsb_ts_wechsel_y">
+                        <property name="decimals"><number>3</number></property>
+                        <property name="minimum"><double>-10000.000000000000000</double></property>
+                        <property name="maximum"><double>10000.000000000000000</double></property>
+                       </widget>
+                      </item>
+                      <item row="2" column="0">
+                       <widget class="QLabel" name="lbl_dsb_ts_wechsel_z">
+                        <property name="text"><string>Z:</string></property>
+                       </widget>
+                      </item>
+                      <item row="2" column="1">
+                       <widget class="QDoubleSpinBox" name="dsb_ts_wechsel_z">
+                        <property name="decimals"><number>3</number></property>
+                        <property name="minimum"><double>-10000.000000000000000</double></property>
+                        <property name="maximum"><double>10000.000000000000000</double></property>
+                       </widget>
+                      </item>
+                      <item row="3" column="0" colspan="2">
+                       <widget class="QPushButton" name="btn_set_wechsel_pos">
+                        <property name="text"><string>Aktuelle Position übernehmen</string></property>
+                       </widget>
+                      </item>
+                     </layout>
+                    </widget>
+                   </item>
+                   <!-- Messposition -->
+                   <item>
+                    <widget class="QGroupBox" name="groupBox_ts_mess">
+                     <property name="title"><string>Messposition</string></property>
+                     <layout class="QGridLayout">
+                      <property name="spacing"><number>5</number></property>
+                      <item row="0" column="0">
+                       <widget class="QLabel" name="lbl_dsb_ts_x">
+                        <property name="text"><string>X:</string></property>
+                       </widget>
+                      </item>
+                      <item row="0" column="1">
+                       <widget class="QDoubleSpinBox" name="dsb_ts_x">
+                        <property name="decimals"><number>3</number></property>
+                        <property name="minimum"><double>-10000.000000000000000</double></property>
+                        <property name="maximum"><double>10000.000000000000000</double></property>
+                       </widget>
+                      </item>
+                      <item row="1" column="0">
+                       <widget class="QLabel" name="lbl_dsb_ts_y">
+                        <property name="text"><string>Y:</string></property>
+                       </widget>
+                      </item>
+                      <item row="1" column="1">
+                       <widget class="QDoubleSpinBox" name="dsb_ts_y">
+                        <property name="decimals"><number>3</number></property>
+                        <property name="minimum"><double>-10000.000000000000000</double></property>
+                        <property name="maximum"><double>10000.000000000000000</double></property>
+                       </widget>
+                      </item>
+                      <item row="2" column="0">
+                       <widget class="QLabel" name="lbl_dsb_ts_z">
+                        <property name="text"><string>Z:</string></property>
+                       </widget>
+                      </item>
+                      <item row="2" column="1">
+                       <widget class="QDoubleSpinBox" name="dsb_ts_z">
+                        <property name="decimals"><number>3</number></property>
+                        <property name="minimum"><double>-10000.000000000000000</double></property>
+                        <property name="maximum"><double>10000.000000000000000</double></property>
+                       </widget>
+                      </item>
+                      <item row="3" column="0" colspan="2">
+                       <widget class="QPushButton" name="btn_set_taster_pos">
+                        <property name="text"><string>Aktuelle Position übernehmen</string></property>
+                       </widget>
+                      </item>
+                     </layout>
+                    </widget>
+                   </item>
+                   <!-- Messparameter -->
+                   <item>
+                    <widget class="QGroupBox" name="groupBox_ts_params">
+                     <property name="title"><string>Messparameter</string></property>
+                     <layout class="QGridLayout">
+                      <property name="spacing"><number>5</number></property>
+                      <item row="0" column="0">
+                       <widget class="QLabel" name="lbl_dsb_ts_spindle_zero">
+                        <property name="text"><string>Spindle Zero:</string></property>
+                       </widget>
+                      </item>
+                      <item row="0" column="1">
+                       <widget class="QDoubleSpinBox" name="dsb_ts_spindle_zero">
+                        <property name="decimals"><number>3</number></property>
+                        <property name="minimum"><double>-10000.000000000000000</double></property>
+                        <property name="maximum"><double>10000.000000000000000</double></property>
+                       </widget>
+                      </item>
+                      <item row="1" column="0">
+                       <widget class="QLabel" name="lbl_dsb_ts_max_probe">
+                        <property name="text"><string>MAX Probe:</string></property>
+                       </widget>
+                      </item>
+                      <item row="1" column="1">
+                       <widget class="QDoubleSpinBox" name="dsb_ts_max_probe">
+                        <property name="decimals"><number>3</number></property>
+                        <property name="minimum"><double>-10000.000000000000000</double></property>
+                        <property name="maximum"><double>10000.000000000000000</double></property>
+                       </widget>
+                      </item>
+                      <item row="2" column="0">
+                       <widget class="QLabel" name="lbl_dsb_ts_retract">
+                        <property name="text"><string>Retract:</string></property>
+                       </widget>
+                      </item>
+                      <item row="2" column="1">
+                       <widget class="QDoubleSpinBox" name="dsb_ts_retract">
+                        <property name="decimals"><number>3</number></property>
+                        <property name="minimum"><double>-10000.000000000000000</double></property>
+                        <property name="maximum"><double>10000.000000000000000</double></property>
+                       </widget>
+                      </item>
+                      <item row="3" column="0">
+                       <widget class="QLabel" name="lbl_dsb_ts_search_vel">
+                        <property name="text"><string>Search Vel:</string></property>
+                       </widget>
+                      </item>
+                      <item row="3" column="1">
+                       <widget class="QDoubleSpinBox" name="dsb_ts_search_vel">
+                        <property name="decimals"><number>1</number></property>
+                        <property name="minimum"><double>0.000000000000000</double></property>
+                        <property name="maximum"><double>10000.000000000000000</double></property>
+                       </widget>
+                      </item>
+                      <item row="4" column="0">
+                       <widget class="QLabel" name="lbl_dsb_ts_probe_vel">
+                        <property name="text"><string>Probe Vel:</string></property>
+                       </widget>
+                      </item>
+                      <item row="4" column="1">
+                       <widget class="QDoubleSpinBox" name="dsb_ts_probe_vel">
+                        <property name="decimals"><number>1</number></property>
+                        <property name="minimum"><double>0.000000000000000</double></property>
+                        <property name="maximum"><double>10000.000000000000000</double></property>
+                       </widget>
+                      </item>
+                     </layout>
+                    </widget>
+                   </item>
+                   <!-- Before / After -->
+                   <item>
+                    <widget class="QGroupBox" name="groupBoxTsBeforeAfter">
+                     <property name="title"><string>Before / After</string></property>
+                     <layout class="QGridLayout">
+                      <property name="spacing"><number>5</number></property>
+                      <item row="0" column="0">
+                       <widget class="QLabel" name="lbl_ts_before">
+                        <property name="styleSheet">
+                         <string>color: #f39c12; font-weight: bold; font-size: 8pt;</string>
+                        </property>
+                        <property name="text"><string>BEFORE</string></property>
+                       </widget>
+                      </item>
+                      <item row="0" column="1">
+                       <widget class="QLabel" name="lbl_ts_after">
+                        <property name="styleSheet">
+                         <string>color: #2ecc71; font-weight: bold; font-size: 8pt;</string>
+                        </property>
+                        <property name="text"><string>AFTER</string></property>
+                       </widget>
+                      </item>
+                      <item row="1" column="0">
+                       <widget class="QTextEdit" name="te_ts_before">
+                        <property name="minimumSize"><size><width>0</width><height>55</height></size></property>
+                        <property name="maximumSize"><size><width>16777215</width><height>55</height></size></property>
+                        <property name="placeholderText"><string>z.B. M64 P2</string></property>
+                       </widget>
+                      </item>
+                      <item row="1" column="1">
+                       <widget class="QTextEdit" name="te_ts_after">
+                        <property name="minimumSize"><size><width>0</width><height>55</height></size></property>
+                        <property name="maximumSize"><size><width>16777215</width><height>55</height></size></property>
+                        <property name="placeholderText"><string>z.B. M65 P2</string></property>
+                       </widget>
+                      </item>
+                     </layout>
+                    </widget>
+                   </item>
+                  </layout>
+                 </widget>
+                </item>
+                <!-- RECHTE SPALTE: Beschreibungen -->
+                <item>
+                 <widget class="QGroupBox" name="groupBox_ts_info">
+                  <property name="title"><string>Beschreibung</string></property>
+                  <layout class="QVBoxLayout">
+                   <item>
+                    <widget class="QLabel" name="lbl_ts_desc">
+                     <property name="wordWrap"><bool>true</bool></property>
+                     <property name="alignment">
+                      <set>Qt::AlignmentFlag::AlignTop|Qt::AlignmentFlag::AlignLeft</set>
+                     </property>
+                     <property name="styleSheet">
+                      <string>font-size: 9pt; color: #d8d8d8;</string>
+                     </property>
+                     <property name="text">
+                      <string>&lt;b&gt;Wechselposition X / Y / Z&lt;/b&gt;&lt;br&gt;Sicherheitsposition für den manuellen Werkzeugwechsel (Maschinenkoordinaten). Die Maschine fährt diese Position an bevor M6 den Wechsel ausführt.&lt;br&gt;&lt;br&gt;&lt;b&gt;Messposition X / Y / Z&lt;/b&gt;&lt;br&gt;Exakte XY-Position des Werkzeugmessers sowie Z-Höhe der Tasteroberfläche (Maschinenkoordinaten).&lt;br&gt;&lt;br&gt;&lt;b&gt;Spindle Zero&lt;/b&gt;&lt;br&gt;Messwert des Referenzwerkzeugs am Taster (G59.3). Alle weiteren Werkzeuglängen werden relativ dazu berechnet.&lt;br&gt;&lt;br&gt;&lt;b&gt;MAX Probe&lt;/b&gt;&lt;br&gt;Maximaler Messweg ab Startposition (negativ = nach unten). Sicherheitslimit verhindert Kollision.&lt;br&gt;&lt;br&gt;&lt;b&gt;Retract&lt;/b&gt;&lt;br&gt;Rückzug nach erstem Kontakt vor der Feinmessung (mm).&lt;br&gt;&lt;br&gt;&lt;b&gt;Search Vel&lt;/b&gt;&lt;br&gt;Geschwindigkeit für die schnelle Vorpositionierung zum Taster (mm/min).&lt;br&gt;&lt;br&gt;&lt;b&gt;Probe Vel&lt;/b&gt;&lt;br&gt;Langsame Antastgeschwindigkeit für die genaue Längenmessung (mm/min).&lt;br&gt;&lt;br&gt;&lt;b&gt;Before / After&lt;/b&gt;&lt;br&gt;G-Code der vor bzw. nach der Messung ausgeführt wird (z.B. Digitalausgänge schalten).</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <spacer>
+                     <property name="orientation"><enum>Qt::Orientation::Vertical</enum></property>
+                     <property name="sizeHint" stdset="0"><size><width>0</width><height>0</height></size></property>
+                    </spacer>
+                   </item>
+                  </layout>
+                 </widget>
+                </item>
+               </layout>
               </item>
+              <!-- Vertikaler Spacer unten -->
               <item>
                <spacer>
-                <property name="orientation">
-                 <enum>Qt::Orientation::Vertical</enum>
-                </property>
-                <property name="sizeHint" stdset="0">
-                 <size>
-                  <width>0</width>
-                  <height>0</height>
-                 </size>
-                </property>
+                <property name="orientation"><enum>Qt::Orientation::Vertical</enum></property>
+                <property name="sizeHint" stdset="0"><size><width>0</width><height>0</height></size></property>
                </spacer>
               </item>
              </layout>

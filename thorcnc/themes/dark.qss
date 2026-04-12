@@ -46,7 +46,7 @@ QGroupBox::title {
     subcontrol-origin: margin;
     subcontrol-position: top left;
     padding: 0 4px;
-    color: #888888;
+    color: #cccccc;
     font-size: 9pt;
 }
 
@@ -64,7 +64,7 @@ QGroupBox::title {
     subcontrol-origin: margin;
     subcontrol-position: top left;
     padding: 0 4px;
-    color: #999999;
+    color: #cccccc;
 }
 
 /* ── Standard Buttons ── */
@@ -320,4 +320,17 @@ QPushButton#btn_spindle_stop {
     min-height: 52px; /* Touch-freundliche Höhe */
     font-size: 11pt;
     font-weight: bold;
+}
+
+/* ── Toolsetter position buttons ── */
+QPushButton#btn_set_wechsel_pos,
+QPushButton#btn_set_taster_pos {
+    border: 1px solid #5599dd;
+    color: #7ab3e8;
+}
+QPushButton#btn_set_wechsel_pos:hover,
+QPushButton#btn_set_taster_pos:hover {
+    border-color: #7ab3e8;
+    color: #ffffff;
+    background-color: #2a4a6e;
 }
