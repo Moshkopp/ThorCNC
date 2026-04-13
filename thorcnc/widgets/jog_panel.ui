@@ -12,6 +12,7 @@
          </property>
          <widget class="QFrame" name="jog_xyz">
           <layout class="QGridLayout" name="jogGridLayout">
+            <property name="spacing"><number>12</number></property>
            <property name="leftMargin">
             <number>8</number>
            </property>
@@ -28,8 +29,8 @@
             <widget class="QPushButton" name="z_plus_jogbutton_3">
              <property name="minimumSize">
               <size>
-               <width>60</width>
-               <height>50</height>
+               <width>85</width>
+               <height>60</height>
               </size>
              </property>
              <property name="font">
@@ -44,8 +45,8 @@
             <widget class="QPushButton" name="z_minus_jogbutton_3">
              <property name="minimumSize">
               <size>
-               <width>60</width>
-               <height>50</height>
+               <width>85</width>
+               <height>60</height>
               </size>
              </property>
              <property name="font">
@@ -60,8 +61,8 @@
             <widget class="QPushButton" name="y_plus_jogbutton_3">
              <property name="minimumSize">
               <size>
-               <width>60</width>
-               <height>50</height>
+               <width>85</width>
+               <height>60</height>
               </size>
              </property>
              <property name="font">
@@ -76,8 +77,8 @@
             <widget class="QPushButton" name="y_minus_jogbutton_3">
              <property name="minimumSize">
               <size>
-               <width>60</width>
-               <height>50</height>
+               <width>85</width>
+               <height>60</height>
               </size>
              </property>
              <property name="font">
@@ -92,8 +93,8 @@
             <widget class="QPushButton" name="x_minus_jogbutton_3">
              <property name="minimumSize">
               <size>
-               <width>60</width>
-               <height>50</height>
+               <width>85</width>
+               <height>60</height>
               </size>
              </property>
              <property name="font">
@@ -108,8 +109,8 @@
             <widget class="QPushButton" name="x_plus_jogbutton_3">
              <property name="minimumSize">
               <size>
-               <width>60</width>
-               <height>50</height>
+               <width>85</width>
+               <height>60</height>
               </size>
              </property>
              <property name="font">

@@ -111,11 +111,11 @@ QPushButton:checked {
 QPushButton#btn_run,
 QPushButton#btn_pause_mdi,
 QPushButton#stop_button {
-    min-height: 55px;
+    min-height: 65px; /* Matched to Power/Estop buttons for symmetry */
     font-size: 14pt;
     border-radius: 6px;
     border: 1px solid #4a4a4a;
-    margin: 2px 20px; /* 20px Horizontal Padding/Margin */
+    margin: 2px 0px; /* Removed horizontal margin, handled by container */
 }
 
 QPushButton#btn_run[status="running"] {

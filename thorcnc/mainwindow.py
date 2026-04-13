@@ -162,8 +162,8 @@ class ThorCNC(QObject):
             if not r_lay:
                 r_lay = QVBoxLayout(right_panel)
             
-            r_lay.setContentsMargins(0, 0, 0, 0)
-            r_lay.setSpacing(6)
+            r_lay.setContentsMargins(10, 0, 10, 0) # Standardized sidebar gutter
+            r_lay.setSpacing(10) # Consistent spacing between modules
             
             for m_name in ["jog_panel", "spindle_panel", "run_controls"]:
                 mod_file = os.path.join(_DIR, "widgets", f"{m_name}.ui")
@@ -178,7 +178,7 @@ class ThorCNC(QObject):
                             sub_w.setObjectName("runControls")
                             from PySide6.QtCore import Qt
                             sub_w.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-                            sub_w.setMinimumHeight(180)
+                            sub_w.setFixedHeight(230) # Match status bar height for perfect symmetry
                             # Keine harte MaximumHeight mehr, damit das Layout flexibler ist
                         r_lay.addWidget(sub_w)
                         
