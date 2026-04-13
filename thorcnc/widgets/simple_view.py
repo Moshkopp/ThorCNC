@@ -108,10 +108,6 @@ class SimpleView(QWidget):
         for lbl in (self.lbl_feed, self.lbl_rpm):
             if lbl: lbl.setStyleSheet(info_style)
 
-        btn_style = "font-size: 22pt; font-weight: bold;"
-        for b in (self.btn_start, self.btn_pause, self.btn_stop, self.btn_estop, self.btn_back):
-            if b: b.setStyleSheet(btn_style)
-
         # X / Y / Z row labels — same size as the big values
         for n in ("lbl_row_x", "lbl_row_y", "lbl_row_z"):
             lbl = self.ui.findChild(QWidget, n)
@@ -156,5 +152,7 @@ class SimpleView(QWidget):
         self.set_wcs(x, y, z)
 
     def set_feed_rpm(self, feed, rpm):
-        if self.lbl_feed: self.lbl_feed.setText(f"FEED: {int(feed)}")
-        if self.lbl_rpm:  self.lbl_rpm.setText(f"RPM: {int(rpm)}")
+        if self.lbl_feed and feed is not None:
+            self.lbl_feed.setText(f"FEED: {int(feed)}")
+        if self.lbl_rpm and rpm is not None:
+            self.lbl_rpm.setText(f"RPM: {int(rpm)}")

@@ -14,8 +14,7 @@
     <layout class="QHBoxLayout" name="backLayout">
      <item>
       <widget class="QPushButton" name="btn_simple_back">
-       <property name="maximumSize"><size><width>130</width><height>42</height></size></property>
-       <property name="text"><string>← Zurück</string></property>
+       <property name="text"><string>← BACK</string></property>
       </widget>
      </item>
      <item>

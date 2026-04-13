@@ -69,6 +69,11 @@ class ThorCNC(QObject):
         self._setup_settings_tab()
         self._connect_signals()
         
+        # Performance/Throttle state
+        self._last_gui_pos = [0.0, 0.0, 0.0]
+        self._last_gui_rpm = 0.0
+        self._last_gui_load = -1.0
+        
         # Tool-Change Handler
         self.poller.tool_change_request.connect(self._on_tool_change_request)
         
@@ -287,6 +292,19 @@ class ThorCNC(QObject):
         self._btn_go_to_home.clicked.connect(self._go_to_home)
         self._update_goto_home_style(all_homed=False)
         tb_lay.addWidget(self._btn_go_to_home)
+        
+        # Move mode combobox to top toolbar (Reorganization)
+        from PySide6.QtWidgets import QComboBox
+        combo = self.ui.findChild(QComboBox, "combo_machine_mode")
+        if combo:
+            # Remove from old layout (leftPanel)
+            if combo.parent() and combo.parent().layout():
+                combo.parent().layout().removeWidget(combo)
+            # Add to top toolbar
+            combo.setMinimumWidth(120)
+            combo.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+            tb_lay.insertWidget(tb_lay.indexOf(self._btn_go_to_home), combo)
+            self.combo_machine_mode = combo
 
         if parent_vtk:
             if isinstance(parent_vtk, QSplitter):
@@ -1531,6 +1549,9 @@ class ThorCNC(QObject):
         self._probe_prefs_load()
         self._probe_prefs_connect()
 
+        # ── Setup Probe DRO ────────────────────────────────────────────────
+        self._setup_probe_dro()
+
     def _on_probe_center_mode_toggled(self, inside: bool):
         """Umschaltung zwischen OUTSIDE und INSIDE."""
         self._probe_center_inside = inside
@@ -1570,32 +1591,6 @@ class ThorCNC(QObject):
         self._probe_run_sequence(name)
 
 
-        # ── Override Slider (same LinuxCNC commands as Main tab) ─────────
-        def sld(name):
-            return self._w(QSlider, name)
-
-        if s := sld("probe_feed_override_slider"):
-            s.valueChanged.connect(lambda v: self.cmd.feedrate(v / 100.0))
-        if s := sld("probe_spindle_override_slider"):
-            s.valueChanged.connect(lambda v: self.cmd.spindleoverride(v / 100.0))
-        if s := sld("probe_rapid_override_slider"):
-            s.valueChanged.connect(lambda v: self.cmd.rapidrate(v / 100.0))
-        if s := sld("probe_v_override_slider"):
-            s.valueChanged.connect(self._on_probe_v_override_changed)
-
-        if btn := self._w(QPushButton, "probe_feed_override_to_100_button"):
-            btn.clicked.connect(lambda: self.cmd.feedrate(1.0))
-        if btn := self._w(QPushButton, "probe_spindle_override_to_100_button"):
-            btn.clicked.connect(lambda: self.cmd.spindleoverride(1.0))
-        if btn := self._w(QPushButton, "probe_rapid_override_to_100_button"):
-            btn.clicked.connect(lambda: self.cmd.rapidrate(1.0))
-        if btn := self._w(QPushButton, "probe_v_override_to_100_button"):
-            btn.clicked.connect(self._on_probe_v_override_to_100)
-
-        # ── Setup Probe DRO ────────────────────────────────────────────────
-        self._setup_probe_dro()
-
-
 
 
     def _update_probe_marker_pos(self):
@@ -1618,9 +1613,37 @@ class ThorCNC(QObject):
             if event.type() == QEvent.Type.MouseButtonPress:
                 self._show_simple_overlay()
         # Main window resize → keep overlay covering the full window
-        if watched is self.ui and event.type() == QEvent.Type.Resize:
-            if hasattr(self, "simple_view"):
-                self.simple_view.setGeometry(self.ui.rect())
+        if watched is self.ui:
+            if event.type() == QEvent.Type.Resize:
+                if hasattr(self, "simple_view"):
+                    cw = self.ui.centralWidget()
+                    self.simple_view.setGeometry(cw.rect() if cw else self.ui.rect())
+            
+            elif event.type() == QEvent.Type.Close:
+                # Safe-Exit: Confirm always to prevent accidental shutdowns
+                from PySide6.QtWidgets import QMessageBox
+                res = QMessageBox.question(
+                    self.ui, 
+                    "ThorCNC beenden?", 
+                    "Die Maschinen-Steuerung wirklich beenden?",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                    QMessageBox.StandardButton.No
+                )
+                if res == QMessageBox.StandardButton.No:
+                    event.ignore()
+                    return True # Event handled
+
+            elif event.type() == QEvent.Type.KeyPress:
+                if event.key() == Qt.Key.Key_F11:
+                    if self.ui.isFullScreen():
+                        self.ui.setWindowState(getattr(self, "_pre_simple_window_state", Qt.WindowState.WindowMaximized))
+                        # Fallback falls state nicht da war
+                        if self.ui.isFullScreen(): self.ui.showNormal()
+                    else:
+                        self._pre_simple_window_state = self.ui.windowState()
+                        self.ui.showFullScreen()
+                    return True
+
         return super().eventFilter(watched, event)
 
     def _setup_probe_dro(self):
@@ -2671,15 +2694,33 @@ class ThorCNC(QObject):
             self.nav_group.setExclusive(True)
 
             nav_names = ["nav_main", "nav_file", "nav_tool", "nav_offsets",
-                         "nav_probing", "nav_html", "nav_settings", "nav_status"]
+                         "nav_probing", "nav_html", "nav_settings", "nav_status", "nav_quit"]
 
             for idx, name in enumerate(nav_names):
                 b = btn(name)
+                if not b and name == "nav_quit":
+                    # Create nav_quit programmatically if not in .ui
+                    b = QPushButton("EXIT")
+                    b.setObjectName("nav_quit")
+                    from PySide6.QtWidgets import QFrame
+                    left_p = self._w(QFrame, "leftPanel")
+                    if left_p and left_p.layout():
+                        # Insert before the first spacer (navSpacer)
+                        # We find the spacer's index or just append it before the stretch
+                        left_p.layout().insertWidget(left_p.layout().count() - 2, b)
+
                 if b:
-                    b.setCheckable(True)
                     b.setMinimumHeight(60)
-                    self.nav_group.addButton(b, idx)
-                    b.clicked.connect(lambda _, i=idx, t=tab: t.setCurrentIndex(i))
+                    b.setCursor(Qt.CursorShape.PointingHandCursor)
+                    b.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+                    
+                    if name == "nav_quit":
+                        b.setCheckable(False)
+                        b.clicked.connect(self.ui.close)
+                    else:
+                        b.setCheckable(True)
+                        self.nav_group.addButton(b, idx)
+                        b.clicked.connect(lambda _, i=idx, t=tab: t.setCurrentIndex(i))
             
             tab.currentChanged.connect(self._sync_nav_buttons)
             # Initial sync (Wait a bit for machine state)
@@ -2698,12 +2739,21 @@ class ThorCNC(QObject):
     def _on_estop(self, active: bool):
         self._status(f"ESTOP {'AKTIV' if active else 'ZURÜCKGESETZT'}")
         from PySide6.QtWidgets import QPushButton
+        _base = "border-radius: 6px; font-weight: bold; font-size: 14pt; min-height: 70px;"
+        # Main Tab
         if b := self._w(QPushButton, "estop_button"):
-            _base = "border-radius: 6px; font-weight: bold; font-size: 14pt; min-height: 70px;"
             if active:
                 b.setStyleSheet(f"QPushButton {{ border: 2px solid #ff4444; color: #cc0000; {_base} }}")
             else:
                 b.setStyleSheet(f"QPushButton {{ background-color: #cc0000; color: white; {_base} }}")
+        
+        # Simple View
+        sv = getattr(self, "simple_view", None)
+        if sv and (b_s := getattr(sv, "btn_estop", None)):
+             if active:
+                 b_s.setStyleSheet(f"QPushButton {{ border: 2px solid #ff4444; color: #cc0000; {_base} }}")
+             else:
+                 b_s.setStyleSheet(f"QPushButton {{ background-color: #cc0000; color: white; {_base} }}")
 
     @Slot(bool)
     def _on_machine_on(self, on: bool):
@@ -2764,16 +2814,21 @@ class ThorCNC(QObject):
         btn_pause = self._w(QPushButton, "btn_pause_mdi")
         btn_stop = self._w(QPushButton, "stop_button")
         
-        if not (btn_run and btn_pause and btn_stop): return
+        # Simple View buttons
+        sv = getattr(self, "simple_view", None)
+        s_run   = getattr(sv, "btn_start", None) if sv else None
+        s_pause = getattr(sv, "btn_pause", None) if sv else None
+        s_stop  = getattr(sv, "btn_stop", None) if sv else None
         
         def set_status(w, status):
-            if w.property("status") != status:
+            if w and w.property("status") != status:
                 w.setProperty("status", status)
-                self.ui.style().unpolish(w)
-                self.ui.style().polish(w)
+                # Use individual widget style to ensure polishing works correctly across overlays
+                w.style().unpolish(w)
+                w.style().polish(w)
 
         if not self._is_machine_on:
-            for btn in (btn_run, btn_pause, btn_stop):
+            for btn in (btn_run, btn_pause, btn_stop, s_run, s_pause, s_stop):
                 set_status(btn, "disabled")
             return
 
@@ -2781,30 +2836,56 @@ class ThorCNC(QObject):
         is_paused = self._interp_state == linuxcnc.INTERP_PAUSED
         is_idle = self._interp_state == linuxcnc.INTERP_IDLE
 
-        # Cycle Start (btn_run)
+        # Cycle Start
         if is_running:
             set_status(btn_run, "running")
+            set_status(s_run, "running")
         elif (is_idle or is_paused) and self._has_file:
             set_status(btn_run, "ready")
+            set_status(s_run, "ready")
         else:
             set_status(btn_run, "idle")
+            set_status(s_run, "idle")
 
-        # Feedhold (btn_pause_mdi)
+        # Feedhold
         if is_paused:
             set_status(btn_pause, "paused")
+            set_status(s_pause, "paused")
         elif is_running:
             set_status(btn_pause, "running")
+            set_status(s_pause, "running")
         else:
             set_status(btn_pause, "idle")
+            set_status(s_pause, "idle")
 
-        # Stop (stop_button)
+        # Stop
         if is_running or is_paused:
             set_status(btn_stop, "active")
+            set_status(s_stop, "active")
         else:
             set_status(btn_stop, "idle")
+            set_status(s_stop, "idle")
 
     @Slot(list)
     def _on_position(self, pos: list):
+        # ── Performance Throttling ─────────────────────────────────────────
+        # Only update GUI if the move is significant (> 0.005mm)
+        # or if the machine has stopped (interp idle) to ensure final precision.
+        significant = False
+        if hasattr(self, "_last_gui_pos"):
+            for i in range(min(3, len(pos))):
+                if abs(pos[i] - self._last_gui_pos[i]) > 0.005:
+                    significant = True
+                    break
+        
+        # Always update if machine transitions to IDLE to settle the display
+        if self.poller.stat.interp_state == linuxcnc.INTERP_IDLE:
+             significant = True
+             
+        if not significant:
+            return
+            
+        self._last_gui_pos = list(pos[:3])
         self._last_pos = pos
         self._refresh_dro()
 
@@ -2865,8 +2946,12 @@ class ThorCNC(QObject):
             self.simple_view.set_wcs(*w_coords)
             self.simple_view.set_machine(*m_coords)
             self.simple_view.set_dtg(*dtg_vals)
-            feed = self.poller.stat.feedrate
-            rpm = abs(self.poller.stat.spindle[0]['speed'])
+            # Actual feed velocity (mm/min) instead of feedrate override factor
+            feed = self.poller.stat.current_vel * 60.0
+            # Prefer HAL actual RPM, fall back to commanded speed
+            rpm = getattr(self.poller, '_spindle_actual', 0.0)
+            if rpm is None or rpm <= 0:
+                rpm = abs(self.poller.stat.spindle[0]['speed'])
             self.simple_view.set_feed_rpm(feed, rpm)
 
     @Slot(int)
@@ -2935,6 +3020,10 @@ class ThorCNC(QObject):
         except ValueError:
             flen = 0.0
         self.backplot.set_tool_geometry(fdia, flen)
+        # Sync to Simple View if present
+        sv = getattr(self, "simple_view", None)
+        if sv and hasattr(sv, "backplot") and sv.backplot:
+            sv.backplot.set_tool_geometry(fdia, flen)
 
     @Slot(list)
     def _on_tool_offset_changed(self, _):
@@ -3093,19 +3182,28 @@ class ThorCNC(QObject):
     @Slot(float)
     def _on_spindle_actual(self, rpm: float):
         """Called when the ACTUAL (Feedback) spindle speed changes (from HAL)."""
-        # DEBUG: Wenn du das im Terminal siehst, kommen HAL-Daten in der UI an!
-        if abs(rpm) > 0.1:
-             print(f"[UI-DEBUG] Spindel IST: {rpm:.1f} RPM")
+        # Throttled update to save CPU
+        if hasattr(self, "_last_gui_rpm"):
+            if abs(rpm - self._last_gui_rpm) < 5.0 and abs(rpm) > 0.1:
+                return
+        self._last_gui_rpm = rpm
              
         from PySide6.QtWidgets import QLabel
         if lbl := self._w(QLabel, "lbl_spindle_ist"):
             lbl.setText(f"{abs(rpm):.0f} RPM")
+            
+        # Real-time update for Simple View if visible
+        sv = getattr(self, "simple_view", None)
+        if sv and sv.isVisible():
+            sv.set_feed_rpm(None, rpm)
 
     @Slot(float)
     def _on_spindle_load(self, load: float):
-        # DEBUG: Last-Daten Check
-        if load > 0.1:
-            print(f"[UI-DEBUG] Spindel Last: {load:.1f}%")
+        # Throttled update
+        if hasattr(self, "_last_gui_load"):
+            if abs(load - self._last_gui_load) < 1.0:
+                return
+        self._last_gui_load = load
             
         from PySide6.QtWidgets import QProgressBar
         if bar := self._w(QProgressBar, "spindle_load_bar"):
@@ -3318,9 +3416,10 @@ class ThorCNC(QObject):
     # ── Simple View Overlay ───────────────────────────────────────────────────
 
     def _setup_simple_overlay(self):
-        """Create SimpleView as a fullscreen child of the main window."""
-        self.simple_view = SimpleView(parent=self.ui)
-        self.simple_view.setGeometry(self.ui.rect())
+        """Create SimpleView as a child overlay of the central widget."""
+        cw = self.ui.centralWidget() or self.ui
+        self.simple_view = SimpleView(parent=cw)
+        self.simple_view.setGeometry(cw.rect())
         self.simple_view.hide()
 
         # ESC shortcut scoped to the overlay
@@ -3339,6 +3438,8 @@ class ThorCNC(QObject):
             self.simple_view.btn_pause.clicked.connect(self._pause_program)
         if self.simple_view.btn_stop:
             self.simple_view.btn_stop.clicked.connect(self._stop_program)
+        if self.simple_view.btn_estop:
+            self.simple_view.btn_estop.clicked.connect(self._toggle_estop)
 
         # Sync backplot state from main backplot
         if self.simple_view.backplot:
@@ -3363,7 +3464,22 @@ class ThorCNC(QObject):
     def _show_simple_overlay(self):
         if not hasattr(self, "simple_view"):
             return
-        self.simple_view.setGeometry(self.ui.rect())
+        cw = self.ui.centralWidget() or self.ui
+        self.simple_view.setGeometry(cw.rect())
+        self.simple_view.show()
+        
+        # Save current state (maximized/normal) to restore it later
+        self._pre_simple_window_state = self.ui.windowState()
+        # Go fullscreen to prevent accidental GUI closure (clicking the X)
+        self.ui.showFullScreen()
+        if self.simple_view.backplot:
+            if hasattr(self, "_backplot_envelope"):
+                self.simple_view.backplot.set_machine_envelope(**self._backplot_envelope)
+            if hasattr(self, "_last_wcs_origin"):
+                self.simple_view.backplot.set_wcs_origin(*self._last_wcs_origin)
+            if self._last_toolpath is not None:
+                self.simple_view.backplot.load_toolpath(self._last_toolpath)
+
         self.simple_view.show()
         self.simple_view.raise_()
         self.simple_view.setFocus()
@@ -3616,14 +3732,13 @@ class ThorCNC(QObject):
 
     def _drain_startup_errors(self):
         """Liest den LinuxCNC Error-Channel einmalig beim Start aus und loggt alle Meldungen."""
-        import linuxcnc as _lc
         self._append_status_log("── Session gestartet ──")
         try:
             ec = self.poller.error_channel
             msg = ec.poll()
             while msg:
                 kind, text = msg
-                is_err = kind in (_lc.NML_ERROR, _lc.OPERATOR_ERROR)
+                is_err = kind in (linuxcnc.NML_ERROR, linuxcnc.OPERATOR_ERROR)
                 self._append_status_log(text, error=is_err)
                 msg = ec.poll()
         except Exception:
@@ -3642,6 +3757,15 @@ class ThorCNC(QObject):
         self.poller.start()
 
     def _on_close(self):
+        # Remove event filters to prevent crashes during destruction
+        if hasattr(self, "_sb_for_filter") and self._sb_for_filter:
+            try:
+                self._sb_for_filter.removeEventFilter(self)
+            except Exception: pass
+        try:
+            self.ui.removeEventFilter(self)
+        except Exception: pass
+
         self.poller.stop()
         
         # Save settings
