@@ -1,20 +1,10 @@
 ( ThorCNC - Center Finder Circular Boss )
-( Args: )
-( #1: Diameter )
-( #3: Max XY Search Distance )
-( #4: Max Z Search Distance )
-( #5: Search Velocity )
-( #6: Probe Velocity )
-( #7: Z Clearance / Retract )
-( #8: Probe Depth )
-#9: Auto Zero - 1=ON, 0=OFF )
-( #10: Probe Diameter )
-( #11: Probe Rapid )
+( #1: Target Diameter, #3: Max XY Search, #4: Max Z Search, #5: Search Vel, #6: Probe Vel, #7: Z Cl, #8: Depth, #9: Auto Zero, #10: Probe Dia, #11: Probe Rapid )
 
 O<center_round> sub
     ( 1. Z-Probe )
     G91
-    G38.2 Z-#4 F#5
+    G38.2 Z-[#4] F#5
     G0 Z#7
     G38.2 Z-[#7 * 1.5] F#6
     O101 if [#9 GT 0.5]
@@ -23,6 +13,8 @@ O<center_round> sub
     G0 Z#7
     G90
 
+    #<start_x> = #5420
+    #<start_y> = #5421
     #<dia> = #10
     O<check_dia> if [#<dia> LE 0]
         #<dia> = #5410
@@ -32,71 +24,69 @@ O<center_round> sub
         #<rapid> = [#5 * 2]
     O<check_rapid> endif
     #<rad> = [#<dia> / 2]
+    #<search_dist> = [[#1 / 2] + #3]
 
     ( 2. X-Center Finding )
-    #<search_dist> = [[#1 / 2] + #3]
-    
     ( Probe X- side )
-G1 X-[#<search_dist>] F#<rapid>
-G1 Z-[#<rad> + #8] F#<rapid>
+    G1 X[#<start_x> - #<search_dist>] F#<rapid>
+    G1 Z-[#<rad> + #8] F#<rapid>
     G91
     G38.2 X#3 F#5
     #<x1> = #5061
-G1 X-[#7] F#<rapid>
+    G1 X-[#7] F#<rapid>
     G38.2 X[#7 * 1.5] F#6
     #<x1> = #5061
     G90
-G1 Z#7 F#<rapid>
+    G1 Z#7 F#<rapid>
 
     ( Probe X+ side )
-G1 X[#<search_dist>] F#<rapid>
-G1 Z-[#<rad> + #8] F#<rapid>
+    G1 X[#<start_x> + #<search_dist>] F#<rapid>
+    G1 Z-[#<rad> + #8] F#<rapid>
     G91
     G38.2 X-#3 F#5
     #<x2> = #5061
-G1 X#7 F#<rapid>
+    G1 X#7 F#<rapid>
     G38.2 X-[#7 * 1.5] F#6
     #<x2> = #5061
     G90
-G1 Z#7 F#<rapid>
+    G1 Z#7 F#<rapid>
     
     #<x_center> = [[#<x1> + #<x2>] / 2]
+    G1 X#<x_center> F#<rapid>
 
     ( 3. Y-Center Finding )
-    ( Search distance remains the same for circular )
-    
     ( Probe Y- side )
-G1 X#<x_center> F#<rapid>
-G1 Z-[#<rad> + #8] F#<rapid>
+    G1 Y[#<start_y> - #<search_dist>] F#<rapid>
+    G1 Z-[#<rad> + #8] F#<rapid>
     G91
     G38.2 Y#3 F#5
     #<y1> = #5062
-G1 Y-[#7] F#<rapid>
+    G1 Y-[#7] F#<rapid>
     G38.2 Y[#7 * 1.5] F#6
     #<y1> = #5062
     G90
-G1 Z#7 F#<rapid>
+    G1 Z#7 F#<rapid>
 
     ( Probe Y+ side )
-G1 X#<x_center> F#<rapid>
-G1 Z-[#<rad> + #8] F#<rapid>
+    G1 Y[#<start_y> + #<search_dist>] F#<rapid>
+    G1 Z-[#<rad> + #8] F#<rapid>
     G91
     G38.2 Y-#3 F#5
     #<y2> = #5062
-G1 Y#7 F#<rapid>
+    G1 Y#7 F#<rapid>
     G38.2 Y-[#7 * 1.5] F#6
     #<y2> = #5062
     G90
-G1 Z#7 F#<rapid>
+    G1 Z#7 F#<rapid>
     
     #<y_center> = [[#<y1> + #<y2>] / 2]
 
-    ( 4. Final Positioning )
-G1 X#<x_center> F#<rapid>
+    ( 4. Final Positioning & Zeroing )
+    G1 X#<x_center> Y#<y_center> F#<rapid>
     O102 if [#9 GT 0.5]
         G10 L20 P0 X0 Y0
     O102 endif
-G1 Z#7 F#<rapid>
+    G1 Z#7 F#<rapid>
     
 O<center_round> endsub
 M2

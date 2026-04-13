@@ -29,27 +29,27 @@ O<inside_corner_br> sub
     G91
     G38.2 X#3 F#5
     #<x_hit> = #5061
-G1 X-[#7] F#<rapid>
+    G1 X-[#7] F#<rapid>
     G38.2 X[#7 * 1.5] F#6
     #<x_hit> = #5061
     G90
-G1 X#<start_x> F#<rapid>
+    G1 X#<start_x> F#<rapid>
     
     ( 3. Y-Probe to bottom wall )
     G91
-    G38.2 Y-#3 F#5
+    G38.2 Y-[#3] F#5
     #<y_hit> = #5062
-G1 Y#7 F#<rapid>
-    G38.2 Y[#7 * 1.5] F#6
+    G1 Y#7 F#<rapid>
+    G38.2 Y-[#7 * 1.5] F#6
     #<y_hit> = #5062
     G90
-G1 Y#<start_y> F#<rapid>
+    G1 Y#<start_y> F#<rapid>
     
     ( 4. Final Position & Zeroing )
-G1 X#<start_x> F#<rapid>
+    G1 X#<start_x> Y#<start_y> F#<rapid>
     O102 if [#9 GT 0.5]
         ( Right wall is at x_hit + radius. Bottom wall is at y_hit - radius )
-        G10 L20 P0 X[#<start_x> - [#<x_hit> + #<rad>]] Y[#<start_y> - [#<y_hit> - #<rad>]]
+        G10 L20 P0 X[#5420 - [#<x_hit> + #<rad>]] Y[#5421 - [#<y_hit> - #<rad>]]
     O102 endif
 O<inside_corner_br> endsub
 M2
