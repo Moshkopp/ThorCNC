@@ -2184,6 +2184,46 @@ class ThorCNC(QObject):
             col_diag.addWidget(gb_diag)
             main_layout.addLayout(col_diag, 1) # Stretch 1
 
+        # ── Toolsetter Settings Initialization (RESTORED) ─────────────────────
+        # Spinboxen laden & verbinden
+        for widget_name, prefs_key, default in self._TOOLSENSOR_FIELDS:
+            dsb = self._w(QDoubleSpinBox, widget_name)
+            if not dsb:
+                continue
+
+            # Wert aus Prefs laden (oder Default)
+            val = self.settings.get(prefs_key, default)
+            dsb.blockSignals(True)
+            dsb.setValue(float(val))
+            dsb.blockSignals(False)
+
+            # HAL-Pin initial setzen
+            self._hal_set(prefs_key, float(val))
+
+            # Jede Änderung → Prefs speichern + HAL aktualisieren
+            dsb.valueChanged.connect(
+                lambda v, k=prefs_key: self._on_toolsensor_changed(k, v)
+            )
+
+        # "Aktuelle Position" Buttons
+        if b := self._w(QPushButton, "btn_set_wechsel_pos"):
+            b.clicked.connect(self._set_wechsel_pos_from_machine)
+        if b := self._w(QPushButton, "btn_set_taster_pos"):
+            b.clicked.connect(self._set_taster_pos_from_machine)
+
+        # Before / After Toolsetter TextEdits
+        from PySide6.QtWidgets import QTextEdit
+        for key, wname in (("ts_before", "te_ts_before"), ("ts_after", "te_ts_after")):
+            if te := self._w(QTextEdit, wname):
+                val = self.settings.get(key, "")
+                te.blockSignals(True)
+                te.setPlainText(str(val) if val else "")
+                te.blockSignals(False)
+                te.textChanged.connect(
+                    lambda k=key, widget=te: self._on_ts_text_save(k, widget)
+                )
+        self._write_ts_before_after()
+
     def _parse_probe_warning_pins(self, text: str):
         """Parses comma-separated string of pins into self._probe_warning_pins list."""
         self._probe_warning_pins = []
