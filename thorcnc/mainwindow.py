@@ -690,6 +690,21 @@ class ThorCNC(QObject):
 
         self._btn_nav_up = self._w(QPushButton, "btn_nav_up")
         self._btn_nav_home = self._w(QPushButton, "btn_nav_home")
+        
+        # UI Polish: Narrower buttons with icons instead of text
+        from PySide6.QtGui import QIcon
+        if self._btn_nav_up:
+            self._btn_nav_up.setText("")
+            self._btn_nav_up.setIcon(QIcon.fromTheme("go-up"))
+            self._btn_nav_up.setFixedWidth(60)
+            self._btn_nav_up.setToolTip("Übergeordnetes Verzeichnis")
+            
+        if self._btn_nav_home:
+            self._btn_nav_home.setText("")
+            self._btn_nav_home.setIcon(QIcon.fromTheme("go-home"))
+            self._btn_nav_home.setFixedWidth(60)
+            self._btn_nav_home.setToolTip("Home-Verzeichnis")
+
         self._lbl_current_path = self._w(QLabel, "lbl_current_path")
 
         if not tree or not self._file_preview or not self._btn_load:
@@ -797,7 +812,7 @@ class ThorCNC(QObject):
             self.settings.set("last_file_dir", path)
             self._selected_filepath = None
             self._btn_load.setEnabled(False)
-            self._file_preview.setText("[ORDNER AUSGEWÄHLT]")
+            self._file_preview.setPlainText("[ORDNER AUSGEWÄHLT]")
         else:
             self.settings.set("last_file_dir", os.path.dirname(path))
             self._selected_filepath = path
