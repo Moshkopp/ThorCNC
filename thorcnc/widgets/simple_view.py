@@ -10,7 +10,7 @@ _DIR = os.path.dirname(__file__)
 _PT_BIG  = 72   # WCS / DTG values  +  X/Y/Z row labels
 _PT_MED  = 42   # MACH values
 _PT_INFO = 32   # FEED / RPM
-_PT_HDR  = 16   # WCS / MACH / DTG column headers
+_PT_HDR  = 20   # WCS / MACH / DTG column headers
 
 _MONO = "Ubuntu Mono"
 
@@ -86,6 +86,7 @@ class SimpleView(QWidget):
         self.btn_start = self.ui.findChild(QPushButton, "btn_simple_start")
         self.btn_pause = self.ui.findChild(QPushButton, "btn_simple_pause")
         self.btn_stop  = self.ui.findChild(QPushButton, "btn_simple_stop")
+        self.btn_estop = self.ui.findChild(QPushButton, "btn_simple_estop")
 
     def _apply_fonts(self):
         """Set fonts+colors via setStyleSheet — higher specificity than global QSS."""
@@ -106,6 +107,10 @@ class SimpleView(QWidget):
 
         for lbl in (self.lbl_feed, self.lbl_rpm):
             if lbl: lbl.setStyleSheet(info_style)
+
+        btn_style = "font-size: 22pt; font-weight: bold;"
+        for b in (self.btn_start, self.btn_pause, self.btn_stop, self.btn_estop, self.btn_back):
+            if b: b.setStyleSheet(btn_style)
 
         # X / Y / Z row labels — same size as the big values
         for n in ("lbl_row_x", "lbl_row_y", "lbl_row_z"):

@@ -78,20 +78,26 @@
        </item>
        <item>
         <widget class="QPushButton" name="btn_simple_start">
-         <property name="minimumSize"><size><width>0</width><height>80</height></size></property>
+         <property name="minimumSize"><size><width>0</width><height>110</height></size></property>
          <property name="text"><string>CYCLE START</string></property>
         </widget>
        </item>
        <item>
         <widget class="QPushButton" name="btn_simple_pause">
-         <property name="minimumSize"><size><width>0</width><height>80</height></size></property>
+         <property name="minimumSize"><size><width>0</width><height>110</height></size></property>
          <property name="text"><string>FEEDHOLD</string></property>
         </widget>
        </item>
        <item>
         <widget class="QPushButton" name="btn_simple_stop">
-         <property name="minimumSize"><size><width>0</width><height>80</height></size></property>
+         <property name="minimumSize"><size><width>0</width><height>110</height></size></property>
          <property name="text"><string>STOP</string></property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btn_simple_estop">
+         <property name="minimumSize"><size><width>0</width><height>110</height></size></property>
+         <property name="text"><string>E-STOP</string></property>
         </widget>
        </item>
       </layout>
