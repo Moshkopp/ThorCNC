@@ -1,16 +1,19 @@
-( ThorCNC - Inside Center Finder X-Axis Rect )
-( #1: X Length, #3: Max XY Search, #4: Max Z Search, #5: Search Vel, #6: Probe Vel, #7: Z Cl, #8: Depth, #9: Auto Zero, #10: Probe Dia, #11: Probe Rapid )
+( ThorCNC - Inside Rect Pocket X )
+( #1: Expected Width X, #3: Max Search, #4: Max Z Search, #5: Search Vel, #6: Probe Vel, #7: Z Cl, #8: Depth, #9: Auto Zero, #10: Probe Dia, #11: Probe Rapid, #12: XY Cl, #13: Step Off )
 
 O<inside_rect_x> sub
-    ( 1. Z-Probe at center )
+    ( 1. Initialization )
+    G90 G17 G40 G21
+    
+    ( 1. Z-Probe )
     G91
     G38.2 Z-[#4] F#5
-    G0 Z#7
-    G38.2 Z-[#7 * 1.5] F#6
+    G1 Z#13 F#11
+    G38.2 Z-[#13 * 2] F#6
     O101 if [#9 GT 0.5]
         G10 L20 P0 Z0
     O101 endif
-    G0 Z#7
+    G1 Z#7 F#11
     G90
 
     #<start_x> = #5420
@@ -19,42 +22,34 @@ O<inside_rect_x> sub
         #<dia> = #5410
     O<check_dia> endif
     #<rapid> = #11
-    O<check_rapid> if [#<rapid> LE 0]
-        #<rapid> = [#5 * 2]
-    O<check_rapid> endif
     #<rad> = [#<dia> / 2]
     
-    ( Move to probe depth )
-    G1 Z-[#<rad> + #8] F#<rapid>
-
     ( 2. X-Center Finding )
-    ( Probe X- side )
     G91
     G38.2 X-[#3] F#5
+    G1 X#13 F#11
+    G38.2 X-[#13 * 1.5] F#6
     #<x1> = #5061
-    G1 X#7 F#<rapid>
-    G38.2 X-[#7 * 1.5] F#6
-    #<x1> = #5061
+    G1 X#13 F#11
     G90
-    G1 X#<start_x> F#<rapid>
+    G1 X#<start_x> F#11
     
-    ( Probe X+ side )
     G91
     G38.2 X#3 F#5
+    G1 X-[#13] F#11
+    G38.2 X[#13 * 1.5] F#6
     #<x2> = #5061
-    G1 X-#7 F#<rapid>
-    G38.2 X[#7 * 1.5] F#6
-    #<x2> = #5061
+    G1 X-[#13] F#11
     G90
     
     #<x_center> = [[#<x1> + #<x2>] / 2]
 
     ( 3. Final Positioning & Zeroing )
-    G1 X#<x_center> F#<rapid>
+    G1 X#<x_center> F#11
     O102 if [#9 GT 0.5]
         G10 L20 P0 X0
     O102 endif
-    G1 Z#7 F#<rapid>
+    G1 Z#7 F#11
 
 O<inside_rect_x> endsub
 M2

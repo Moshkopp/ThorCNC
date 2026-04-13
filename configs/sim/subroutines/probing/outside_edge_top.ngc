@@ -1,16 +1,19 @@
 ( ThorCNC - Outside Top Edge )
-( #1: Edge Width, #3: Max XY, #4: Max Z, #5: Search Vel, #6: Probe Vel, #7: Z Cl, #8: Depth, #9: Auto Zero, #10: Probe Dia, #11: Probe Rapid )
+( #1: Edge Width, #3: Max XY, #4: Max Z, #5: Search Vel, #6: Probe Vel, #7: Z Cl, #8: Depth, #9: Auto Zero, #10: Probe Dia, #11: Probe Rapid, #12: XY Cl, #13: Step Off )
 
 O<outside_edge_top> sub
+    ( 1. Initialization )
+    G90 G17 G40 G21
+    
     ( 1. Z-Probe )
     G91
     G38.2 Z-[#4] F#5
-    G0 Z#7
-    G38.2 Z-[#7 * 1.5] F#6
+    G1 Z#13 F#11 ( Step Off )
+    G38.2 Z-[#13 * 2] F#6 ( Fine Probe )
     O101 if [#9 GT 0.5]
         G10 L20 P0 Z0
     O101 endif
-    G0 Z#7
+    G1 Z#7 F#11 ( Move to Z Clearance )
     G90
 
     #<start_y> = #5421
@@ -25,22 +28,23 @@ O<outside_edge_top> sub
     #<rad> = [#<dia> / 2]
     
     ( 2. Y-Probe from top )
-    G1 Y[#<start_y> + #1] F#<rapid>
+    G1 Y[#<start_y> + #1 + #12] F#<rapid>
     G1 Z-[#<rad> + #8] F#<rapid>
     G91
-    G38.2 Y-[#3] F#5
+    G38.2 Y-[#12 + #3] F#5
+    G1 Y#13 F#<rapid>
+    G38.2 Y-[#13 * 1.5] F#6
     #<y_hit> = #5062
-    G1 Y#7 F#<rapid>
-    G38.2 Y-[#7 * 1.5] F#6
-    #<y_hit> = #5062
+    G1 Y#13 F#<rapid>
     G90
-    G1 Z#7 F#<rapid>
     
-    ( 3. Final Position & Zeroing )
-    G1 Y#<start_y> F#<rapid>
+    ( 3. Move to Edge & Zero )
+    #<y_wall> = [#<y_hit> - #<rad>]
+    G1 Y#<y_wall> F#<rapid>
     O102 if [#9 GT 0.5]
-        ( Wall is at y_hit - radius )
-        G10 L20 P0 Y[#5421 - [#<y_hit> - #<rad>]]
+        G10 L20 P0 Y0
     O102 endif
+    G1 Z#7 F#<rapid>
+
 O<outside_edge_top> endsub
 M2
