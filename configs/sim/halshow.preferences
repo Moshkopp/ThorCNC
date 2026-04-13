@@ -1,6 +1,6 @@
 # Halshow settings
 # This file is generated automatically.
-wm geometry . 915x512+2398+481
+wm geometry . 915x512+784+180
 placeFrames 0.3
 set ::ratio 0.3
 set ::old_w_leftf 160
@@ -12,6 +12,11 @@ set ::watchlist {
     pin+spindle.0.at-speed
     pin+thorcnc.spindle-atspeed
     pin+thorcnc.spindle-load
+    pin+motion.digital-out-01
+    pin+motion.digital-in-00
+    pin+motion.digital-out-00
+    pin+motion.digital-out-03
+    pin+motion.digital-out-02
 }
 set ::workmode watchhal
 set ::watchInterval 100

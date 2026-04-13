@@ -909,3 +909,11 @@ QPushButton#btn_probe_center_mode:checked {
     border-color: #00cc44;
     color: #00cc44;
 }
+
+/* ── Tool-Timer / Status (unten rechts) ── */
+#time_display {
+    font-family: 'Bebas Kai';
+    font-size: 14pt;
+    color: #cc0000;
+    font-weight: bold;
+}

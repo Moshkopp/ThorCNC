@@ -786,3 +786,11 @@ QPushButton#btn_probe_center_mode:checked {
     border-color: #2ecc71;
     color: #2ecc71;
 }
+
+
+
+/* ── Status Bar ── */
+QFrame#bottomBarFrame {
+    background-color: #f5f5f5;
+    border-top: 1px solid #ddd;
+}

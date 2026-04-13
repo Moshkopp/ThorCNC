@@ -25,6 +25,9 @@
     "ts_search_vel": 300.0,
     "ts_probe_vel": 10.0,
     "mdi_history": [
+        "M64 P0",
+        "M65 P0",
+        "M64 P0",
         "m3 S15000",
         "T1 M6 G43",
         "T14 M6 G43",
@@ -62,7 +65,7 @@
         "T6 M6 G43",
         "m3 s1500"
     ],
-    "theme": "dark",
+    "theme": "dark_green",
     "backplot_msaa_samples": 16,
     "backplot_antialiasing": false,
     "show_html_tab": false,
@@ -86,5 +89,7 @@
     "probe_xy_clear": 5.0,
     "probe_max_xy": 10.0,
     "probe_extra_dep": 0.0,
-    "probe_dia": 3.0
+    "probe_dia": 3.0,
+    "probe_warning_color": "#00ff00",
+    "probe_warning_pins": "0,2"
 }

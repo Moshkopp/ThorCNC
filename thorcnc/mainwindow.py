@@ -5,7 +5,7 @@ directly to LinuxCNC via custom implementations (no qtpyvcp).
 """
 import os
 import linuxcnc
-from PySide6.QtWidgets import QMainWindow, QHBoxLayout, QLabel
+from PySide6.QtWidgets import QMainWindow, QHBoxLayout, QLabel, QFrame
 from PySide6.QtCore import Qt, QObject, Slot, QTimer
 from PySide6.QtUiTools import QUiLoader
 
@@ -43,6 +43,14 @@ class ThorCNC(QObject):
         self._current_mcodes = ()
         self._probe_center_inside = False
         self._load_settings()
+        
+        # Probe Warning Settings
+        self._probe_warning_enabled = self.settings.get("probe_warning_enabled", True)
+        self._probe_warning_pins_str = str(self.settings.get("probe_warning_pins", "0"))
+        self._probe_warning_color = self.settings.get("probe_warning_color", "#8b1a1a")
+        self._parse_probe_warning_pins(self._probe_warning_pins_str)
+        
+        print(f"[ThorCNC] Probe Warning: {'ENABLED' if self._probe_warning_enabled else 'DISABLED'} on pins {self._probe_warning_pins}")
         self._load_ui()
         self._replace_custom_widgets()
         self._restore_window_state()
@@ -2009,7 +2017,8 @@ class ThorCNC(QObject):
 
     def _setup_settings_tab(self):
         """Verbindet alle Settings-Sub-Tabs."""
-        from PySide6.QtWidgets import QDoubleSpinBox, QPushButton, QComboBox, QCheckBox, QGroupBox, QVBoxLayout, QWidget
+        from PySide6.QtWidgets import (QDoubleSpinBox, QPushButton, QComboBox, QCheckBox, 
+                                       QGroupBox, QVBoxLayout, QWidget, QLineEdit, QHBoxLayout, QLabel)
 
         # ── UI Tab: Theme & Language ───────────────────────────────────────────
         if cb := self._w(QComboBox, "combo_theme"):
@@ -2079,49 +2088,132 @@ class ThorCNC(QObject):
             self.settings.get("show_html_tab", True)))
 
 
-        # Spinboxen laden & verbinden
-        for widget_name, prefs_key, default in self._TOOLSENSOR_FIELDS:
-            dsb = self._w(QDoubleSpinBox, widget_name)
-            if not dsb:
-                continue
+        # ── Machine Tab Cleanup & Probe Warning Settings ──────────────────────
+        if mach_tab := self._w(QWidget, "settings_tab_machine"):
+            layout = mach_tab.layout()
+            # Clear existing layout to "clean up" (actually we'll just re-organize it)
+            # Find btn_halshow and remove it from direct layout if found
+            if btn_hal := mach_tab.findChild(QPushButton, "btn_halshow"):
+                layout.removeWidget(btn_hal)
+            
+            # --- Group 1: Machine Safety / Warnings ---
+            gb_safety = QGroupBox("Maschinensicherheit / Warnungen")
+            gl_safety = QVBoxLayout(gb_safety)
+            
+            # Description
+            lbl_desc = QLabel("<b>Visuelle Taster-Warnung:</b><br>"
+                              "Färbt die untere Statuszeile auffällig ein, wenn bestimmte digitale "
+                              "Ausgänge (M64) aktiv sind. Verhindert Kollisionen bei aktivem 3D-Taster.")
+            lbl_desc.setWordWrap(True)
+            lbl_desc.setStyleSheet("color: #aaa; margin-bottom: 4px;")
+            gl_safety.addWidget(lbl_desc)
+            
+            # Enable Checkbox
+            self._cb_probe_warn = QCheckBox("Visuelle Warnung aktivieren")
+            self._cb_probe_warn.setChecked(self._probe_warning_enabled)
+            self._cb_probe_warn.toggled.connect(self._on_probe_warning_enabled_changed)
+            gl_safety.addWidget(self._cb_probe_warn)
+            
+            # Pins Input
+            lay_pins = QHBoxLayout()
+            lay_pins.addWidget(QLabel("Überwachter Digitaler Ausgang (Pins):"))
+            self._le_probe_pins = QLineEdit(self._probe_warning_pins_str)
+            self._le_probe_pins.setPlaceholderText("z.B. 0 oder 0, 2, 3")
+            self._le_probe_pins.setToolTip("Kommagetrennte Liste der Pins (M64 Px)")
+            self._le_probe_pins.textChanged.connect(self._on_probe_warning_pins_changed)
+            lay_pins.addWidget(self._le_probe_pins)
+            gl_safety.addLayout(lay_pins)
+            
+            # Color Selector
+            lay_color = QHBoxLayout()
+            lay_color.addWidget(QLabel("Warnfarbe (Hintergrund):"))
+            self._btn_probe_color = QPushButton("WÄHLEN")
+            self._btn_probe_color.setFixedWidth(100)
+            self._update_probe_color_button()
+            self._btn_probe_color.clicked.connect(self._pick_probe_warning_color)
+            lay_color.addWidget(self._btn_probe_color)
+            lay_color.addStretch()
+            gl_safety.addLayout(lay_color)
+            
+            layout.insertWidget(0, gb_safety)
+            
+            # --- Group 2: Diagnostics ---
+            gb_diag = QGroupBox("Diagnose & Komponenten")
+            gl_diag = QVBoxLayout(gb_diag)
+            if btn_hal:
+                btn_hal.setMinimumHeight(30)
+                gl_diag.addWidget(btn_hal)
+            
+            # Probe Sim Button (Sim only) - move here
+            if b_sim := self._w(QPushButton, "btn_probe_sim"):
+                gl_diag.addWidget(b_sim)
+                
+            layout.insertWidget(1, gb_diag)
 
-            # Wert aus Prefs laden (oder Default)
-            val = self.settings.get(prefs_key, default)
-            dsb.blockSignals(True)
-            dsb.setValue(float(val))
-            dsb.blockSignals(False)
+    def _parse_probe_warning_pins(self, text: str):
+        """Parses comma-separated string of pins into self._probe_warning_pins list."""
+        self._probe_warning_pins = []
+        try:
+            parts = text.split(",")
+            for p in parts:
+                p = p.strip()
+                if p.isdigit():
+                    self._probe_warning_pins.append(int(p))
+        except:
+            self._probe_warning_pins = [0]
+        if not self._probe_warning_pins:
+            self._probe_warning_pins = [0]
 
-            # HAL-Pin initial setzen
-            self._hal_set(prefs_key, float(val))
+    def _update_probe_color_button(self):
+        """Updates the color button background to show current color."""
+        c = self._probe_warning_color
+        # Get a contrast color (white or black) for the text
+        self._btn_probe_color.setStyleSheet(
+            f"QPushButton {{ background-color: {c}; color: white; "
+            f"border: 1px solid #444; font-weight: bold; padding: 4px; }}"
+        )
 
-            # Jede Änderung → Prefs speichern + HAL aktualisieren
-            dsb.valueChanged.connect(
-                lambda v, k=prefs_key: self._on_toolsensor_changed(k, v)
-            )
+    def _on_probe_warning_enabled_changed(self, enabled: bool):
+        self._probe_warning_enabled = enabled
+        self.settings.set("probe_warning_enabled", enabled)
+        self.settings.save()
+        # Trigger refresh if active
+        if hasattr(self, "_last_dout"):
+            self._on_digital_out_changed(self._last_dout)
 
-        # "Aktuelle Position" Buttons
-        if b := self._w(QPushButton, "btn_set_wechsel_pos"):
-            b.clicked.connect(self._set_wechsel_pos_from_machine)
-        if b := self._w(QPushButton, "btn_set_taster_pos"):
-            b.clicked.connect(self._set_taster_pos_from_machine)
+    def _on_probe_warning_pins_changed(self, text: str):
+        self._probe_warning_pins_str = text
+        self._parse_probe_warning_pins(text)
+        self.settings.set("probe_warning_pins", text)
+        self.settings.save()
+        # Trigger refresh
+        if hasattr(self, "_last_dout"):
+            self._on_digital_out_changed(self._last_dout)
 
-        # Before / After Toolsetter TextEdits
-        from PySide6.QtWidgets import QTextEdit
-        for key, wname in (("ts_before", "te_ts_before"), ("ts_after", "te_ts_after")):
-            if te := self._w(QTextEdit, wname):
-                val = self.settings.get(key, "")
-                te.blockSignals(True)
-                te.setPlainText(str(val) if val else "")
-                te.blockSignals(False)
-                te.textChanged.connect(
-                    lambda k=key, widget=te: self._on_ts_text_save(k, widget)
-                )
-        self._write_ts_before_after()
+    def _pick_probe_warning_color(self):
+        from PySide6.QtWidgets import QColorDialog
+        from PySide6.QtGui import QColor
+        initial = QColor(self._probe_warning_color)
+        color = QColorDialog.getColor(initial, self.ui, "Warnfarbe wählen")
+        if color.isValid():
+            hex_color = color.name() # #RRGGBB
+            self._probe_warning_color = hex_color
+            self.settings.set("probe_warning_color", hex_color)
+            self.settings.save()
+            self._update_probe_color_button()
+            # Trigger refresh
+            if hasattr(self, "_last_dout"):
+                self._on_digital_out_changed(self._last_dout)
 
-        # Probe Sim Button (Sim only)
-        if b := self._w(QPushButton, "btn_probe_sim"):
-            b.pressed.connect(lambda: self._set_sim_probe(True))
-            b.released.connect(lambda: self._set_sim_probe(False))
+    def _get_brighter_color(self, hex_color, factor=1.2):
+        """Helper to get a brighter version for the border."""
+        from PySide6.QtGui import QColor
+        c = QColor(hex_color)
+        h, s, v, a = c.getHsv()
+        # Make it brighter and slightly less saturated for "neon" effect
+        v = min(255, int(v * factor))
+        s = int(s * 0.9)
+        return QColor.fromHsv(h, s, v, a).name()
 
     def _set_sim_probe(self, state: bool):
         """Setzt den simulierten Probe-Pin über die HAL-Komponente."""
@@ -2311,6 +2403,7 @@ class ThorCNC(QObject):
         p.program_line.connect(self._on_program_line)
         p.error_message.connect(self._on_error)
         p.info_message.connect(self._on_info)
+        p.digital_outputs_changed.connect(self._on_digital_out_changed)
 
         # ── Machine Buttons (probe_basic widget names) ──────────────────────
         from PySide6.QtWidgets import QPushButton, QSlider
@@ -3021,6 +3114,62 @@ class ThorCNC(QObject):
         self._update_run_buttons()
         if hasattr(self, "_html_list"):
             self._refresh_html_list(path)
+
+    @Slot(tuple)
+    def _on_digital_out_changed(self, dout: tuple):
+        """React to M64/M65 on specific pins to show a visual warning."""
+        self._last_dout = dout # Store for settings refresh
+        
+        if not self._probe_warning_enabled:
+            # If function is disabled, ensure property is false and reset style
+            if hasattr(self, "status_bar") and self.status_bar:
+                if self.status_bar.property("probe_active"):
+                    self.status_bar.setProperty("probe_active", False)
+                    self.status_bar.setStyleSheet("")
+                    self.status_bar.style().unpolish(self.status_bar)
+                    self.status_bar.style().polish(self.status_bar)
+            return
+            
+        is_active = False
+        try:
+            # Check if ANY of the configured pins are high
+            for idx in self._probe_warning_pins:
+                if 0 <= idx < len(dout):
+                    if dout[idx] == 1:
+                        is_active = True
+                        break
+            
+            # Print debug on state change
+            if not hasattr(self, "_last_probe_warning_state") or self._last_probe_warning_state != is_active:
+                print(f"[DEBUG] Probe Warning state changed: {is_active} (Pins: {self._probe_warning_pins})")
+                self._last_probe_warning_state = is_active
+        except Exception as e:
+            print(f"[DEBUG] Error in _on_digital_out_changed: {e}")
+            pass
+
+        self._probe_active = is_active
+        
+        # Update property on the bottom status bar (bottomBarFrame)
+        if hasattr(self, "status_bar") and self.status_bar:
+            frame = self.status_bar
+            if frame.property("probe_active") != is_active:
+                frame.setProperty("probe_active", is_active)
+                
+                if is_active:
+                    # Apply dynamic user-defined color ONLY as border
+                    color = self._probe_warning_color
+                    # We override the QSS colors via inline stylesheet when active
+                    # Use a thick border for visibility
+                    frame.setStyleSheet(
+                        f"QFrame#bottomBarFrame {{ border: 6px solid {color} !important; }}"
+                    )
+                else:
+                    # Reset to QSS defaults
+                    frame.setStyleSheet("")
+                
+                frame.style().unpolish(frame)
+                frame.style().polish(frame)
+                frame.update()
 
     @Slot(int)
     def _on_program_line(self, line: int):

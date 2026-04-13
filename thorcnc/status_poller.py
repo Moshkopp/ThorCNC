@@ -29,6 +29,7 @@ class StatusPoller(QObject):
     program_line         = Signal(int)
     gcodes_changed       = Signal(tuple)  # tuple of active G-codes
     mcodes_changed       = Signal(tuple)  # tuple of active M-codes
+    digital_outputs_changed = Signal(tuple) # tuple of 64 digital outs (0/1)
 
     # Overrides
     feed_override        = Signal(float)  # 0.0–2.0
@@ -82,6 +83,7 @@ class StatusPoller(QObject):
         self._homed          = None
         self._gcodes         = None
         self._mcodes         = None
+        self._dout           = None
 
         self._timer = QTimer(self)
         self._timer.setInterval(interval_ms)
@@ -179,6 +181,13 @@ class StatusPoller(QObject):
         if mcodes != self._mcodes:
             self._mcodes = mcodes
             self.mcodes_changed.emit(mcodes)
+
+        dout = s.dout
+        if dout != self._dout:
+            # Debugging digital output changes
+            # print(f"[DEBUG] Digital Outs changed! Bit 0: {dout[0]}")
+            self._dout = dout
+            self.digital_outputs_changed.emit(dout)
 
         if s.feedrate != self._feed_override:
             self._feed_override = s.feedrate
