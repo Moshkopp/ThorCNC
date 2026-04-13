@@ -1893,19 +1893,21 @@ class ThorCNC(QObject):
             dia    = val("dsb_probe_dia")
 
             rapid  = val("dsb_probe_rapid")
+            xy_cl  = val("dsb_probe_xy_clearance")
+            step_off = val("dsb_probe_step_off")
 
             if ngc_name in ("center_rect", "center_rect_x", "center_rect_y",
                             "inside_rect", "inside_rect_x", "inside_rect_y"):
                 lx = val("le_probe_center_x")
                 ly = val("le_probe_center_y")
-                params = f" [{lx}] [{ly}] [{max_xy}] [{max_z}] [{s_vel}] [{p_vel}] [{z_cl}] [{dep}] [{auto_zero}] [{dia}] [{rapid}]"
+                params = f" [{lx}] [{ly}] [{max_xy}] [{max_z}] [{s_vel}] [{p_vel}] [{z_cl}] [{dep}] [{auto_zero}] [{dia}] [{rapid}] [{xy_cl}] [{step_off}]"
             elif ngc_name in ("center_round", "inside_round"):
                 cdia = val("le_probe_center_diam")
-                params = f" [{cdia}] [0] [{max_xy}] [{max_z}] [{s_vel}] [{p_vel}] [{z_cl}] [{dep}] [{auto_zero}] [{dia}] [{rapid}]"
+                params = f" [{cdia}] [0] [{max_xy}] [{max_z}] [{s_vel}] [{p_vel}] [{z_cl}] [{dep}] [{auto_zero}] [{dia}] [{rapid}] [{xy_cl}] [{step_off}]"
             elif is_corner_edge:
-                # For corners and edges: #1 Width, #2-9 as usual, #10 Dia, #11 Rapid
+                # For corners and edges: #1 Width, #2-9 as usual, #10 Dia, #11 Rapid, #12 XY_Cl, #13 Step_Off
                 ew = val("dsb_probe_edge_width")
-                params = f" [{ew}] [0] [{max_xy}] [{max_z}] [{s_vel}] [{p_vel}] [{z_cl}] [{dep}] [{auto_zero}] [{dia}] [{rapid}]"
+                params = f" [{ew}] [0] [{max_xy}] [{max_z}] [{s_vel}] [{p_vel}] [{z_cl}] [{dep}] [{auto_zero}] [{dia}] [{rapid}] [{xy_cl}] [{step_off}]"
 
         # Wrapper-Datei erzeugen: ruft alle drei nacheinander auf
         run_path = os.path.join(ngc_dir, "probe_run.ngc")
