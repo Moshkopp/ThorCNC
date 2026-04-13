@@ -14,6 +14,7 @@ from .gcode_parser import parse_file
 from .widgets.gcode_view import GCodeView
 from .widgets.backplot import BackplotWidget
 from .widgets.tool_dialog import ToolSelectionDialog
+from .widgets.simple_view import SimpleView
 
 _DIR = os.path.dirname(__file__)
 
@@ -36,6 +37,8 @@ class ThorCNC(QObject):
         # State tracking for dynamic run buttons
         self._is_machine_on = False
         self._has_file = False
+        self._last_toolpath = None
+        self._last_wcs_origin = (0.0, 0.0, 0.0)
         self._interp_state = linuxcnc.INTERP_IDLE
         self._is_spindle_running = False
         self._user_program = ""   # User loaded main program
@@ -495,6 +498,9 @@ class ThorCNC(QObject):
         self._refresh_dro()
         if self.poller.stat.g5x_index != 9:
             self.backplot.set_wcs_origin(g5x[0], g5x[1], g5x[2])
+            self._last_wcs_origin = (g5x[0], g5x[1], g5x[2])
+            if hasattr(self, "simple_view") and self.simple_view.backplot:
+                self.simple_view.backplot.set_wcs_origin(g5x[0], g5x[1], g5x[2])
 
     @Slot(int)
     def _on_g5x_index(self, g5x_index: int):
@@ -554,11 +560,14 @@ class ThorCNC(QObject):
 
         # Envelope zeigt nutzbaren Arbeitsbereich (0 bis MAX bzw. MIN bis 0)
         # nicht die technischen Soft-Limits mit Homing-Überfahrt
-        self.backplot.set_machine_envelope(
+        envelope = dict(
             x_min=lim("X", "MIN_LIMIT", 0), x_max=lim("X", "MAX_LIMIT", 600),
             y_min=lim("Y", "MIN_LIMIT", 0), y_max=lim("Y", "MAX_LIMIT", 500),
             z_min=lim("Z", "MIN_LIMIT", -200), z_max=lim("Z", "MAX_LIMIT", 0),
         )
+        self.backplot.set_machine_envelope(**envelope)
+        # SimpleView overlay backplot gets the same envelope (created later via singleShot)
+        self._backplot_envelope = envelope
 
     def _setup_jog_display(self):
         """Jog-Display-Page aus INI setzen, Icons auf Buttons legen."""
@@ -1604,6 +1613,14 @@ class ThorCNC(QObject):
         if watched == getattr(self, "_probe_grid_frm", None):
             if event.type() == QEvent.Resize:
                 self._update_probe_marker_pos()
+        # Status bar click → open simple overlay
+        if watched is getattr(self, "_sb_for_filter", None):
+            if event.type() == QEvent.Type.MouseButtonPress:
+                self._show_simple_overlay()
+        # Main window resize → keep overlay covering the full window
+        if watched is self.ui and event.type() == QEvent.Type.Resize:
+            if hasattr(self, "simple_view"):
+                self.simple_view.setGeometry(self.ui.rect())
         return super().eventFilter(watched, event)
 
     def _setup_probe_dro(self):
@@ -2650,37 +2667,14 @@ class ThorCNC(QObject):
         from PySide6.QtWidgets import QTabWidget, QButtonGroup
         tab = ui.findChild(QTabWidget, "tabWidget")
         if tab:
-            # ── SIMPLE TAB ───────────────────────────────────────────────────
-            from PySide6.QtWidgets import QWidget, QGridLayout
-            self._simple_tab = QWidget()
-            self._simple_tab.setLayout(QGridLayout())
-            # Insert at Index 1 (between MAIN and FILE)
-            tab.insertTab(1, self._simple_tab, "Simple")
-            
             self.nav_group = QButtonGroup(self)
             self.nav_group.setExclusive(True)
-            
-            # Nav-Buttons: wir fügen den Simple Button an Index 1 ein
-            nav_names = ["nav_main", "nav_simple", "nav_file", "nav_tool", "nav_offsets",
+
+            nav_names = ["nav_main", "nav_file", "nav_tool", "nav_offsets",
                          "nav_probing", "nav_html", "nav_settings", "nav_status"]
-            
-            # Button Container suchen (meist das Parent von nav_main)
-            nav_container = None
-            if b_main := btn("nav_main"):
-                nav_container = b_main.parent()
 
             for idx, name in enumerate(nav_names):
                 b = btn(name)
-                # Falls nav_simple noch nicht existiert (da programmatisch), erstellen wir ihn
-                if not b and name == "nav_simple" and nav_container:
-                    b = QPushButton("SIMPLE")
-                    b.setObjectName(name)
-                    # Suchen wir den Style von nav_main um ihn zu kopieren
-                    b.setStyleSheet(b_main.styleSheet())
-                    # Wir fügen ihn VOR nav_file ein falls möglich, sonst einfach add
-                    if nav_container.layout():
-                        nav_container.layout().insertWidget(1, b)
-
                 if b:
                     b.setCheckable(True)
                     b.setMinimumHeight(60)
@@ -2691,6 +2685,9 @@ class ThorCNC(QObject):
             # Initial sync (Wait a bit for machine state)
             from PySide6.QtCore import QTimer
             QTimer.singleShot(500, lambda: self._sync_nav_buttons(tab.currentIndex()))
+
+        # Simple View — fullscreen overlay, opened by clicking the status bar
+        self._setup_simple_overlay()
 
     # ── Slots ─────────────────────────────────────────────────────────────────
 
@@ -2850,8 +2847,27 @@ class ThorCNC(QObject):
         # Tool marker only visible if all axes are homed
         if all_homed:
             self.backplot.set_tool_position(pos[0] - t_off[0], pos[1] - t_off[1], pos[2] - t_off[2])
+            if hasattr(self, "simple_view") and self.simple_view.backplot:
+                self.simple_view.backplot.set_tool_position(pos[0] - t_off[0], pos[1] - t_off[1], pos[2] - t_off[2])
         else:
             self.backplot.set_tool_position(float('nan'), float('nan'), float('nan'))
+            if hasattr(self, "simple_view") and self.simple_view.backplot:
+                self.simple_view.backplot.set_tool_position(float('nan'), float('nan'), float('nan'))
+
+        # Simple View overlay DRO sync (only when visible to save work)
+        if hasattr(self, "simple_view") and self.simple_view.isVisible():
+            w_coords = [pos[i] - g5x[i] - t_off[i] for i in range(3)]
+            m_coords = [pos[i] for i in range(3)]
+            dtg_vals = [
+                self.poller.stat.dtg[i] if hasattr(self.poller.stat, "dtg") else 0.0
+                for i in range(3)
+            ]
+            self.simple_view.set_wcs(*w_coords)
+            self.simple_view.set_machine(*m_coords)
+            self.simple_view.set_dtg(*dtg_vals)
+            feed = self.poller.stat.feedrate
+            rpm = abs(self.poller.stat.spindle[0]['speed'])
+            self.simple_view.set_feed_rpm(feed, rpm)
 
     @Slot(int)
     def _on_tool(self, tool: int):
@@ -3201,7 +3217,11 @@ class ThorCNC(QObject):
             return
         self._has_file = True
         self.gcode_view.load_file(path)
-        self.backplot.load_toolpath(parse_file(path))
+        tp = parse_file(path)
+        self._last_toolpath = tp
+        self.backplot.load_toolpath(tp)
+        if hasattr(self, "simple_view") and self.simple_view.backplot:
+            self.simple_view.backplot.load_toolpath(tp)
         self._update_run_buttons()
         if hasattr(self, "_html_list"):
             self._refresh_html_list(path)
@@ -3295,6 +3315,63 @@ class ThorCNC(QObject):
         log.addItem(item)
         log.scrollToBottom()
 
+    # ── Simple View Overlay ───────────────────────────────────────────────────
+
+    def _setup_simple_overlay(self):
+        """Create SimpleView as a fullscreen child of the main window."""
+        self.simple_view = SimpleView(parent=self.ui)
+        self.simple_view.setGeometry(self.ui.rect())
+        self.simple_view.hide()
+
+        # ESC shortcut scoped to the overlay
+        from PySide6.QtGui import QShortcut, QKeySequence
+        esc = QShortcut(QKeySequence(Qt.Key.Key_Escape), self.simple_view)
+        esc.activated.connect(self._hide_simple_overlay)
+
+        # Zurück button
+        if self.simple_view.btn_back:
+            self.simple_view.btn_back.clicked.connect(self._hide_simple_overlay)
+
+        # Machine control buttons
+        if self.simple_view.btn_start:
+            self.simple_view.btn_start.clicked.connect(self._run_program)
+        if self.simple_view.btn_pause:
+            self.simple_view.btn_pause.clicked.connect(self._pause_program)
+        if self.simple_view.btn_stop:
+            self.simple_view.btn_stop.clicked.connect(self._stop_program)
+
+        # Sync backplot state from main backplot
+        if self.simple_view.backplot:
+            if hasattr(self, "_backplot_envelope"):
+                self.simple_view.backplot.set_machine_envelope(**self._backplot_envelope)
+            if hasattr(self, "_last_wcs_origin"):
+                self.simple_view.backplot.set_wcs_origin(*self._last_wcs_origin)
+            if hasattr(self, "_last_toolpath") and self._last_toolpath is not None:
+                self.simple_view.backplot.load_toolpath(self._last_toolpath)
+            self.simple_view.backplot.set_view_iso()
+
+        # Make status bar clickable
+        if sb := self.ui.statusBar():
+            from PySide6.QtCore import Qt as _Qt
+            sb.setCursor(_Qt.CursorShape.PointingHandCursor)
+            sb.installEventFilter(self)
+            self._sb_for_filter = sb
+
+        # Track main window resize
+        self.ui.installEventFilter(self)
+
+    def _show_simple_overlay(self):
+        if not hasattr(self, "simple_view"):
+            return
+        self.simple_view.setGeometry(self.ui.rect())
+        self.simple_view.show()
+        self.simple_view.raise_()
+        self.simple_view.setFocus()
+
+    def _hide_simple_overlay(self):
+        if hasattr(self, "simple_view"):
+            self.simple_view.hide()
+
     def _sync_nav_buttons(self, index: int):
         """Nav-Buttons an den Tab-Zustand anpassen und LinuxCNC-Modus umschalten."""
         if hasattr(self, "nav_group"):
@@ -3302,26 +3379,6 @@ class ThorCNC(QObject):
                 b.blockSignals(True)
                 b.setChecked(True)
                 b.blockSignals(False)
-
-        # ── SIMPLE MODE Visibility ───────────────────────────────────────────
-        # In 'Simple' (Index 1), blenden wir alles aus außer der navbar
-        is_simple = (index == 1)
-        
-        from PySide6.QtWidgets import QWidget, QFrame
-        # Bekannte Container für Sidebars/DRO/Controls
-        targets = ["dro_display_container", "rightPanel", "bottom_controls", 
-                   "control_panel", "jogBox"]
-        for t_name in targets:
-            if w := self._w(QWidget, t_name):
-                w.setVisible(not is_simple)
-            elif w := self._w(QFrame, t_name):
-                w.setVisible(not is_simple)
-        
-        # Modular Status Bar ausblenden falls vorhanden
-        if hasattr(self, "status_bar") and self.status_bar:
-            self.status_bar.setVisible(not is_simple)
-                
-        pass
 
         # Modus-Umschaltung basierend auf Tab (Auto vs Manual)
         # Tab 0: Main (Auto), Tab 1: File (Auto), Rest: Manual
