@@ -25,6 +25,13 @@
     "ts_search_vel": 300.0,
     "ts_probe_vel": 10.0,
     "mdi_history": [
+        "M65 P0",
+        "M64 P0",
+        "M65 P3",
+        "M64 P3",
+        "M65 P2",
+        "M64 P2",
+        "M65 P0",
         "M64 P0",
         "M65 P0",
         "M64 P0",
@@ -90,6 +97,6 @@
     "probe_max_xy": 10.0,
     "probe_extra_dep": 0.0,
     "probe_dia": 3.0,
-    "probe_warning_color": "#00ff00",
+    "probe_warning_color": "#ff00ff",
     "probe_warning_pins": "0,2"
 }

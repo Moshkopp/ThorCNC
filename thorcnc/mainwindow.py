@@ -2090,20 +2090,38 @@ class ThorCNC(QObject):
 
         # ── Machine Tab Cleanup & Probe Warning Settings ──────────────────────
         if mach_tab := self._w(QWidget, "settings_tab_machine"):
-            layout = mach_tab.layout()
-            # Clear existing layout to "clean up" (actually we'll just re-organize it)
-            # Find btn_halshow and remove it from direct layout if found
-            if btn_hal := mach_tab.findChild(QPushButton, "btn_halshow"):
-                layout.removeWidget(btn_hal)
+            # Robustly clear existing layout and its widgets
+            if old_layout := mach_tab.layout():
+                while old_layout.count():
+                    item = old_layout.takeAt(0)
+                    if w := item.widget():
+                        w.setParent(None)
+                        w.deleteLater()
+                # Detach layout from widget by parenting it to a dummy
+                QWidget().setLayout(old_layout)
             
-            # --- Group 1: Machine Safety / Warnings ---
+            # Set a horizontal layout for the machine tab
+            main_layout = QHBoxLayout(mach_tab)
+            main_layout.setContentsMargins(10, 10, 10, 10)
+            main_layout.setSpacing(15)
+            
+            # --- Column 1: Machine Safety / Warnings (Left) ---
+            col_safety = QVBoxLayout()
+            
+            # Wrap Safety in a styled Frame
+            f_safety = QFrame()
+            f_safety.setFrameShape(QFrame.Shape.StyledPanel)
+            f_safety.setObjectName("safetyFrame")
+            f_safety.setStyleSheet("QFrame#safetyFrame { border: 1px solid #444; border-radius: 4px; background-color: rgba(255,255,255,5); }")
+            
+            fl_safety = QVBoxLayout(f_safety)
             gb_safety = QGroupBox("Maschinensicherheit / Warnungen")
             gl_safety = QVBoxLayout(gb_safety)
             
             # Description
             lbl_desc = QLabel("<b>Visuelle Taster-Warnung:</b><br>"
-                              "Färbt die untere Statuszeile auffällig ein, wenn bestimmte digitale "
-                              "Ausgänge (M64) aktiv sind. Verhindert Kollisionen bei aktivem 3D-Taster.")
+                              "Färbt die Statuszeile auffällig ein, wenn digitale "
+                              "Ausgänge (M64) aktiv sind (z.B. für 3D-Taster).")
             lbl_desc.setWordWrap(True)
             lbl_desc.setStyleSheet("color: #aaa; margin-bottom: 4px;")
             gl_safety.addWidget(lbl_desc)
@@ -2116,39 +2134,55 @@ class ThorCNC(QObject):
             
             # Pins Input
             lay_pins = QHBoxLayout()
-            lay_pins.addWidget(QLabel("Überwachter Digitaler Ausgang (Pins):"))
+            lay_pins.addWidget(QLabel("M64 P... (Index):"))
             self._le_probe_pins = QLineEdit(self._probe_warning_pins_str)
-            self._le_probe_pins.setPlaceholderText("z.B. 0 oder 0, 2, 3")
-            self._le_probe_pins.setToolTip("Kommagetrennte Liste der Pins (M64 Px)")
+            self._le_probe_pins.setPlaceholderText("z.B. 0, 2")
             self._le_probe_pins.textChanged.connect(self._on_probe_warning_pins_changed)
             lay_pins.addWidget(self._le_probe_pins)
             gl_safety.addLayout(lay_pins)
             
             # Color Selector
             lay_color = QHBoxLayout()
-            lay_color.addWidget(QLabel("Warnfarbe (Hintergrund):"))
+            lay_color.addWidget(QLabel("Warnfarbe:"))
             self._btn_probe_color = QPushButton("WÄHLEN")
-            self._btn_probe_color.setFixedWidth(100)
+            self._btn_probe_color.setFixedWidth(120)
             self._update_probe_color_button()
             self._btn_probe_color.clicked.connect(self._pick_probe_warning_color)
             lay_color.addWidget(self._btn_probe_color)
             lay_color.addStretch()
             gl_safety.addLayout(lay_color)
             
-            layout.insertWidget(0, gb_safety)
+            fl_safety.addWidget(gb_safety)
+            fl_safety.addStretch() # Push safety up
             
-            # --- Group 2: Diagnostics ---
+            col_safety.addWidget(f_safety)
+            main_layout.addLayout(col_safety, 1) # Stretch 1
+            
+            # --- Column 2: Diagnostics & Components (Right) ---
+            col_diag = QVBoxLayout()
             gb_diag = QGroupBox("Diagnose & Komponenten")
             gl_diag = QVBoxLayout(gb_diag)
-            if btn_hal:
-                btn_hal.setMinimumHeight(30)
-                gl_diag.addWidget(btn_hal)
             
-            # Probe Sim Button (Sim only) - move here
+            # List of diagnostics tools
+            diag_tools = [
+                ("HAL Show (Pins & Signale)", self._run_halshow),
+                ("HAL Scope (Oszilloskop)", self._run_halscope),
+                ("LinuxCNC Status (Detail-Infos)", self._run_linuxcnc_status)
+            ]
+            
+            for text, func in diag_tools:
+                b = QPushButton(text)
+                b.setMinimumHeight(45)
+                b.clicked.connect(func)
+                gl_diag.addWidget(b)
+            
+            # Probe Sim Button (Sim only) - move here if present
             if b_sim := self._w(QPushButton, "btn_probe_sim"):
                 gl_diag.addWidget(b_sim)
-                
-            layout.insertWidget(1, gb_diag)
+            
+            gl_diag.addStretch()
+            col_diag.addWidget(gb_diag)
+            main_layout.addLayout(col_diag, 1) # Stretch 1
 
     def _parse_probe_warning_pins(self, text: str):
         """Parses comma-separated string of pins into self._probe_warning_pins list."""
@@ -3273,7 +3307,28 @@ class ThorCNC(QObject):
             subprocess.Popen(["halshow"], start_new_session=True)
             self._status("HAL Show gestartet.")
         except Exception as e:
-            self._status(f"Error: halshow not found: {e}")
+            self._status(f"Konnte halshow nicht starten: {e}", error=True)
+
+    def _run_halscope(self):
+        """Startet halscope als externen Prozess."""
+        import subprocess
+        try:
+            subprocess.Popen(["halscope"], start_new_session=True)
+            self._status("HAL Scope gestartet.")
+        except Exception as e:
+            self._status(f"Konnte halscope nicht starten: {e}", error=True)
+
+    def _run_linuxcnc_status(self):
+        """Startet linuxcnctop als externen Prozess."""
+        import subprocess
+        try:
+            # linuxcnctop runs in a terminal usually, but here we try to launch it.
+            # If it's a CLI tool, it might need a terminal emulator.
+            # But we'll try launching it directly first as the user requested it.
+            subprocess.Popen(["linuxcnctop"], start_new_session=True)
+            self._status("LinuxCNC Status (top) gestartet.")
+        except Exception as e:
+            self._status(f"Konnte linuxcnctop nicht starten: {e}", error=True)
 
     def _go_to_home(self):
         """Move to machine zero via O<go_to_home> subroutine."""
