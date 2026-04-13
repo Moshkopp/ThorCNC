@@ -1,11 +1,11 @@
-( ThorCNC - Inside Round Pocket )
+( ThorCNC - Inside Round Pocket Center )
 ( #1: Expected Diameter, #3: Max Search, #4: Max Z Search, #5: Search Vel, #6: Probe Vel, #7: Z Cl, #8: Depth, #9: Auto Zero, #10: Probe Dia, #11: Probe Rapid, #12: XY Cl, #13: Step Off )
 
 O<inside_round> sub
     ( 1. Initialization )
     G90 G17 G40 G21
     
-    ( 1. Z-Probe )
+    ( 1. Z-Probe to find floor )
     G91
     G38.2 Z-[#4] F#5
     G1 Z#13 F#11
@@ -23,55 +23,58 @@ O<inside_round> sub
         #<dia> = #5410
     O<check_dia> endif
     #<rapid> = #11
+    O<check_rapid> if [#<rapid> LE 0]
+        #<rapid> = [#5 * 2]
+    O<check_rapid> endif
     #<rad> = [#<dia> / 2]
     
     ( 2. X-Center Finding )
     G91
     G38.2 X-[#3] F#5
-    G1 X#13 F#11
+    G1 X#13 F#<rapid>
     G38.2 X-[#13 * 1.5] F#6
     #<x1> = #5061
-    G1 X#13 F#11
+    G1 X#13 F#<rapid>
     G90
-    G1 X#<start_x> F#11
+    G1 X#<start_x> F#<rapid>
     
     G91
     G38.2 X#3 F#5
-    G1 X-[#13] F#11
+    G1 X-[#13] F#<rapid>
     G38.2 X[#13 * 1.5] F#6
     #<x2> = #5061
-    G1 X-[#13] F#11
+    G1 X-[#13] F#<rapid>
     G90
     
     #<x_center> = [[#<x1> + #<x2>] / 2]
-    G1 X#<x_center> F#11
+    G1 X#<x_center> F#<rapid>
 
     ( 3. Y-Center Finding )
     G91
     G38.2 Y-[#3] F#5
-    G1 Y#13 F#11
+    G1 Y#13 F#<rapid>
     G38.2 Y-[#13 * 1.5] F#6
     #<y1> = #5062
-    G1 Y#13 F#11
+    G1 Y#13 F#<rapid>
     G90
-    G1 Y#<start_y> F#11
+    G1 Y#<start_y> F#<rapid>
     
     G91
     G38.2 Y#3 F#5
-    G1 Y-[#13] F#11
+    G1 Y-[#13] F#<rapid>
     G38.2 Y[#13 * 1.5] F#6
     #<y2> = #5062
-    G1 Y-[#13] F#11
+    G1 Y-[#13] F#<rapid>
     G90
     
     #<y_center> = [[#<y1> + #<y2>] / 2]
 
     ( 4. Final Positioning & Zeroing )
-    G1 X#<x_center> Y#<y_center> F#11
+    G1 X#<x_center> Y#<y_center> F#<rapid>
     O102 if [#9 GT 0.5]
         G10 L20 P0 X0 Y0
     O102 endif
-    G1 Z#7 F#11
+    G1 Z#7 F#<rapid>
 
 O<inside_round> endsub
 M2
