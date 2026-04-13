@@ -1,5 +1,6 @@
 ( Go to Machine Home - G53 )
 O<go_to_home> sub
+    G64 P0.1 ( Path blending for smoother motion )
     ( First move Z to machine zero for safety )
     G53 G0 Z0
     ( Then move X and Y to machine zero )

@@ -3392,13 +3392,35 @@ class ThorCNC(QObject):
             old_mode = self.poller.stat.task_mode
             self.cmd.mode(linuxcnc.MODE_MDI)
             self.cmd.wait_complete()
-            # Subroutine aufrufen (G53 Z0 gefolgt von X0 Y0)
+            
+            # Subroutine aufrufen
             self.cmd.mdi("O<go_to_home> CALL")
             self.cmd.wait_complete()
+            
+            # Warten bis die Fahrt wirklich beendet ist (Interpreter IDLE)
+            # Das verhindert das Ruckeln am Ende, wenn ThorCNC den Modus zu früh umschaltet
+            import time
+            from PySide6.QtWidgets import QApplication
+            start_t = time.time()
+            timeout = 60.0 # Sekunden
+            
+            self._status("Fahrt auf Home-Position (G53) läuft...")
+            
+            while time.time() - start_t < timeout:
+                # Wir geben der GUI Zeit zum Atmen und Aktualisieren
+                QApplication.processEvents()
+                
+                # Check ob Interpreter fertig ist
+                # Wir greifen direkt auf den Status zu
+                if self.poller.stat.interp_state == linuxcnc.INTERP_IDLE:
+                    break
+                time.sleep(0.05)
+            
             self.cmd.mode(old_mode)
-            self._status("Subroutine: Fahrt auf Home-Position gestartet (G53)")
+            self.cmd.wait_complete()
+            self._status("Home-Position erreicht.")
         except Exception as e:
-            self._status(f"Homing error: {e}")
+            self._status(f"Homing error: {e}", error=True)
 
     def _run_program(self):
         s = self.poller.stat
