@@ -1608,8 +1608,8 @@ class ThorCNC(QObject):
         if watched == getattr(self, "_probe_grid_frm", None):
             if event.type() == QEvent.Resize:
                 self._update_probe_marker_pos()
-        # Status bar click → open simple overlay
-        if watched is getattr(self, "_sb_for_filter", None):
+        # Status bar click or Simple View label click → open simple overlay
+        if watched in (getattr(self, "_sb_for_filter", None), getattr(self, "_lbl_simple_view_indicator", None)):
             if event.type() == QEvent.Type.MouseButtonPress:
                 self._show_simple_overlay()
         # Main window resize → keep overlay covering the full window
@@ -3393,8 +3393,21 @@ class ThorCNC(QObject):
         self._status(msg)
 
     def _status(self, msg: str, error: bool = False):
-        if sb := self.ui.statusBar():
+        if hasattr(self, "_lbl_status_msg") and self._lbl_status_msg:
+            self._lbl_status_msg.setText(msg)
+            self._lbl_status_msg.setStyleSheet(
+                f"color: {'#ff5555' if error else '#cccccc'}; font-weight: bold; margin-left: 10px;"
+            )
+            # Timer to clear the message after 10 seconds
+            if not hasattr(self, "_status_timer"):
+                from PySide6.QtCore import QTimer
+                self._status_timer = QTimer()
+                self._status_timer.setSingleShot(True)
+                self._status_timer.timeout.connect(lambda: self._lbl_status_msg.setText(""))
+            self._status_timer.start(10000)
+        elif sb := self.ui.statusBar():
             sb.showMessage(msg, 10000)
+            
         self._append_status_log(msg, error=error)
 
     def _append_status_log(self, msg: str, error: bool = False):
@@ -3451,11 +3464,62 @@ class ThorCNC(QObject):
                 self.simple_view.backplot.load_toolpath(self._last_toolpath)
             self.simple_view.backplot.set_view_iso()
 
-        # Make status bar clickable
+        # Make status bar clickable & add persistent Simple View indicator
         if sb := self.ui.statusBar():
             from PySide6.QtCore import Qt as _Qt
+            from PySide6.QtWidgets import QLabel, QWidget, QHBoxLayout
+            
+            # 1. Custom Status Message Label (Left)
+            self._lbl_status_msg = QLabel("")
+            self._lbl_status_msg.setObjectName("persistent_status_msg")
+            self._lbl_status_msg.setMinimumWidth(300)
+            
+            # 2. Centered Simple View Indicator
+            self._lbl_simple_view_indicator = QLabel(" SIMPLE VIEW ")
+            self._lbl_simple_view_indicator.setObjectName("simple_view_indicator")
+            self._lbl_simple_view_indicator.setAlignment(_Qt.AlignmentFlag.AlignCenter)
+            # Subtle styling: Blue border instead of solid background
+            self._lbl_simple_view_indicator.setStyleSheet("""
+                QLabel#simple_view_indicator {
+                    background-color: transparent;
+                    color: #3a7abf;
+                    font-weight: bold;
+                    font-size: 9pt;
+                    padding: 1px 40px;
+                    border: 1px solid #3a7abf;
+                    border-radius: 4px;
+                }
+                QLabel#simple_view_indicator:hover {
+                    background-color: rgba(58, 122, 191, 40);
+                    color: #ffffff;
+                }
+            """)
+            
+            # Create a container to hold and center everything
+            container = QWidget()
+            layout = QHBoxLayout(container)
+            layout.setContentsMargins(0, 0, 0, 0)
+            layout.setSpacing(0)
+            
+            layout.addWidget(self._lbl_status_msg)
+            layout.addStretch()
+            layout.addWidget(self._lbl_simple_view_indicator)
+            layout.addStretch()
+            # Placeholder for right-side alignment symmetry if needed
+            right_spacer = QLabel("")
+            right_spacer.setMinimumWidth(300)
+            layout.addWidget(right_spacer)
+            
+            # Configure status bar
+            sb.setVisible(True)
+            sb.setMinimumHeight(28)
+            sb.setStyleSheet("QStatusBar { background: #1a1a1a; border-top: 1px solid #444444; }")
+            sb.clearMessage()
+            sb.addWidget(container, 1)
+            
             sb.setCursor(_Qt.CursorShape.PointingHandCursor)
             sb.installEventFilter(self)
+            self._lbl_simple_view_indicator.installEventFilter(self)
             self._sb_for_filter = sb
 
         # Track main window resize
