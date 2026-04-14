@@ -141,6 +141,22 @@ QPushButton#stop_button[status="active"] {
     color: white;
 }
 
+QPushButton#btn_opt {
+    border: 1px solid #3a7abf;
+    color: #3a7abf;
+    min-height: 38px;
+    font-size: 11pt;
+    font-weight: bold;
+    background-color: #1a1a1a;
+    border-radius: 4px;
+    margin: 4px 8px; /* Standard sidebar button margin */
+}
+
+QPushButton#btn_opt:hover {
+    background-color: #3a7abf;
+    color: white;
+}
+
 #nav_quit {
     border: 1px solid #c0392b;
     color: #c0392b;
@@ -201,6 +217,23 @@ QPushButton#btn_simple_back:hover {
     color: white;
 }
 
+QPushButton#btn_simple_toggle {
+    min-height: 50px;
+    min-width: 140px;
+    font-size: 16pt;
+    font-weight: bold;
+    border-radius: 6px;
+    border: 1px solid #2ecc71; /* Greenish toggle border */
+    color: #2ecc71;
+    background-color: #1a1a1a;
+    margin-left: 10px;
+}
+
+QPushButton#btn_simple_toggle:hover {
+    background-color: #2ecc71;
+    color: white;
+}
+
 QPushButton#btn_simple_start[status="running"] {
     background-color: #27ae60;
     color: white;
@@ -236,7 +269,7 @@ QPushButton[objectName^="nav_"] {
     border: 1px solid transparent;
     border-radius: 4px;
     margin: 4px 8px; /* Floating margin */
-    min-height: 60px;
+    min-height: 38px;
     font-size: 11pt;
     font-weight: bold;
     text-align: left;
@@ -254,6 +287,38 @@ QPushButton[objectName^="nav_"]:checked {
     background-color: #3a7abf; /* Full active color */
     color: #ffffff;
     border-left: 4px solid #5599dd;
+}
+
+/* ── OPT Jalousie Panel ── */
+QFrame#optExpandPanel {
+    background-color: #1a1a1a;
+    border: none;
+    border-left: 2px solid #3a7abf;
+    margin-right: 2px;
+}
+
+QPushButton#btn_opt_sb, 
+QPushButton#btn_opt_m1 {
+    font-size: 8pt;
+    min-height: 40px;
+    background: transparent;
+    border: 1px solid #333333;
+    border-radius: 4px;
+    margin: 1px 6px;
+    color: #b0b0b0;
+}
+
+QPushButton#btn_opt_sb:checked, 
+QPushButton#btn_opt_m1:checked {
+    background-color: #3a7abf;
+    color: white;
+    border-color: #5599dd;
+}
+
+QPushButton#btn_opt_sb:hover, 
+QPushButton#btn_opt_m1:hover {
+    background-color: #2a2a2a;
+    border-color: #5599dd;
 }
 
 /* Specific Machine Buttons */
@@ -1005,4 +1070,27 @@ QPushButton#btn_probe_center_mode:checked {
     font-size: 14pt;
     color: #cc0000;
     font-weight: bold;
+}
+
+/* ── Optional Options Dialog ── */
+QDialog#OptOptionsDialog {
+    min-width: 350px;
+}
+
+QPushButton#btn_single_block,
+QPushButton#btn_m1 {
+    font-size: 12pt;
+    min-height: 70px;
+}
+
+QPushButton#btn_single_block[active="true"],
+QPushButton#btn_m1[active="true"] {
+    background-color: #3a7abf;
+    color: white;
+    border: 1px solid #5599dd;
+}
+
+QPushButton#btn_close {
+    border: 1px solid #666666;
+    color: #aaaaaa;
 }

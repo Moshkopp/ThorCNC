@@ -1,8 +1,9 @@
 import os
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QPushButton
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QPushButton, QStackedWidget
 from PySide6.QtUiTools import QUiLoader
 
 from .backplot import BackplotWidget
+from .gcode_view import GCodeView
 
 _DIR = os.path.dirname(__file__)
 
@@ -50,7 +51,7 @@ class SimpleView(QWidget):
         super().__init__(parent)
         self._load_ui()
         self._apply_fonts()
-        self._setup_backplot()
+        self._setup_view_stack()
 
     # ── UI loading ────────────────────────────────────────────────────────────
 
@@ -87,6 +88,10 @@ class SimpleView(QWidget):
         self.btn_pause = self.ui.findChild(QPushButton, "btn_simple_pause")
         self.btn_stop  = self.ui.findChild(QPushButton, "btn_simple_stop")
         self.btn_estop = self.ui.findChild(QPushButton, "btn_simple_estop")
+        self.btn_toggle = self.ui.findChild(QPushButton, "btn_simple_toggle")
+        
+        if self.btn_toggle:
+            self.btn_toggle.clicked.connect(self._on_toggle_clicked)
 
     def _apply_fonts(self):
         """Set fonts+colors via setStyleSheet — higher specificity than global QSS."""
@@ -122,13 +127,29 @@ class SimpleView(QWidget):
             lbl = self.ui.findChild(QWidget, name)
             if lbl: lbl.setStyleSheet(_hdr_style(color))
 
-    def _setup_backplot(self):
+    def _setup_view_stack(self):
         frame = self.ui.findChild(QWidget, "frame_simple_backplot")
         if frame and frame.layout():
+            self.stack = QStackedWidget()
+            
+            # 1. Backplot
             self.backplot = BackplotWidget(msaa_samples=4)
-            frame.layout().addWidget(self.backplot)
+            self.stack.addWidget(self.backplot)
+            
+            # 2. GCode View
+            self.gcode_view = GCodeView(editable=False)
+            self.gcode_view.set_font_size(24) # Big enough for high-vis
+            self.stack.addWidget(self.gcode_view)
+            
+            frame.layout().addWidget(self.stack)
         else:
             self.backplot = None
+            self.gcode_view = None
+
+    def _on_toggle_clicked(self):
+        if not hasattr(self, "stack"): return
+        new_idx = (self.stack.currentIndex() + 1) % self.stack.count()
+        self.stack.setCurrentIndex(new_idx)
 
     # ── DRO setters ───────────────────────────────────────────────────────────
 
@@ -156,3 +177,11 @@ class SimpleView(QWidget):
             self.lbl_feed.setText(f"FEED: {int(feed)}")
         if self.lbl_rpm and rpm is not None:
             self.lbl_rpm.setText(f"RPM: {int(rpm)}")
+
+    def load_gcode(self, path: str):
+        if self.gcode_view:
+            self.gcode_view.load_file(path)
+
+    def set_gcode_line(self, line: int):
+        if self.gcode_view:
+            self.gcode_view.set_current_line(line)

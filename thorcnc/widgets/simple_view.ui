@@ -9,12 +9,17 @@
    <property name="spacing"><number>12</number></property>
    <property name="margin"><number>20</number></property>
 
-   <!-- ← Zurück -->
+   <!-- ← Zurück + Toggle -->
    <item>
     <layout class="QHBoxLayout" name="backLayout">
      <item>
       <widget class="QPushButton" name="btn_simple_back">
        <property name="text"><string>← BACK</string></property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btn_simple_toggle">
+       <property name="text"><string>PLOT / GCODE</string></property>
       </widget>
      </item>
      <item>

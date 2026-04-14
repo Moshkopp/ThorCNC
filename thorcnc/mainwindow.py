@@ -5,8 +5,8 @@ directly to LinuxCNC via custom implementations (no qtpyvcp).
 """
 import os
 import linuxcnc
-from PySide6.QtWidgets import QMainWindow, QHBoxLayout, QLabel, QFrame
-from PySide6.QtCore import Qt, QObject, Slot, QTimer
+from PySide6.QtWidgets import QMainWindow, QHBoxLayout, QLabel, QFrame, QPushButton
+from PySide6.QtCore import Qt, QObject, Slot, QTimer, QPropertyAnimation, QEasingCurve
 from PySide6.QtUiTools import QUiLoader
 
 from .status_poller import StatusPoller
@@ -15,6 +15,7 @@ from .widgets.gcode_view import GCodeView
 from .widgets.backplot import BackplotWidget
 from .widgets.tool_dialog import ToolSelectionDialog
 from .widgets.simple_view import SimpleView
+# from .widgets.opt_options import OptOptionsDialog
 
 _DIR = os.path.dirname(__file__)
 
@@ -29,7 +30,9 @@ class ThorCNC(QObject):
 
         self.ini_path = ini_path or os.environ.get("INI_FILE_NAME", "")
         self.ini = linuxcnc.ini(self.ini_path) if self.ini_path else None
+        self.stat = linuxcnc.stat()
         self.cmd = linuxcnc.command()
+        self.is_single_block = False
         
         self._jog_velocity = 100.0  # mm/min or inch/min default
         self._jog_increment = 0.0   # 0.0 means continuous
@@ -68,6 +71,7 @@ class ThorCNC(QObject):
         self._setup_html_tab()
         self._setup_settings_tab()
         self._connect_signals()
+        self._setup_opt_jalousie()
         
         # Performance/Throttle state
         self._last_gui_pos = [0.0, 0.0, 0.0]
@@ -154,17 +158,31 @@ class ThorCNC(QObject):
         else:
             self.status_bar = self.ui
 
-        # Load Right Panel Modules
+        # Load Sidebar Modules (Split between Left and Right)
         from PySide6.QtWidgets import QFrame, QSizePolicy, QVBoxLayout
         right_panel = self.ui.findChild(QFrame, "rightPanel")
+        left_panel  = self.ui.findChild(QFrame, "runControlsPanel")
+        
         if right_panel:
             r_lay = right_panel.layout()
-            if not r_lay:
-                r_lay = QVBoxLayout(right_panel)
+            if not r_lay: r_lay = QVBoxLayout(right_panel)
+            r_lay.setContentsMargins(10, 0, 10, 0)
+            r_lay.setSpacing(10)
             
-            r_lay.setContentsMargins(10, 0, 10, 0) # Standardized sidebar gutter
-            r_lay.setSpacing(10) # Consistent spacing between modules
-            
+            # Use left layout for run_controls if present
+            l_lay = None
+            if left_panel:
+                l_lay = left_panel.layout()
+                if not l_lay:
+                    # Fallback lookup by name
+                    l_lay = left_panel.findChild(QVBoxLayout, "runControlsLayout")
+                
+                if not l_lay:
+                    l_lay = QVBoxLayout(left_panel)
+                
+                l_lay.setContentsMargins(0, 0, 0, 0)
+                l_lay.setSpacing(0)
+
             for m_name in ["jog_panel", "spindle_panel", "run_controls"]:
                 mod_file = os.path.join(_DIR, "widgets", f"{m_name}.ui")
                 if os.path.exists(mod_file):
@@ -178,12 +196,21 @@ class ThorCNC(QObject):
                             sub_w.setObjectName("runControls")
                             from PySide6.QtCore import Qt
                             sub_w.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-                            sub_w.setFixedHeight(230) # Match status bar height for perfect symmetry
-                            # Keine harte MaximumHeight mehr, damit das Layout flexibler ist
-                        r_lay.addWidget(sub_w)
+                            sub_w.setFixedHeight(230)
+                            if l_lay:
+                                l_lay.addWidget(sub_w)
+                            else:
+                                r_lay.addWidget(sub_w)
+                        else:
+                            r_lay.addWidget(sub_w)
                         
                         if m_name == "spindle_panel":
                             r_lay.addStretch()
+            
+            # Ensure E-Stop/Power is at the bottom of the right panel
+            estop_grp = self.ui.findChild(QFrame, "estopPowerGroup")
+            if estop_grp and r_lay:
+                r_lay.addWidget(estop_grp)
 
     def _replace_custom_widgets(self):
         """Replace GCodeEditor and VTKBackPlot with custom implementations."""
@@ -2506,6 +2533,64 @@ class ThorCNC(QObject):
                 dsb.setValue(pos[axis_idx])
         self._status("Probe position set from current machine position.")
 
+    def _setup_opt_jalousie(self):
+        """Initialisiert die Animation für das OPT-Panel."""
+        self._opt_panel = self.ui.findChild(QFrame, "optExpandPanel")
+        if not self._opt_panel:
+            print("[ThorCNC] WARNUNG: optExpandPanel nicht in UI gefunden.")
+            return
+            
+        self._opt_anim = QPropertyAnimation(self._opt_panel, b"maximumHeight")
+        self._opt_anim.setDuration(300)
+        self._opt_anim.setEasingCurve(QEasingCurve.Type.InOutQuart)
+        
+        # Buttons im Panel verbinden
+        btn_sb = self.ui.findChild(QPushButton, "btn_opt_sb")
+        btn_m1 = self.ui.findChild(QPushButton, "btn_opt_m1")
+        
+        if btn_sb:
+            btn_sb.clicked.connect(self._toggle_sb_internal)
+        if btn_m1:
+            btn_m1.clicked.connect(self._toggle_m1_internal)
+            
+        # Status-Sync für die neuen Buttons
+        self.poller.periodic.connect(self._sync_opt_buttons)
+
+    def _sync_opt_buttons(self):
+        """Synchronisiert die Sidebar-Buttons mit dem Maschinenstatus."""
+        btn_sb = self.ui.findChild(QPushButton, "btn_opt_sb")
+        btn_m1 = self.ui.findChild(QPushButton, "btn_opt_m1")
+        
+        if btn_sb:
+            btn_sb.setChecked(self.is_single_block)
+        if btn_m1:
+            btn_m1.setChecked(bool(self.poller.stat.optional_stop))
+
+    def _toggle_sb_internal(self):
+        self.is_single_block = not self.is_single_block
+        self._status(f"Single Block: {'AN' if self.is_single_block else 'AUS'}")
+
+    def _toggle_m1_internal(self):
+        curr = bool(self.poller.stat.optional_stop)
+        self.cmd.set_optional_stop(not curr)
+        self._status(f"M1 Optional Stop: {'AN' if not curr else 'AUS'}")
+
+    def _on_opt_clicked(self):
+        """Toggle-Logik für das Jalousie-Panel."""
+        if not hasattr(self, "_opt_panel") or not self._opt_panel:
+            return
+            
+        is_expanded = self._opt_panel.maximumHeight() > 0
+        
+        if is_expanded:
+            self._opt_anim.setStartValue(100)
+            self._opt_anim.setEndValue(0)
+        else:
+            self._opt_anim.setStartValue(0)
+            self._opt_anim.setEndValue(105) # Höhe für 2 Buttons + Spacing
+            
+        self._opt_anim.start()
+
     def _connect_signals(self):
         p = self.poller
         ui = self.ui
@@ -2547,6 +2632,8 @@ class ThorCNC(QObject):
             b.clicked.connect(self._toggle_power)
         if b := btn("stop_button"):
             b.clicked.connect(self._stop_program)
+        if b := btn("btn_opt"):
+            b.clicked.connect(self._on_opt_clicked)
         if b := btn("btn_run"):
             b.clicked.connect(self._run_program)
         if b := btn("manual_mode_button"):
@@ -2557,8 +2644,6 @@ class ThorCNC(QObject):
             b.clicked.connect(lambda: self.cmd.mode(linuxcnc.MODE_AUTO))
         if b := btn("go_to_home_button"):
             b.clicked.connect(self._home_all)
-        if b := btn("btn_run"):
-            b.clicked.connect(self._run_program)
         if b := btn("estop_button"):
             b.clicked.connect(self._toggle_estop)
 
@@ -2698,19 +2783,9 @@ class ThorCNC(QObject):
 
             for idx, name in enumerate(nav_names):
                 b = btn(name)
-                if not b and name == "nav_quit":
-                    # Create nav_quit programmatically if not in .ui
-                    b = QPushButton("EXIT")
-                    b.setObjectName("nav_quit")
-                    from PySide6.QtWidgets import QFrame
-                    left_p = self._w(QFrame, "leftPanel")
-                    if left_p and left_p.layout():
-                        # Insert before the first spacer (navSpacer)
-                        # We find the spacer's index or just append it before the stretch
-                        left_p.layout().insertWidget(left_p.layout().count() - 2, b)
 
                 if b:
-                    b.setMinimumHeight(60)
+                    b.setMinimumHeight(38)
                     b.setCursor(Qt.CursorShape.PointingHandCursor)
                     b.setFocusPolicy(Qt.FocusPolicy.NoFocus)
                     
@@ -3318,8 +3393,10 @@ class ThorCNC(QObject):
         tp = parse_file(path)
         self._last_toolpath = tp
         self.backplot.load_toolpath(tp)
-        if hasattr(self, "simple_view") and self.simple_view.backplot:
-            self.simple_view.backplot.load_toolpath(tp)
+        if hasattr(self, "simple_view"):
+            if self.simple_view.backplot:
+                self.simple_view.backplot.load_toolpath(tp)
+            self.simple_view.load_gcode(path)
         self._update_run_buttons()
         if hasattr(self, "_html_list"):
             self._refresh_html_list(path)
@@ -3383,6 +3460,15 @@ class ThorCNC(QObject):
     @Slot(int)
     def _on_program_line(self, line: int):
         self.gcode_view.set_current_line(line)
+        if hasattr(self, "simple_view") and self.simple_view.isVisible():
+            self.simple_view.set_gcode_line(line)
+            
+        # GUI-side Single Block: Pause immediately after line change
+        if getattr(self, "is_single_block", False):
+            # If we are running (READING/WAITING/EXEC), send pause
+            if self._interp_state in (linuxcnc.INTERP_READING, linuxcnc.INTERP_WAITING):
+                print(f"[DIAGNOSTIC] Single Block Auto-Pause triggered at line {line}")
+                self.cmd.auto(linuxcnc.AUTO_PAUSE)
 
     @Slot(str)
     def _on_error(self, msg: str):
@@ -3543,6 +3629,11 @@ class ThorCNC(QObject):
                 self.simple_view.backplot.set_wcs_origin(*self._last_wcs_origin)
             if self._last_toolpath is not None:
                 self.simple_view.backplot.load_toolpath(self._last_toolpath)
+            if self._user_program:
+                self.simple_view.load_gcode(self._user_program)
+                s = self.poller.stat
+                line = s.motion_line if s.motion_line > 0 else s.current_line
+                self.simple_view.set_gcode_line(line)
 
         self.simple_view.show()
         self.simple_view.raise_()
@@ -3593,6 +3684,36 @@ class ThorCNC(QObject):
             self.cmd.state(linuxcnc.STATE_ESTOP_RESET)
         else:
             self.cmd.state(linuxcnc.STATE_ESTOP)
+
+    def _run_program(self):
+        s = self.poller.stat
+        current_mode = s.task_mode
+        interp_state = self._interp_state
+        is_sb = getattr(self, "is_single_block", False)
+
+        # In Automatik-Modus wechseln falls nötig
+        if current_mode != linuxcnc.MODE_AUTO:
+            self.cmd.mode(linuxcnc.MODE_AUTO)
+            self.cmd.wait_complete()
+
+        # Falls pausiert, prüfen ob wir steppen oder fortsetzen
+        if interp_state == linuxcnc.INTERP_PAUSED:
+            if is_sb:
+                print("[DIAGNOSTIC] Step click (Paused): Sending AUTO_STEP")
+                self.cmd.auto(linuxcnc.AUTO_STEP)
+            else:
+                print("[DIAGNOSTIC] Resume click: Sending AUTO_RESUME")
+                self.cmd.auto(linuxcnc.AUTO_RESUME)
+        else:
+            # Wenn nicht pausiert, entweder Steppen oder normal Starten
+            if is_sb:
+                print("[DIAGNOSTIC] Step click (Start): Sending AUTO_STEP")
+                self.cmd.auto(linuxcnc.AUTO_STEP)
+            else:
+                # Normaler Start von Zeile 0 (oder aktueller Zeile falls Idle in Mitte)
+                line = s.motion_line if (s.motion_line and s.motion_line > 0) else 0
+                print(f"[DIAGNOSTIC] Start click: Sending AUTO_RUN from line {line}")
+                self.cmd.auto(linuxcnc.AUTO_RUN, line)
 
     def _run_halshow(self):
         """Startet halshow als externen Prozess."""
@@ -3660,24 +3781,6 @@ class ThorCNC(QObject):
             self._status("Home-Position erreicht.")
         except Exception as e:
             self._status(f"Homing error: {e}", error=True)
-
-    def _run_program(self):
-        s = self.poller.stat
-        current_mode = s.task_mode
-        interp_state = self._interp_state
-
-        if interp_state == linuxcnc.INTERP_PAUSED:
-            print("[DIAGNOSTIC] Resume click: Sending AUTO_RESUME")
-            self.cmd.auto(linuxcnc.AUTO_RESUME)
-        else:
-            print(f"[DIAGNOSTIC] Start click: Current Mode={current_mode}, State={interp_state}")
-            # Nur in AUTO wechseln, wenn wir nicht schon dort sind
-            if current_mode != linuxcnc.MODE_AUTO:
-                self.cmd.mode(linuxcnc.MODE_AUTO)
-                self.cmd.wait_complete()
-            
-            # Programm von Zeile 0 starten (oder aktueller Zeile falls Idle)
-            self.cmd.auto(linuxcnc.AUTO_RUN, 0)
 
     def _home_all(self):
         self.cmd.mode(linuxcnc.MODE_MANUAL)

@@ -37,7 +37,7 @@
       </property>
       <layout class="QVBoxLayout" name="leftLayout">
        <property name="spacing">
-        <number>8</number>
+        <number>4</number>
        </property>
        <property name="leftMargin"><number>8</number></property>
        <property name="topMargin"><number>8</number></property>
@@ -48,7 +48,7 @@
          <property name="minimumSize">
           <size>
            <width>0</width>
-           <height>45</height>
+           <height>38</height>
           </size>
          </property>
          <property name="text">
@@ -61,7 +61,7 @@
          <property name="minimumSize">
           <size>
            <width>0</width>
-           <height>45</height>
+           <height>38</height>
           </size>
          </property>
          <property name="text">
@@ -74,7 +74,7 @@
          <property name="minimumSize">
           <size>
            <width>0</width>
-           <height>45</height>
+           <height>38</height>
           </size>
          </property>
          <property name="text">
@@ -87,7 +87,7 @@
          <property name="minimumSize">
           <size>
            <width>0</width>
-           <height>45</height>
+           <height>38</height>
           </size>
          </property>
          <property name="text">
@@ -100,7 +100,7 @@
          <property name="minimumSize">
           <size>
            <width>0</width>
-           <height>45</height>
+           <height>38</height>
           </size>
          </property>
          <property name="text">
@@ -113,7 +113,7 @@
          <property name="minimumSize">
           <size>
            <width>0</width>
-           <height>45</height>
+           <height>38</height>
           </size>
          </property>
          <property name="text">
@@ -126,7 +126,7 @@
          <property name="minimumSize">
           <size>
            <width>0</width>
-           <height>45</height>
+           <height>38</height>
           </size>
          </property>
          <property name="text">
@@ -139,11 +139,24 @@
          <property name="minimumSize">
           <size>
            <width>0</width>
-           <height>45</height>
+           <height>38</height>
           </size>
          </property>
          <property name="text">
           <string>STATUS</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="nav_quit">
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>38</height>
+          </size>
+         </property>
+         <property name="text">
+          <string>QUIT</string>
          </property>
         </widget>
        </item>
@@ -202,53 +215,99 @@
          <property name="sizeHint" stdset="0">
           <size>
            <width>20</width>
-           <height>80</height>
+           <height>20</height>
           </size>
          </property>
         </spacer>
        </item>
-       <item>
-        <widget class="QFrame" name="estopPowerGroup">
-         <property name="minimumSize">
-          <size>
-           <width>0</width>
-           <height>230</height>
-          </size>
-         </property>
-         <property name="maximumSize">
-          <size>
-           <width>16777215</width>
-           <height>230</height>
-          </size>
-         </property>
-         <layout class="QVBoxLayout" name="estopPowerLayout">
-          <property name="leftMargin"><number>8</number></property>
-          <property name="topMargin"><number>8</number></property>
-          <property name="rightMargin"><number>8</number></property>
-          <property name="bottomMargin"><number>8</number></property>
-          <property name="spacing"><number>8</number></property>
-          <item>
-           <widget class="QPushButton" name="estop_button">
-            <property name="minimumSize">
-             <size>
-              <width>0</width>
-              <height>65</height>
-             </size>
-            </property>
-            <property name="text"><string>E-STOP</string></property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QPushButton" name="power_button">
-            <property name="minimumSize">
-             <size>
-              <width>0</width>
-              <height>65</height>
-             </size>
-            </property>
-            <property name="text"><string>POWER</string></property>
-           </widget>
-          </item>
+        <item>
+         <widget class="QFrame" name="optExpandPanel">
+          <property name="maximumSize">
+           <size>
+            <width>16777215</width>
+            <height>0</height>
+           </size>
+          </property>
+          <property name="frameShape">
+           <enum>QFrame::NoFrame</enum>
+          </property>
+          <property name="frameShadow">
+           <enum>QFrame::Plain</enum>
+          </property>
+          <layout class="QVBoxLayout" name="optExpandLayout">
+           <property name="spacing">
+            <number>2</number>
+           </property>
+           <property name="leftMargin">
+            <number>0</number>
+           </property>
+           <property name="topMargin">
+            <number>0</number>
+           </property>
+           <property name="rightMargin">
+            <number>0</number>
+           </property>
+           <property name="bottomMargin">
+            <number>5</number>
+           </property>
+           <item>
+            <widget class="QPushButton" name="btn_opt_sb">
+             <property name="minimumSize">
+              <size>
+               <width>0</width>
+               <height>45</height>
+              </size>
+             </property>
+             <property name="text">
+              <string>SINGLE BLOCK</string>
+             </property>
+             <property name="checkable">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="btn_opt_m1">
+             <property name="minimumSize">
+              <size>
+               <width>0</width>
+               <height>45</height>
+              </size>
+             </property>
+             <property name="text">
+              <string>M1 OPT STOP</string>
+             </property>
+             <property name="checkable">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="btn_opt">
+          <property name="minimumSize">
+           <size>
+            <width>0</width>
+            <height>40</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>OPT</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QFrame" name="runControlsPanel">
+         <property name="minimumSize"><size><width>0</width><height>230</height></size></property>
+         <property name="maximumSize"><size><width>16777215</width><height>230</height></size></property>
+         <layout class="QVBoxLayout" name="runControlsLayout">
+          <property name="leftMargin"><number>0</number></property>
+          <property name="topMargin"><number>0</number></property>
+          <property name="rightMargin"><number>0</number></property>
+          <property name="bottomMargin"><number>0</number></property>
+          <property name="spacing"><number>0</number></property>
          </layout>
         </widget>
        </item>
@@ -1957,7 +2016,38 @@
         <height>16777215</height>
        </size>
       </property>
-      <layout class="QVBoxLayout" name="rightLayoutPlaceholder" /></widget>
+      <layout class="QVBoxLayout" name="rightLayoutPlaceholder">
+       <item>
+        <spacer name="rightTopSpacer">
+         <property name="orientation"><enum>Qt::Orientation::Vertical</enum></property>
+         <property name="sizeType"><enum>QSizePolicy::Policy::Expanding</enum></property>
+         <property name="sizeHint" stdset="0"><size><width>20</width><height>40</height></size></property>
+        </spacer>
+       </item>
+       <item>
+        <widget class="QFrame" name="estopPowerGroup">
+         <property name="minimumSize"><size><width>0</width><height>230</height></size></property>
+         <property name="maximumSize"><size><width>16777215</width><height>230</height></size></property>
+         <layout class="QVBoxLayout" name="estopPowerLayout">
+          <property name="margin"><number>8</number></property>
+          <property name="spacing"><number>8</number></property>
+          <item>
+           <widget class="QPushButton" name="estop_button">
+            <property name="minimumSize"><size><width>0</width><height>65</height></size></property>
+            <property name="text"><string>E-STOP</string></property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="power_button">
+            <property name="minimumSize"><size><width>0</width><height>65</height></size></property>
+            <property name="text"><string>POWER</string></property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+      </layout>
+     </widget>
     </item>
    </layout>
   </widget>
