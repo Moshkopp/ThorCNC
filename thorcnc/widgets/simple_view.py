@@ -134,6 +134,7 @@ class SimpleView(QWidget):
             
             # 1. Backplot
             self.backplot = BackplotWidget(msaa_samples=4)
+            self._setup_backplot_toolbar()
             self.stack.addWidget(self.backplot)
             
             # 2. GCode View
@@ -145,6 +146,41 @@ class SimpleView(QWidget):
         else:
             self.backplot = None
             self.gcode_view = None
+
+    def _setup_backplot_toolbar(self):
+        if not self.backplot: return
+        tb_lay = self.backplot.toolbar_layout()
+        
+        from PySide6.QtWidgets import QPushButton
+        from PySide6.QtCore import Qt
+        
+        btn = QPushButton("CLEAR TRAIL")
+        btn.setObjectName("btn_simple_clear_trail")
+        btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        btn.setMinimumHeight(35)
+        btn.setMinimumWidth(150)
+        # Style matching the simple view buttons (high vis)
+        btn.setStyleSheet("""
+            QPushButton {
+                background-color: #34495e;
+                color: #ffffff;
+                border: 1px solid #5d6d7e;
+                border-radius: 4px;
+                font-size: 14pt;
+                font-weight: bold;
+                padding: 4px 12px;
+            }
+            QPushButton:hover {
+                background-color: #e67e22; /* Orange touch */
+            }
+            QPushButton:pressed {
+                background-color: #d35400;
+            }
+        """)
+        btn.clicked.connect(self.backplot.clear_trail)
+        
+        # Insert before the stretch
+        tb_lay.insertWidget(0, btn)
 
     def _on_toggle_clicked(self):
         if not hasattr(self, "stack"): return

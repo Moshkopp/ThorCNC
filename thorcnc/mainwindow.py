@@ -548,8 +548,15 @@ class ThorCNC(QObject):
         if self.poller.stat.g5x_index != 9:
             self.backplot.set_wcs_origin(g5x[0], g5x[1], g5x[2])
             self._last_wcs_origin = (g5x[0], g5x[1], g5x[2])
+            
+            # Wenn noch kein Programm geladen ist, zentriere auf den neuen Nullpunkt
+            if not getattr(self, "_has_file", False):
+                self.backplot.fit_view(None)
+
             if hasattr(self, "simple_view") and self.simple_view.backplot:
                 self.simple_view.backplot.set_wcs_origin(g5x[0], g5x[1], g5x[2])
+                if not getattr(self, "_has_file", False):
+                    self.simple_view.backplot.fit_view(None)
 
     @Slot(int)
     def _on_g5x_index(self, g5x_index: int):
@@ -3487,9 +3494,12 @@ class ThorCNC(QObject):
         tp = parse_file(path)
         self._last_toolpath = tp
         self.backplot.load_toolpath(tp)
+        self.backplot.fit_view(tp)
+        
         if hasattr(self, "simple_view"):
             if self.simple_view.backplot:
                 self.simple_view.backplot.load_toolpath(tp)
+                self.simple_view.backplot.fit_view(tp)
             self.simple_view.load_gcode(path)
         self._update_run_buttons()
         if hasattr(self, "_html_list"):

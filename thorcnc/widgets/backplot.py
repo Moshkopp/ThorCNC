@@ -344,9 +344,14 @@ class _BackplotGL(QWidget):
             pos=pts, color=col, width=1.0, antialias=True, mode='lines')
         self._view.addItem(self._envelope_item)
 
-    def _fit_view(self, segments: list[Segment]):
+    def _fit_view(self, segments: list[Segment] = None):
         if not segments:
+            ox, oy, oz = self._wcs_offset
+            self._view.opts['center'] = pg.Vector(ox, oy, oz)
+            self._view.opts['distance'] = 200.0  # Default zoom level
+            self.set_view_iso()
             return
+
         mn_x, mx_x, mn_y, mx_y, mn_z, mx_z = bounding_box(segments)
         ox, oy, oz = self._wcs_offset
         cx = (mn_x + mx_x) / 2 + ox
@@ -453,6 +458,12 @@ class BackplotWidget(QFrame):
     def load_toolpath(self, segments: list[Segment]):
         if self._impl:
             self._impl.load_toolpath(segments)
+
+    def fit_view(self, segments: list[Segment] = None):
+        """Calculates center and distance to fit the segments in view.
+        If segments is None, centers on the WCS origin."""
+        if self._impl:
+            self._impl._fit_view(segments)
 
     def set_tool_position(self, x: float, y: float, z: float):
         if self._impl:
