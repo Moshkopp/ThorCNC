@@ -145,7 +145,7 @@ QPushButton#btn_opt {
     border: 1px solid #3a7abf;
     color: #3a7abf;
     min-height: 38px;
-    font-size: 11pt;
+    font-size: 14pt;
     font-weight: bold;
     background-color: #1a1a1a;
     border-radius: 4px;
@@ -299,7 +299,7 @@ QFrame#optExpandPanel {
 
 QPushButton#btn_opt_sb, 
 QPushButton#btn_opt_m1 {
-    font-size: 8pt;
+    font-size: 12pt;
     min-height: 40px;
     background: transparent;
     border: 1px solid #333333;
