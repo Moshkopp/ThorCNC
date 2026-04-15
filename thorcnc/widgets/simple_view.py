@@ -151,36 +151,51 @@ class SimpleView(QWidget):
         if not self.backplot: return
         tb_lay = self.backplot.toolbar_layout()
         
+        # Clear any existing items to avoid duplicates
+        while tb_lay.count() > 0:
+            item = tb_lay.takeAt(0)
+            if item.widget(): item.widget().deleteLater()
+
         from PySide6.QtWidgets import QPushButton
         from PySide6.QtCore import Qt
         
-        btn = QPushButton("CLEAR TRAIL")
-        btn.setObjectName("btn_simple_clear_trail")
-        btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        btn.setMinimumHeight(35)
-        btn.setMinimumWidth(150)
-        # Style matching the simple view buttons (high vis)
-        btn.setStyleSheet("""
+        # Style matching the industrial dark theme
+        btn_style = """
             QPushButton {
                 background-color: #34495e;
                 color: #ffffff;
                 border: 1px solid #5d6d7e;
                 border-radius: 4px;
-                font-size: 14pt;
+                font-size: 11pt;
                 font-weight: bold;
                 padding: 4px 12px;
+                min-height: 32px;
             }
             QPushButton:hover {
-                background-color: #e67e22; /* Orange touch */
+                background-color: #3a7abf; /* ThorCNC Blue */
+                border-color: #3498db;
             }
             QPushButton:pressed {
-                background-color: #d35400;
+                background-color: #2980b9;
             }
-        """)
-        btn.clicked.connect(self.backplot.clear_trail)
+        """
+
+        views = [
+            ("ISO",   self.backplot.set_view_iso),
+            ("TOP",   self.backplot.set_view_z),
+            ("FRONT", self.backplot.set_view_y),
+            ("SIDE",  self.backplot.set_view_x),
+            ("CLEAR TRAIL", self.backplot.clear_trail)
+        ]
+
+        for label, fn in views:
+            btn = QPushButton(label)
+            btn.setStyleSheet(btn_style)
+            btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+            btn.clicked.connect(fn)
+            tb_lay.addWidget(btn)
         
-        # Insert before the stretch
-        tb_lay.insertWidget(0, btn)
+        tb_lay.addStretch()
 
     def _on_toggle_clicked(self):
         if not hasattr(self, "stack"): return
