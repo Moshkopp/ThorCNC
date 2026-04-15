@@ -759,7 +759,12 @@ class ThorCNC(QObject):
             self._btn_nav_home.setFixedWidth(60)
             self._btn_nav_home.setToolTip("Home-Verzeichnis")
 
-        self._lbl_current_path = self._w(QLabel, "lbl_current_path")
+        self._breadcrumb_container = self._w(QWidget, "breadcrumb_container")
+        self._breadcrumb_layout = None
+        if self._breadcrumb_container:
+            self._breadcrumb_layout = QHBoxLayout(self._breadcrumb_container)
+            self._breadcrumb_layout.setContentsMargins(0, 0, 0, 0)
+            self._breadcrumb_layout.setSpacing(2)
 
         if not tree or not self._file_preview or not self._btn_load:
             return
@@ -830,8 +835,46 @@ class ThorCNC(QObject):
         if tree and os.path.isdir(path):
             tree.setRootIndex(self._fs_model.index(path))
             self._current_dir = path
-            if self._lbl_current_path:
-                self._lbl_current_path.setText(path)
+            if hasattr(self, "_breadcrumb_container") and self._breadcrumb_container:
+                self._update_breadcrumbs(path)
+
+    def _update_breadcrumbs(self, path: str):
+        """Erstellt interaktive Breadcrumb-Buttons für den aktuellen Pfad."""
+        if not self._breadcrumb_layout:
+            return
+
+        # Layout leeren
+        while self._breadcrumb_layout.count():
+            item = self._breadcrumb_layout.takeAt(0)
+            if w := item.widget():
+                w.deleteLater()
+        
+        # Pfad normalisieren und aufteilen
+        path = os.path.normpath(path)
+        parts = [p for p in path.split(os.sep) if p]
+        
+        # Root Button (/)
+        self._add_breadcrumb_button("/", os.sep)
+        
+        # Segmente hinzufügen
+        current_acc = os.sep
+        for part in parts:
+            # Separator
+            sep = QLabel("›")
+            sep.setStyleSheet("color: #666; font-weight: bold; margin: 0 2px;")
+            self._breadcrumb_layout.addWidget(sep)
+            
+            current_acc = os.path.join(current_acc, part)
+            self._add_breadcrumb_button(part, current_acc)
+            
+        self._breadcrumb_layout.addStretch()
+
+    def _add_breadcrumb_button(self, text, path):
+        btn = QPushButton(text)
+        btn.setObjectName("breadcrumb_item")
+        btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn.clicked.connect(lambda: self._nav_set_dir(path))
+        self._breadcrumb_layout.addWidget(btn)
 
     def _nav_up(self):
         import os

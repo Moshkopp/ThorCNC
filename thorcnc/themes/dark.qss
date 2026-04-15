@@ -624,6 +624,29 @@ QPushButton#btn_main_zoom_out {
     max-height: 35px;
 }
 
+/* ── Breadcrumbs ── */
+QWidget#breadcrumb_container {
+    background-color: #1a1a1a;
+    border: 1px solid #333333;
+    border-radius: 4px;
+    padding: 2px;
+}
+
+QPushButton#breadcrumb_item {
+    background: transparent;
+    border: none;
+    color: #aaaaaa;
+    font-weight: bold;
+    font-size: 10pt;
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
+QPushButton#breadcrumb_item:hover {
+    background-color: #3a7abf;
+    color: #ffffff;
+}
+
 QPushButton#btn_save_file {
     background-color: #27ae60;
     color: #ffffff;

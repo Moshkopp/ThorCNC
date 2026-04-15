@@ -574,9 +574,12 @@
                  </widget>
                 </item>
                 <item>
-                 <widget class="QLabel" name="lbl_current_path">
-                  <property name="text">
-                   <string>/</string>
+                 <widget class="QWidget" name="breadcrumb_container" native="true">
+                  <property name="sizePolicy">
+                   <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+                    <horstretch>0</horstretch>
+                    <verstretch>0</verstretch>
+                   </sizepolicy>
                   </property>
                  </widget>
                 </item>

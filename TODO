@@ -1,9 +1,7 @@
 # ThorCNC TODO
 
 ## UI / UX Verbesserungen
-- [ ] **Breadcrumb-Navigation im File-Tab**: Das statische Pfad-Label (`/home/cnc/...`) durch eine Reihe von anklickbaren Buttons (für jedes Verzeichnis-Segment) ersetzen. Dies erlaubt es dem Bediener, mit einem Klick direkt in jede übergeordnete Ebene zu springen.
+- [x] **Breadcrumb-Navigation im File-Tab**: Das statische Pfad-Label (`/home/cnc/...`) durch eine Reihe von anklickbaren Buttons (für jedes Verzeichnis-Segment) ersetzen. Dies erlaubt es dem Bediener, mit einem Klick direkt in jede übergeordnete Ebene zu springen.
 
 ## Features & Sicherheit
-- [ ] Erweitertes Jogging-Panel (Layout-Optimierung)
-- [ ] Integration von Kamera-Vorschau in die Hauptansicht
 - [ ] **Finde next M6**: (Erklärung folgt) Automatisches Finden des nächsten Werkzeugwechsels im G-Code.
