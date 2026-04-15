@@ -277,6 +277,8 @@ class ThorCNC(QObject):
         if self._btn_find_m6:
             self._btn_find_m6.clicked.connect(self._find_next_m6)
 
+        self._setup_highlight_settings()
+
         # Replace placeholder with stack (Stack is in a QVBoxLayout)
         if parent_gc and parent_gc.layout():
             lay = parent_gc.layout()
@@ -3225,38 +3227,115 @@ class ThorCNC(QObject):
         if not lbl:
             return
 
-        active_g = []
-        important_g = {
-            "G54", "G55", "G56", "G57", "G58", "G59", 
-            "G59.1", "G59.2", "G59.3", "G43", "G49", 
-            "G20", "G21", "G90", "G91"
-        }
+        # Lade Einstellungen
+        s = self.settings
+        imp_list = set(s.get("hlight_gc_imp_list", "").replace(",", " ").upper().split())
+        warn_list = set(s.get("hlight_gc_warn_list", "").replace(",", " ").upper().split())
+        m_list = set(s.get("hlight_mc_list", "").replace(",", " ").upper().split())
         
+        col_imp = s.get("hlight_gc_imp_color", "#ffffff")
+        col_warn = s.get("hlight_gc_warn_color", "#ffffff")
+        col_m = s.get("hlight_mc_color", "#ffffff")
+        col_def = "#cccccc" # Standardfarbe für nicht-markierte Codes
+
+        active_g = []
         # Format G-codes
         for g in self._current_gcodes[1:]:
             if g == -1: continue
             val = g / 10.0
-            g_str = f"G{val:g}"
-            if g_str in important_g:
-                active_g.append(f'<span style="color: #FFC13B; font-weight: bold;">{g_str}</span>')
-            else:
-                active_g.append(f'<span style="color: #cccccc;">{g_str}</span>')
+            g_str = f"G{val:g}".upper()
+            
+            color = col_def
+            weight = "normal"
+            
+            if g_str in warn_list:
+                color = col_warn
+                weight = "bold"
+            elif g_str in imp_list:
+                color = col_imp
+                weight = "bold"
+            
+            active_g.append(f'<span style="color: {color}; font-weight: {weight};">{g_str}</span>')
 
-        # Format M-codes (Green/Lime as requested)
+        # Format M-codes
         active_m = []
         for m in self._current_mcodes[1:]:
             if m == -1: continue
-            m_str = f"M{m}"
-            active_m.append(f'<span style="color: #aaff00; font-weight: bold;">{m_str}</span>')
+            m_str = f"M{m}".upper()
+            
+            color = col_def
+            weight = "normal"
+            
+            if m_str in m_list:
+                color = col_m
+                weight = "bold"
+                
+            active_m.append(f'<span style="color: {color}; font-weight: {weight};">{m_str}</span>')
 
         # Combine into a single vertical list
         total_active = active_g + active_m
 
         lbl.setTextFormat(Qt.TextFormat.RichText)
-        # Use larger font size (13pt approx 17px)
+        # Use larger font size
         style = "font-size: 13pt; line-height: 1.2;"
         content = "<br>".join(total_active)
         lbl.setText(f'<div style="{style}">{content}</div>')
+
+    def _setup_highlight_settings(self):
+        from PySide6.QtWidgets import QLineEdit, QPushButton, QColorDialog
+        ui = self.ui
+        s = self.settings
+
+        # (LineEditName, ButtonName, Prefix)
+        self._hlight_cfg = [
+            ("le_gc_important", "btn_gc_color_important", "hlight_gc_imp"),
+            ("le_gc_warning",   "btn_gc_color_warning",   "hlight_gc_warn"),
+            ("le_mc_highlights", "btn_mc_color",          "hlight_mc"),
+        ]
+
+        for le_name, btn_name, prefix in self._hlight_cfg:
+            le = ui.findChild(QLineEdit, le_name)
+            btn = ui.findChild(QPushButton, btn_name)
+            
+            if le:
+                le.setText(s.get(f"{prefix}_list", ""))
+                le.textChanged.connect(lambda text, p=prefix: self._on_hlight_text_changed(p, text))
+            
+            if btn:
+                color = s.get(f"{prefix}_color", "#ffffff")
+                self._update_color_btn_style(btn, color)
+                btn.clicked.connect(lambda checked=False, p=prefix, b=btn: self._on_hlight_color_clicked(p, b))
+
+    def _on_hlight_text_changed(self, prefix, text):
+        self.settings.set(f"{prefix}_list", text)
+        self.settings.save()
+        self._update_active_codes_display()
+
+    def _on_hlight_color_clicked(self, prefix, btn):
+        from PySide6.QtWidgets import QColorDialog
+        from PySide6.QtGui import QColor
+        
+        current = self.settings.get(f"{prefix}_color", "#ffffff")
+        color = QColorDialog.getColor(QColor(current), self.ui, "Farbe wählen")
+        
+        if color.isValid():
+            hex_color = color.name()
+            self.settings.set(f"{prefix}_color", hex_color)
+            self.settings.save()
+            self._update_color_btn_style(btn, hex_color)
+            self._update_active_codes_display()
+
+    def _update_color_btn_style(self, btn, color):
+        btn.setStyleSheet(f"background-color: {color}; color: {'#000000' if self._is_light(color) else '#ffffff'}; border: 1px solid #5d6d7e; font-weight: bold;")
+
+    def _is_light(self, hex_color):
+        """Prüft ob eine Farbe hell oder dunkel ist (für Kontrast-Text)."""
+        hex_color = hex_color.lstrip('#')
+        if len(hex_color) != 6: return True
+        r, g, b = int(hex_color[0:2], 16), int(hex_color[2:4], 16), int(hex_color[4:6], 16)
+        # Luminanz-Formel
+        brightness = (r * 0.299 + g * 0.587 + b * 0.114)
+        return brightness > 128
 
     @Slot(list)
     def _on_homed(self, homed: list):

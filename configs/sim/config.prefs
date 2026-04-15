@@ -3,13 +3,13 @@
     "window_geometry": "01d9d0cb0003000000000000000000000000077f000004370000005b0000001c0000074a000004240000000100040000078000000000000000000000077f00000437",
     "window_state": "000000ff00000000fd00000000000007800000041c00000004000000040000000800000008fc00000000",
     "backplot_view": {
-        "distance": 268.15117603353656,
-        "elevation": 35,
-        "azimuth": -45,
+        "distance": 411.0346866709522,
+        "elevation": 29.0,
+        "azimuth": -41.0,
         "center": [
-            267.29998779296875,
-            224.27499389648438,
-            -80.80000305175781
+            247.3000030517578,
+            228.39999389648438,
+            -81.30000305175781
         ]
     },
     "main_splitter": "000000ff0000000100000003000001e80000005a0000031201ffffffff010000000100",
@@ -93,13 +93,19 @@
     "editor_gcode_font_size": 12,
     "viewer_gcode_font_size": 12,
     "probe_auto_zero": "true",
-    "ts_before": "M64 P2\n(DEBUG, M64 P2 AN)",
-    "ts_after": "M65 P2\n(DEBUG, M65 P2 AUS)",
+    "ts_before": "M64 P0\n(DEBUG, M64 AN)",
+    "ts_after": "M64 P0\n(DEBUG, M65 AUS)",
     "probe_feed": 50.0,
     "probe_xy_clear": 5.0,
     "probe_max_xy": 10.0,
     "probe_extra_dep": 0.0,
     "probe_dia": 3.0,
     "probe_warning_color": "#ff00ff",
-    "probe_warning_pins": "0,2"
+    "probe_warning_pins": "0,2",
+    "hlight_gc_warn_list": "G49,  G59.3,",
+    "hlight_gc_warn_color": "#ff0000",
+    "hlight_mc_list": "M1, M0, ",
+    "hlight_mc_color": "#00ff00",
+    "hlight_gc_imp_list": "G43, G54,",
+    "hlight_gc_imp_color": "#ffaa00"
 }
