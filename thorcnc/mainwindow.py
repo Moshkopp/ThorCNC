@@ -4,6 +4,7 @@ Loads the UI converted from probe_basic.ui and connects all widgets
 directly to LinuxCNC via custom implementations (no qtpyvcp).
 """
 import os
+import re
 import linuxcnc
 from PySide6.QtWidgets import QMainWindow, QHBoxLayout, QLabel, QFrame, QPushButton
 from PySide6.QtCore import Qt, QObject, Slot, QTimer, QPropertyAnimation, QEasingCurve
@@ -265,13 +266,16 @@ class ThorCNC(QObject):
         if self._btn_show_mdi:
             self._btn_show_mdi.clicked.connect(lambda: self._switch_gcode_panel(1))
 
-        # Main Tab Zoom Buttons
         self._btn_main_zoom_in = self.ui.findChild(QPushButton, "btn_main_zoom_in")
         self._btn_main_zoom_out = self.ui.findChild(QPushButton, "btn_main_zoom_out")
+        self._btn_find_m6 = self.ui.findChild(QPushButton, "btn_find_m6")
+        
         if self._btn_main_zoom_in:
             self._btn_main_zoom_in.clicked.connect(lambda: self.gcode_view.zoomIn(1))
         if self._btn_main_zoom_out:
             self._btn_main_zoom_out.clicked.connect(lambda: self.gcode_view.zoomOut(1))
+        if self._btn_find_m6:
+            self._btn_find_m6.clicked.connect(self._find_next_m6)
 
         # Replace placeholder with stack (Stack is in a QVBoxLayout)
         if parent_gc and parent_gc.layout():
@@ -2608,6 +2612,11 @@ class ThorCNC(QObject):
             btn_sb.setChecked(self.is_single_block)
         if btn_m1:
             btn_m1.setChecked(bool(self.poller.stat.optional_stop))
+        
+        # Find M6 Button sperren wenn Maschine läuft
+        if hasattr(self, "_btn_find_m6") and self._btn_find_m6:
+            is_idle = self.poller.stat.interp_state == linuxcnc.INTERP_IDLE
+            self._btn_find_m6.setEnabled(is_idle)
 
     def _toggle_sb_internal(self):
         self.is_single_block = not self.is_single_block
@@ -2633,6 +2642,48 @@ class ThorCNC(QObject):
             self._opt_anim.setEndValue(105) # Höhe für 2 Buttons + Spacing
             
         self._opt_anim.start()
+
+    def _find_next_m6(self):
+        """Sucht nach dem nächsten M6 Werkzeugwechsel im G-Code."""
+        if not self.gcode_view:
+            return
+
+        text = self.gcode_view.toPlainText()
+        if not text:
+            return
+            
+        lines = text.split('\n')
+        total_lines = len(lines)
+        
+        # Aktuelle Zeile (0-basiert)
+        cursor = self.gcode_view.textCursor()
+        start_line = cursor.blockNumber()
+        
+        # Regex für M6 (G-Code konform: ignoriert Kommentare)
+        m6_ptrn = re.compile(r'(?<!\()(?:\bM6\b)', re.IGNORECASE)
+
+        # 1. Suche ab der nächsten Zeile bis zum Dateiende
+        found_idx = -1
+        for i in range(start_line + 1, total_lines):
+            line_clean = re.sub(r'\(.*?\)|;.*', '', lines[i])
+            if m6_ptrn.search(line_clean):
+                found_idx = i
+                break
+        
+        # 2. Zyklische Suche: Falls nichts gefunden, vom Dateianfang bis zur aktuellen Zeile
+        if found_idx == -1:
+            for i in range(0, start_line + 1):
+                line_clean = re.sub(r'\(.*?\)|;.*', '', lines[i])
+                if m6_ptrn.search(line_clean):
+                    found_idx = i
+                    break
+        
+        if found_idx != -1:
+            # Zeile hervorheben und Statusmeldung (optional)
+            self.gcode_view.set_current_line(found_idx + 1) # set_current_line ist 1-basiert
+            self._status(f"M6 gefunden in Zeile {found_idx + 1}")
+        else:
+            self._status("Kein M6 im Programm gefunden.")
 
     def _connect_signals(self):
         p = self.poller

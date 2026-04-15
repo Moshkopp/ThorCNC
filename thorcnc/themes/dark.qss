@@ -647,6 +647,26 @@ QPushButton#breadcrumb_item:hover {
     color: #ffffff;
 }
 
+QPushButton#btn_find_m6 {
+    background-color: #34495e;
+    color: #ecf0f1;
+    font-weight: bold;
+    border: 1px solid #5d6d7e;
+    border-radius: 4px;
+    padding: 2px 6px;
+}
+
+QPushButton#btn_find_m6:hover {
+    background-color: #3a7abf; /* ThorCNC Blue */
+    border-color: #3174b5;
+}
+
+QPushButton#btn_find_m6:disabled {
+    background-color: #1a1a1a;
+    color: #555555;
+    border-color: #333333;
+}
+
 QPushButton#btn_save_file {
     background-color: #27ae60;
     color: #ffffff;

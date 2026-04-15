@@ -1,5 +1,5 @@
 ; ThorCNC – Probe sequence
 O<before_probe> call
-O<center_rect> call  [50] [70] [10.0] [50.0] [20.0] [50.0] [20.0] [4.0] [0]
+O<center_round> call  [0.0000] [0] [10.0] [10.0] [200.0] [50.0] [5.0] [0.0] [1] [3.0] [400.0] [5.0] [15.0]
 O<after_probe> call
 M2

@@ -25,6 +25,7 @@
     "ts_search_vel": 300.0,
     "ts_probe_vel": 10.0,
     "mdi_history": [
+        "T99 M6 G43",
         "T14 M6 G43",
         "T8 M6 G43",
         "M65 P0",

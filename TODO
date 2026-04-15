@@ -4,4 +4,4 @@
 - [x] **Breadcrumb-Navigation im File-Tab**: Das statische Pfad-Label (`/home/cnc/...`) durch eine Reihe von anklickbaren Buttons (für jedes Verzeichnis-Segment) ersetzen. Dies erlaubt es dem Bediener, mit einem Klick direkt in jede übergeordnete Ebene zu springen.
 
 ## Features & Sicherheit
-- [ ] **Finde next M6**: (Erklärung folgt) Automatisches Finden des nächsten Werkzeugwechsels im G-Code.
+- [x] **Finde next M6**: (Erklärung folgt) Automatisches Finden des nächsten Werkzeugwechsels im G-Code.
