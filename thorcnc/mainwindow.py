@@ -2555,7 +2555,15 @@ class ThorCNC(QObject):
 
     def _set_wechsel_pos_from_machine(self):
         """Sets the current machine position as Change Position X/Y/Z."""
-        from PySide6.QtWidgets import QDoubleSpinBox
+        from PySide6.QtWidgets import QDoubleSpinBox, QMessageBox
+        
+        # Sicherheitsabfrage
+        res = QMessageBox.question(self.ui, "Position übernehmen", 
+                                  "Möchtest du die aktuelle Maschinenposition wirklich als neue WECHSELPOSITION übernehmen?",
+                                  QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+        if res != QMessageBox.StandardButton.Yes:
+            return
+
         pos = getattr(self, "_last_pos", None)
         if pos is None:
             self._status("Keine Positionsdaten verfügbar!", error=True)
@@ -2573,7 +2581,15 @@ class ThorCNC(QObject):
 
     def _set_taster_pos_from_machine(self):
         """Sets the current machine position as Probe Position X/Y/Z."""
-        from PySide6.QtWidgets import QDoubleSpinBox
+        from PySide6.QtWidgets import QDoubleSpinBox, QMessageBox
+        
+        # Sicherheitsabfrage
+        res = QMessageBox.question(self.ui, "Position übernehmen", 
+                                  "Möchtest du die aktuelle Maschinenposition wirklich als neue MESSPOSITION übernehmen?",
+                                  QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+        if res != QMessageBox.StandardButton.Yes:
+            return
+
         pos = getattr(self, "_last_pos", None)
         if pos is None:
             self._status("Keine Positionsdaten verfügbar!", error=True)
