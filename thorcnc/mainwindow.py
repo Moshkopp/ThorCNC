@@ -1995,7 +1995,7 @@ class ThorCNC(QObject):
         # Parameter für Center Finder und Corners/Edges sammeln
         params = ""
         is_corner_edge = ngc_name.startswith("outside_") or ngc_name.startswith("inside_")
-        if ngc_name in ("center_rect", "center_round") or is_corner_edge:
+        if ngc_name.startswith("center_") or is_corner_edge:
             from PySide6.QtWidgets import QLineEdit, QDoubleSpinBox
             def val(name, default="0.0"):
                 if w := self._w(QLineEdit, name): return w.text() or default
