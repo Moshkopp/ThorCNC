@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 # ThorCNC Updater
 # Zieht die neuesten Änderungen aus dem Repository und reinstalliert das Paket.
 #
 # Verwendung:
 #   ./update.sh            # normales Update
 #   ./update.sh --dev      # Update im Entwicklungsmodus (editable)
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -24,13 +24,13 @@ for arg in "$@"; do
     esac
 done
 
-# ── PIP Flags (Debian 12+ / PEP 668) ──────────────────────────────────────────
+# --- PIP Flags (Debian 12+ / PEP 668) ----------------------------------------
 PIP_BREAK_FLAG=""
 if pip install --help | grep -q 'break-system-packages'; then
     PIP_BREAK_FLAG="--break-system-packages"
 fi
 
-# ── Farben ────────────────────────────────────────────────────────────────────
+# --- Farben ------------------------------------------------------------------
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
 BLUE='\033[0;34m'; NC='\033[0m'; BOLD='\033[1m'
 
@@ -40,25 +40,25 @@ warn() { echo -e "${YELLOW}[WARN]${NC}  $*"; }
 err()  { echo -e "${RED}[FEHLER]${NC} $*" >&2; exit 1; }
 
 echo -e "${BOLD}ThorCNC Updater${NC}"
-echo "───────────────────────────────────────"
+echo "---------------------------------------"
 
 cd "$SCRIPT_DIR"
 
-# ── Git-Status prüfen ─────────────────────────────────────────────────────────
+# --- Git-Status prüfen -------------------------------------------------------
 if ! git rev-parse --git-dir &>/dev/null; then
     err "Kein Git-Repository gefunden in: $SCRIPT_DIR"
 fi
 
 # Lokale Änderungen anzeigen (kein Abbruch)
 if ! git diff --quiet || ! git diff --cached --quiet; then
-    warn "Lokale Änderungen vorhanden – werden beim Pull beibehalten (kein Überschreiben)."
+    warn "Lokale Änderungen vorhanden - werden beim Pull beibehalten (kein Überschreiben)."
 fi
 
 # Aktuelle Version merken
 OLD_REV=$(git rev-parse --short HEAD)
 info "Aktuelle Version: $OLD_REV"
 
-# ── Stash & Pull ──────────────────────────────────────────────────────────────
+# --- Stash & Pull ------------------------------------------------------------
 if $FORCE_MODE; then
     warn "FORCE MODE: Verwerfe lokale Änderungen und setze auf origin zurück..."
     git fetch origin &>/dev/null
@@ -98,15 +98,15 @@ fi
 NEW_REV=$(git rev-parse --short HEAD)
 
 if [ "$OLD_REV" = "$NEW_REV" ]; then
-    ok "Bereits auf dem neuesten Stand ($NEW_REV) – kein Commit-Update."
+    ok "Bereits auf dem neuesten Stand ($NEW_REV) - kein Commit-Update."
 else
-    ok "Aktualisiert: $OLD_REV → $NEW_REV"
+    ok "Aktualisiert: $OLD_REV -> $NEW_REV"
     echo ""
     git log --oneline "${OLD_REV}..HEAD"
     echo ""
 fi
 
-# ── Paket neu installieren ────────────────────────────────────────────────────
+# --- Paket neu installieren --------------------------------------------------
 EXTRAS="[backplot]"
 
 if $DEV_MODE; then
