@@ -17,7 +17,9 @@ A modern LinuxCNC graphical interface (VCP) for 3-axis milling machines, built w
 
 ---
 
-![ThorCNC Screenshot](thorcnc/images/screen_main.png)
+![ThorCNC Main Screen](thorcnc/images/screen_main.png)
+![Simple Dashboard](thorcnc/images/screen_simple.png)
+![Probing Tab](thorcnc/images/screen_probing.png)
 ![Tool Change Dialog](thorcnc/images/screen_toolchange.png)
 
 ---
@@ -44,6 +46,8 @@ A modern LinuxCNC graphical interface (VCP) for 3-axis milling machines, built w
 - **Splash Screen** — Support for custom industrial startup graphics via `INTRO_GRAPHIC` and `INTRO_TIME`.
 - **WCS Selector** — Quick switch between G54–G59.3 via dropdown in the DRO panel.
 - **Settings** — Four sub-tabs: Toolsetter, UI (live theme + language switching), Maschine, Erweitert.
+- **Simple View** — High-visibility minimalist dashboard for distance monitoring, featuring oversized DROs and status indicators.
+- **Probing Interface** — Dedicated, touch-optimized tab for automated workpiece probing and tool measurement.
 - **Themes** — Dark (default), light, dark_green, dark_orange — switchable at runtime.
 
 ---
