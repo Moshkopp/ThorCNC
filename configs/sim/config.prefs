@@ -27,6 +27,9 @@
     "mdi_history": [
         "T99 M6 G43",
         "T6 M6 G43",
+        "T7 M6 G43",
+        "T99 M6 G43",
+        "T6 M6 G43",
         "T99 M6 G43",
         "M65 P2",
         "M65 P0",
@@ -71,10 +74,7 @@
         "T1 M6 G43",
         "T99 M6 G43",
         "m3 s1500",
-        "T14 M6 G43",
-        "T999 M6 G43",
-        "T14 M6 G43",
-        "T2 M6 G43"
+        "T14 M6 G43"
     ],
     "theme": "dark",
     "backplot_msaa_samples": 16,
@@ -108,5 +108,6 @@
     "hlight_mc_list": "M1, M0, ",
     "hlight_mc_color": "#00ff00",
     "hlight_gc_imp_list": "G43, G54,",
-    "hlight_gc_imp_color": "#ffaa00"
+    "hlight_gc_imp_color": "#ffaa00",
+    "abort_gcode": "M5 M9\n  G4 P0.1\n  G54\n  G4 P0.1\nM65 P0\n  G90 G40\nG21"
 }
