@@ -231,17 +231,82 @@ class ThorCNC(QObject):
         old_gcode = self.ui.findChild(QWidget, "gcodeEditor")
         parent_gc = old_gcode.parent() if old_gcode else None
 
+        # Delete redundant buttons from the loaded UI to avoid duplication and save resources
+        for btn_name in ["btn_find_m6", "btn_main_zoom_in", "btn_main_zoom_out"]:
+            if btn := self.ui.findChild(QPushButton, btn_name):
+                if btn.parent() and btn.parent().layout():
+                    btn.parent().layout().removeWidget(btn)
+                btn.deleteLater()
+
         # Stack: Seite 0 = GCodeView, Seite 1 = MDI-Page
         self._gcode_mdi_stack = QStackedWidget()
         self._gcode_mdi_stack.setObjectName("gcodeEditor")
 
-        # Seite 0: GCodeView
+        # Seite 0: GCode-Editor mit Header
+        gcode_container = QWidget()
+        gcode_lay = QVBoxLayout(gcode_container)
+        gcode_lay.setContentsMargins(0, 0, 0, 0)
+        gcode_lay.setSpacing(0)
+
+        # ── GCode Header ──
+        self._gcode_header = QFrame()
+        self._gcode_header.setObjectName("gcodeHeader")
+        h_lay = QHBoxLayout(self._gcode_header)
+        h_lay.setContentsMargins(4, 4, 4, 4)
+        h_lay.setSpacing(6)
+
+        # Find M6
+        self._btn_find_m6 = QPushButton("FIND M6")
+        self._btn_find_m6.setObjectName("btn_find_m6")
+        self._btn_find_m6.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self._btn_find_m6.clicked.connect(self._find_next_m6)
+        h_lay.addWidget(self._btn_find_m6)
+
+        h_lay.addStretch()
+
+        # Edit Toggle
+        self._btn_edit_gcode = QPushButton("EDIT")
+        self._btn_edit_gcode.setCheckable(True)
+        self._btn_edit_gcode.setObjectName("btn_edit_gcode")
+        self._btn_edit_gcode.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self._btn_edit_gcode.clicked.connect(self._on_toggle_gcode_edit)
+        h_lay.addWidget(self._btn_edit_gcode)
+
+        # Save Button
+        self._btn_save_gcode = QPushButton("SAVE")
+        self._btn_save_gcode.setObjectName("btn_save_gcode")
+        self._btn_save_gcode.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self._btn_save_gcode.clicked.connect(self._on_save_gcode)
+        self._btn_save_gcode.setEnabled(False) # Only if edited? Or always?
+        h_lay.addWidget(self._btn_save_gcode)
+
+        # Zoom Buttons
+        self._btn_main_zoom_out = QPushButton("-")
+        self._btn_main_zoom_out.setObjectName("btn_main_zoom_out")
+        self._btn_main_zoom_out.clicked.connect(lambda: self.gcode_view.zoomOut(1))
+        h_lay.addWidget(self._btn_main_zoom_out)
+
+        self._btn_main_zoom_in = QPushButton("+")
+        self._btn_main_zoom_in.setObjectName("btn_main_zoom_in")
+        self._btn_main_zoom_in.clicked.connect(lambda: self.gcode_view.zoomIn(1))
+        h_lay.addWidget(self._btn_main_zoom_in)
+
+        gcode_lay.addWidget(self._gcode_header)
+
+        # GCodeView
         self.gcode_view = GCodeView()
-        v_size = self.settings.get("viewer_gcode_font_size", 30)
-        self.gcode_view.set_font_size(v_size)
         self.gcode_view.zoom_changed.connect(
             lambda s: (self.settings.set("viewer_gcode_font_size", s), self.settings.save()))
-        self._gcode_mdi_stack.addWidget(self.gcode_view)
+
+        v_size = self.settings.get("viewer_gcode_font_size", 30)
+        self.gcode_view.set_font_size(v_size)
+        
+        # Modification tracking
+        self.gcode_view.document().modificationChanged.connect(self._on_gcode_modification_changed)
+        
+        gcode_lay.addWidget(self.gcode_view)
+        
+        self._gcode_mdi_stack.addWidget(gcode_container)
 
         # Seite 1: MDI-Page
         mdi_page = QWidget()
@@ -265,24 +330,13 @@ class ThorCNC(QObject):
         mdi_page_lay.addWidget(self._mdi_history_widget)
         self._gcode_mdi_stack.addWidget(mdi_page)
 
-        # UI-Buttons verdrahten (aus der UI-Datei)
+        # UI-Buttons verdrahten (aus der UI-Datei) - Sidebar Nav
         self._btn_show_gcode = self.ui.findChild(QPushButton, "btn_gcode_view")
         self._btn_show_mdi   = self.ui.findChild(QPushButton, "btn_mdi_view")
         if self._btn_show_gcode:
             self._btn_show_gcode.clicked.connect(lambda: self._switch_gcode_panel(0))
         if self._btn_show_mdi:
             self._btn_show_mdi.clicked.connect(lambda: self._switch_gcode_panel(1))
-
-        self._btn_main_zoom_in = self.ui.findChild(QPushButton, "btn_main_zoom_in")
-        self._btn_main_zoom_out = self.ui.findChild(QPushButton, "btn_main_zoom_out")
-        self._btn_find_m6 = self.ui.findChild(QPushButton, "btn_find_m6")
-        
-        if self._btn_main_zoom_in:
-            self._btn_main_zoom_in.clicked.connect(lambda: self.gcode_view.zoomIn(1))
-        if self._btn_main_zoom_out:
-            self._btn_main_zoom_out.clicked.connect(lambda: self.gcode_view.zoomOut(1))
-        if self._btn_find_m6:
-            self._btn_find_m6.clicked.connect(self._find_next_m6)
 
         self._setup_highlight_settings()
 
@@ -2746,6 +2800,67 @@ class ThorCNC(QObject):
             
         self._opt_anim.start()
 
+    def _on_toggle_gcode_edit(self):
+        """Schaltet den G-Code Viewer in den Editiermodus um."""
+        if not self.gcode_view:
+            return
+        
+        is_edit = self._btn_edit_gcode.isChecked()
+        self.gcode_view.setReadOnly(not is_edit)
+        self._btn_save_gcode.setEnabled(is_edit)
+        
+        # Style-Update via Property (optional)
+        self._btn_edit_gcode.setProperty("active", is_edit)
+        self._btn_edit_gcode.style().unpolish(self._btn_edit_gcode)
+        self._btn_edit_gcode.style().polish(self._btn_edit_gcode)
+        
+        if is_edit:
+            self._status("G-CODE EDIT MODE ENABLED")
+            # Update save button state based on current modification
+            self._on_gcode_modification_changed(self.gcode_view.document().isModified())
+        else:
+            self._status("G-CODE EDIT MODE DISABLED")
+            self._btn_save_gcode.setEnabled(False)
+
+    @Slot(bool)
+    def _on_gcode_modification_changed(self, modified: bool):
+        """Wird aufgerufen, wenn sich der Änderungsstatus des G-Codes ändert."""
+        if not self.gcode_view:
+            return
+            
+        # Button nur aktivieren, wenn wir auch im Edit-Modus sind
+        is_edit = self._btn_edit_gcode.isChecked()
+        self._btn_save_gcode.setEnabled(is_edit and modified)
+        
+        # Property für das Styling
+        self._btn_save_gcode.setProperty("modified", modified)
+        self._btn_save_gcode.style().unpolish(self._btn_save_gcode)
+        self._btn_save_gcode.style().polish(self._btn_save_gcode)
+
+    def _on_save_gcode(self):
+        """Speichert den aktuell editierten G-Code zurück in die Datei."""
+        if not self._user_program or not os.path.exists(self._user_program):
+            self._status("SAVE FAILED: NO FILE LOADED")
+            return
+            
+        try:
+            content = self.gcode_view.toPlainText()
+            with open(self._user_program, 'w') as f:
+                f.write(content)
+            
+            self.gcode_view.document().setModified(False)
+            self._status(f"G-CODE SAVED: {os.path.basename(self._user_program)}")
+            
+            # Neu parsen für Backplot
+            tp = parse_file(self._user_program)
+            self._last_toolpath = tp
+            self.backplot.load_toolpath(tp)
+            
+            # Wenn wir fertig sind mit Speichern, Edit-Mode verlassen?
+            # Der User entscheidet das meist selbst. Wir lassen ihn drin.
+        except Exception as e:
+            self._status(f"SAVE ERROR: {str(e)}")
+
     def _find_next_m6(self):
         """Sucht nach dem nächsten M6 Werkzeugwechsel im G-Code."""
         if not self.gcode_view:
@@ -2782,8 +2897,9 @@ class ThorCNC(QObject):
                     break
         
         if found_idx != -1:
-            # Zeile hervorheben und Statusmeldung (optional)
-            self.gcode_view.set_current_line(found_idx + 1) # set_current_line ist 1-basiert
+            # Zeile hervorheben und Statusmeldung
+            # Wir erzwingen den Cursor-Sprung (move_cursor=True), damit der User sieht wo das M6 ist
+            self.gcode_view.set_current_line(found_idx + 1, move_cursor=True)
             self._status(f"M6 gefunden in Zeile {found_idx + 1}")
         else:
             self._status("Kein M6 im Programm gefunden.")

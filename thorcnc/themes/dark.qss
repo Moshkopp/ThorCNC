@@ -695,6 +695,60 @@ QPushButton#btn_main_zoom_out {
     max-height: 35px;
 }
 
+/* ── GCode Editor Header ── */
+QFrame#gcodeHeader {
+    background-color: #1a1a1a;
+    border: 1px solid #444444;
+    border-bottom: none;
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+    min-height: 40px;
+}
+
+QFrame#gcodeHeader QPushButton {
+    min-height: 35px;
+    max-height: 35px;
+}
+
+QPushButton#btn_find_m6 {
+    background-color: #34495e;
+    color: #ecf0f1;
+    font-weight: bold;
+    border: 1px solid #5d6d7e;
+    padding: 0 15px;
+}
+
+QPushButton#btn_edit_gcode {
+    background-color: #2a2a2a;
+    border: 1px solid #444444;
+    color: #aaaaaa;
+    padding: 0 15px;
+}
+
+QPushButton#btn_edit_gcode:checked {
+    background-color: #e67e22;
+    color: white;
+    border-color: #ff9f43;
+}
+
+QPushButton#btn_save_gcode {
+    background-color: #2a2a2a;
+    border: 1px solid #444444;
+    color: #666666;
+    padding: 0 15px;
+}
+
+QPushButton#btn_save_gcode[modified="true"] {
+    background-color: #27ae60;
+    border-color: #2ecc71;
+    color: white;
+}
+
+QPushButton#btn_save_gcode:disabled {
+    background-color: #2a2a2a;
+    color: #444444;
+}
+
 /* ── Breadcrumbs ── */
 QWidget#breadcrumb_container {
     background-color: #1a1a1a;

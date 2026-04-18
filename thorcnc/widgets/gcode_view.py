@@ -67,10 +67,10 @@ class _LineNumberArea(QWidget):
 # ──────────────────────────────────────────────────────────── GCodeView ────
 
 class GCodeView(QPlainTextEdit):
-    """Schreibgeschützter G-Code Viewer mit Zeilennummern und Highlighting."""
+    """G-Code Viewer with syntax highlighting and current line highlighting."""
 
-    line_selected = Signal(int)   # Benutzer klickt auf eine Zeile
-    zoom_changed = Signal(int)    # Font-Größe hat sich geändert
+    line_selected = Signal(int)   # User clicks on a line
+    zoom_changed = Signal(int)    # Font size changed
 
     def __init__(self, parent=None, editable=False):
         super().__init__(parent)
@@ -78,49 +78,53 @@ class GCodeView(QPlainTextEdit):
         self.setLineWrapMode(QPlainTextEdit.LineWrapMode.NoWrap)
 
         self._font_size = 22 if editable else 30
-        self._apply_style()
-
+        
+        # Highlighter
         self._highlighter = _GCodeHighlighter(self.document())
-        self._current_line = -1          # hevorgehobene Zeile (0-basiert)
+        self._current_line = -1          # highlighted line (0-indexed)
 
         self._line_area = _LineNumberArea(self)
         self.blockCountChanged.connect(self._update_line_number_width)
         self.updateRequest.connect(self._update_line_number_area)
 
         self._update_line_number_width(0)
+        
+        # Apply initial font
+        self._update_font()
 
-        # Background colors
-        self._bg_current = QColor("#2c3e50")   # aktuelle Zeile
-        self._fg_linenum  = QColor("#5d6d7e")
-        self._fg_linenum_current = QColor("#aaaaaa")
-
-    # ── Öffentliche API ──────────────────────────────────────────────────
+    # ── Public API ──────────────────────────────────────────────────
 
     def load_file(self, path: str):
         try:
             with open(path, 'r', errors='replace') as fh:
                 self.setPlainText(fh.read())
+            self.document().setModified(False)
         except OSError:
-            self.setPlainText(f"[Datei nicht lesbar: {path}]")
+            self.setPlainText(f"[File not readable: {path}]")
         self.set_current_line(-1)
 
-    def set_current_line(self, line_num: int):
-        """Hebt Zeile line_num hervor und scrollt sie sichtbar (1-basiert).
-        -1 = keine Hervorhebung."""
-        self._current_line = line_num - 1  # intern 0-basiert
+    def set_current_line(self, line_num: int, move_cursor: bool = False):
+        """Highlights line line_num and scrolls it into view (1-indexed).
+        -1 = no highlight."""
+        self._current_line = line_num - 1  # internal 0-indexed
         self.viewport().update()
         if line_num > 0:
             block = self.document().findBlockByLineNumber(line_num - 1)
             if block.isValid():
                 cursor = QTextCursor(block)
-                self.setTextCursor(cursor)
-                self.centerCursor()
+                # Move cursor if explicitly requested or if we are in read-only mode (navigation)
+                if move_cursor or self.isReadOnly():
+                    self.setTextCursor(cursor)
+                    self.centerCursor()
+                else:
+                    # Just scroll to it if it's the current executing line but don't steal cursor
+                    self.ensureCursorVisible()
 
-    # ── Zeilennummern ────────────────────────────────────────────────────
+    # ── Line Numbers ────────────────────────────────────────────────────
 
     def _line_number_width(self) -> int:
         digits = max(1, len(str(self.blockCount())))
-        return 6 + self.fontMetrics().horizontalAdvance('9') * digits
+        return 10 + self.fontMetrics().horizontalAdvance('9') * digits
 
     def _update_line_number_width(self, _=0):
         self.setViewportMargins(self._line_number_width(), 0, 0, 0)
@@ -142,7 +146,10 @@ class GCodeView(QPlainTextEdit):
 
     def _paint_line_numbers(self, event):
         painter = QPainter(self._line_area)
-        painter.fillRect(event.rect(), QColor("#1e1e1e"))
+        
+        # Background for line numbers area (use theme colors if possible)
+        bg_color = self.palette().color(QPalette.ColorRole.Window).darker(110)
+        painter.fillRect(event.rect(), bg_color)
 
         block = self.firstVisibleBlock()
         block_num = block.blockNumber()
@@ -151,14 +158,17 @@ class GCodeView(QPlainTextEdit):
         bottom = top + round(self.blockBoundingRect(block).height())
         fm = self.fontMetrics()
 
+        pen_normal = self.palette().color(QPalette.ColorRole.Text)
+        pen_normal.setAlpha(120)
+        pen_current = self.palette().color(QPalette.ColorRole.Highlight)
+
         while block.isValid() and top <= event.rect().bottom():
             if block.isVisible() and bottom >= event.rect().top():
                 is_current = (block_num == self._current_line)
-                painter.setPen(self._fg_linenum_current if is_current
-                               else self._fg_linenum)
+                painter.setPen(pen_current if is_current else pen_normal)
                 painter.drawText(
                     0, top,
-                    self._line_area.width() - 3,
+                    self._line_area.width() - 5,
                     fm.height(),
                     Qt.AlignmentFlag.AlignRight,
                     str(block_num + 1),
@@ -168,7 +178,7 @@ class GCodeView(QPlainTextEdit):
             bottom = top + round(self.blockBoundingRect(block).height())
             block_num += 1
 
-    # ── Aktuelle Zeile hervorheben ────────────────────────────────────────
+    # ── Current Line Highlight ────────────────────────────────────────
 
     def paintEvent(self, event):
         if self._current_line >= 0:
@@ -177,35 +187,37 @@ class GCodeView(QPlainTextEdit):
             if block.isValid():
                 rect = self.blockBoundingGeometry(block) \
                            .translated(self.contentOffset())
+                # Use highlight color with transparency
+                highlight_color = self.palette().color(QPalette.ColorRole.Highlight)
+                highlight_color.setAlpha(40)
                 painter.fillRect(
                     QRect(0, int(rect.top()),
                           self.viewport().width(), int(rect.height())),
-                    self._bg_current,
+                    highlight_color,
                 )
             painter.end()
         super().paintEvent(event)
 
     def zoomIn(self, range: int = 1):
         self._font_size += range * 2
-        self._apply_style()
+        self._update_font()
 
     def zoomOut(self, range: int = 1):
         self._font_size = max(6, self._font_size - range * 2)
-        self._apply_style()
+        self._update_font()
 
     def set_font_size(self, size: int):
         self._font_size = size
-        self._apply_style()
+        self._update_font()
 
-    def _apply_style(self):
+    def _update_font(self):
         self.setStyleSheet(
-            f"QPlainTextEdit {{ font-family: 'Monospace'; font-size: {self._font_size}pt; }}"
+            f"font-size: {self._font_size}pt; font-family: 'Monospace';"
         )
         self.zoom_changed.emit(self._font_size)
 
     def wheelEvent(self, event):
         """Handle zooming with Ctrl + Mouse Wheel."""
-        # Check for control modifier (some systems return multiple modifiers, so use &)
         if event.modifiers() & Qt.ControlModifier:
             if event.angleDelta().y() > 0:
                 self.zoomIn(1)
