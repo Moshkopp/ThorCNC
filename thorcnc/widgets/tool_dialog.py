@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLineEdit, 
                              QTableWidget, QTableWidgetItem, QPushButton, 
-                             QLabel, QHeaderView, QAbstractItemView)
+                             QLabel, QHeaderView, QAbstractItemView, QFrame)
 from PySide6.QtCore import Qt, Slot
 
 class ToolSelectionDialog(QDialog):
@@ -12,17 +12,38 @@ class ToolSelectionDialog(QDialog):
         self.setWindowTitle("Select Tool for M6")
         self.setMinimumSize(500, 600)
         self.setModal(True)
+        self.setWindowFlags(Qt.WindowType.Dialog | Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        
         self._selected_tool = None
         self._data = tool_data  # List of dicts or tuples
         
+        self._setup_ui()
+        self.search_input.setFocus()
 
-        layout = QVBoxLayout(self)
-        layout.setSpacing(12)
-        layout.setContentsMargins(15, 15, 15, 15)
+    def _setup_ui(self):
+        # Main Container (Frameless support)
+        self.container = QFrame(self)
+        self.container.setObjectName("toolDialogContainer")
+        
+        outer_layout = QVBoxLayout(self)
+        outer_layout.setContentsMargins(0, 0, 0, 0)
+        outer_layout.addWidget(self.container)
+
+        layout = QVBoxLayout(self.container)
+        layout.setSpacing(15)
+        layout.setContentsMargins(25, 25, 25, 25)
+
+        # Header
+        header_label = QLabel("MANUAL TOOL SELECTION")
+        header_label.setObjectName("toolDialogHeader")
+        header_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(header_label)
 
         # Search field
-        layout.addWidget(QLabel("FILTER / ENTER TOOL NUMBER:"))
+        layout.addWidget(QLabel("FILTER TOOLS:"))
         self.search_input = QLineEdit()
+        self.search_input.setObjectName("toolSearchInput")
         self.search_input.setPlaceholderText("Type tool number or name...")
         self.search_input.textChanged.connect(self._on_search_changed)
         self.search_input.returnPressed.connect(self._accept_from_search)
@@ -30,6 +51,8 @@ class ToolSelectionDialog(QDialog):
 
         # Table
         self.table = QTableWidget(0, 3)
+        self.table.setObjectName("toolSelectionTable")
+        self.table.setAlternatingRowColors(True)
         self.table.setHorizontalHeaderLabels(["T#", "DIAMETER", "COMMENT"])
         self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
@@ -41,25 +64,29 @@ class ToolSelectionDialog(QDialog):
         header.setSectionResizeMode(0, QHeaderView.ResizeMode.Fixed)
         header.setSectionResizeMode(1, QHeaderView.ResizeMode.Fixed)
         header.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
-        self.table.setColumnWidth(0, 50)
-        self.table.setColumnWidth(1, 100)
+        self.table.setColumnWidth(0, 60)
+        self.table.setColumnWidth(1, 110)
         
         layout.addWidget(self.table)
         self._populate_table()
 
         # Buttons
         btn_layout = QHBoxLayout()
+        btn_layout.setSpacing(10)
         btn_layout.addStretch()
         
-        self.btn_cancel = QPushButton("Cancel")
+        self.btn_cancel = QPushButton("CANCEL")
+        self.btn_cancel.setObjectName("btnToolCancel")
+        self.btn_cancel.setMinimumWidth(120)
         self.btn_cancel.clicked.connect(self.reject)
         btn_layout.addWidget(self.btn_cancel)
         
-        self.btn_confirm = QPushButton("Confirm M6")
-        self.btn_confirm.setObjectName("btnConfirm")
+        self.btn_confirm = QPushButton("SELECT TOOL")
+        self.btn_confirm.setObjectName("btnToolConfirm")
+        self.btn_confirm.setMinimumWidth(150)
         self.btn_confirm.clicked.connect(self.accept)
         btn_layout.addWidget(self.btn_confirm)
-        
+
         layout.addLayout(btn_layout)
         
         self.search_input.setFocus()

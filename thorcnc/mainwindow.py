@@ -88,6 +88,13 @@ class ThorCNC(QObject):
         from PySide6.QtWidgets import QTabWidget
         if tab := self._w(QTabWidget, "tabWidget"):
             tab.setCurrentIndex(0)
+
+    def _add_class(self, widget, class_name: str):
+        """Helper to add a QSS class and ensure it's applied."""
+        if not widget: return
+        widget.setProperty("class", class_name)
+        widget.style().unpolish(widget)
+        widget.style().polish(widget)
     # ── Settings & State ──────────────────────────────────────────────────────
     
     def _load_settings(self):
@@ -366,20 +373,16 @@ class ThorCNC(QObject):
             return
         in_auto = getattr(self, "_current_mode", None) == linuxcnc.MODE_AUTO
         btn = self._btn_go_to_home
-        _base = "border-radius:4px; font-weight:bold; font-size:11pt; padding:4px 14px; min-height:22px;"
+        
         if in_auto:
             btn.setEnabled(False)
-            btn.setStyleSheet(f"QPushButton {{ {_base} }}")
+            self._add_class(btn, "") # Clear specific color classes
         elif all_homed:
             btn.setEnabled(True)
-            btn.setStyleSheet(
-                f"QPushButton {{ background:#2d862d; color:white; border:1px solid #1f5f1f; {_base} }}"
-                "QPushButton:hover { background:#3aa63a; }")
+            self._add_class(btn, "btn-green")
         else:
             btn.setEnabled(True)
-            btn.setStyleSheet(
-                f"QPushButton {{ background:#c0392b; color:white; border:1px solid #8e2a20; {_base} }}"
-                "QPushButton:hover { background:#e74c3c; }")
+            self._add_class(btn, "btn-red")
 
     def _setup_dro(self):
         """DRO panel in probe_basic style: Axis | WORK | MACHINE | REF button."""
@@ -406,34 +409,19 @@ class ThorCNC(QObject):
         axis_width = 48
         val_width = 115 # Slightly slimmer to fit 3 columns
 
-        zero_btn_style = (
-            "QPushButton { font: bold 10pt 'Bebas Kai'; border-radius:4px;"
-            " background: #3464a4; color: white; }"
-            "QPushButton:hover { background: #4682c8; }"
-            "QPushButton:pressed { background: #204a87; }")
-
-        ref_all_btn_style = (
-            "QPushButton { font: bold 10pt 'Bebas Kai'; border-radius:4px;"
-            " background: #4e9a06; color: white; }"
-            "QPushButton:hover { background: #64b408; }")
-
-        ref_btn_style_base = (
-            "QPushButton { font: bold 9pt 'Bebas Kai'; border-radius:4px; }"
-            "QPushButton[homed=true] { background: #4e9a06; color: white; }")
-
         # ── Row 0: Header ───────────────────────────────────────────────────
         
         # ZERO ALL button
         btn_zero_all = QPushButton("ZERO\nALL")
         btn_zero_all.setFixedSize(btn_width, 36)
         btn_zero_all.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        btn_zero_all.setStyleSheet(zero_btn_style)
+        self._add_class(btn_zero_all, "btn-blue")
         btn_zero_all.clicked.connect(lambda: self._zero_axis("ALL"))
         glay.addWidget(btn_zero_all, 0, 0)
 
         # AXIS header
         lbl_axis_hdr = QLabel("AXIS")
-        lbl_axis_hdr.setObjectName("dro_header")
+        self._add_class(lbl_axis_hdr, "dro-header")
         lbl_axis_hdr.setFixedWidth(axis_width)
         lbl_axis_hdr.setAlignment(Qt.AlignmentFlag.AlignCenter)
         glay.addWidget(lbl_axis_hdr, 0, 1)
@@ -452,14 +440,14 @@ class ThorCNC(QObject):
 
         # MACHINE header
         lbl_mach_hdr = QLabel("MACHINE")
-        lbl_mach_hdr.setObjectName("dro_header")
+        self._add_class(lbl_mach_hdr, "dro-header")
         lbl_mach_hdr.setFixedWidth(val_width)
         lbl_mach_hdr.setAlignment(Qt.AlignmentFlag.AlignCenter)
         glay.addWidget(lbl_mach_hdr, 0, 3)
 
         # DTG header (Distance to Go)
         lbl_dtg_hdr = QLabel("DTG")
-        lbl_dtg_hdr.setObjectName("dro_header")
+        self._add_class(lbl_dtg_hdr, "dro-header")
         lbl_dtg_hdr.setFixedWidth(val_width)
         lbl_dtg_hdr.setAlignment(Qt.AlignmentFlag.AlignCenter)
         glay.addWidget(lbl_dtg_hdr, 0, 4)
@@ -468,7 +456,7 @@ class ThorCNC(QObject):
         self._btn_ref_all = QPushButton("REF ALL")
         self._btn_ref_all.setFixedSize(btn_width, 36)
         self._btn_ref_all.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        self._btn_ref_all.setStyleSheet(ref_all_btn_style)
+        self._add_class(self._btn_ref_all, "btn-green")
         self._btn_ref_all.clicked.connect(self._home_all)
         glay.addWidget(self._btn_ref_all, 0, 5)
 
@@ -487,20 +475,20 @@ class ThorCNC(QObject):
             btn_zero.setObjectName("dro_zero_btn")
             btn_zero.setFixedSize(btn_width, 42)
             btn_zero.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-            btn_zero.setStyleSheet(zero_btn_style)
+            self._add_class(btn_zero, "btn-blue")
             btn_zero.clicked.connect(lambda _=False, a=axis: self._zero_axis(a))
             glay.addWidget(btn_zero, i, 0)
 
             # Axis label
             lbl_axis = QLabel(axis)
-            lbl_axis.setObjectName("dro_axis_label")
+            self._add_class(lbl_axis, "dro-axis-label")
             lbl_axis.setFixedWidth(axis_width)
             lbl_axis.setAlignment(Qt.AlignmentFlag.AlignCenter)
             glay.addWidget(lbl_axis, i, 1)
 
             # WORK position
             lbl_work = QLabel("+0.000")
-            lbl_work.setObjectName("dro_work")
+            self._add_class(lbl_work, "dro-value")
             lbl_work.setFixedWidth(val_width)
             lbl_work.setFixedHeight(42)
             lbl_work.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
@@ -508,7 +496,10 @@ class ThorCNC(QObject):
 
             # MACHINE position
             lbl_mach = QLabel("+0.000")
-            lbl_mach.setObjectName("dro_machine")
+            self._add_class(lbl_mach, "dro-value")
+            self._add_class(lbl_mach, "dro-machine") # Multiple classes are supported by space separated string if handled by QSS, but property "class" usually takes one. Actually QSS can match parts.
+            # Wait, Qt property "class" usually is a single string. To match multiple, we use space.
+            lbl_mach.setProperty("class", "dro-value dro-machine")
             lbl_mach.setFixedWidth(val_width)
             lbl_mach.setFixedHeight(42)
             lbl_mach.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
@@ -516,7 +507,9 @@ class ThorCNC(QObject):
 
             # DTG position
             lbl_dtg = QLabel("+0.000")
-            lbl_dtg.setObjectName("dro_dtg")
+            self._add_class(lbl_dtg, "dro-value")
+            self._add_class(lbl_dtg, "dro-dtg")
+            lbl_dtg.setProperty("class", "dro-value dro-dtg")
             lbl_dtg.setFixedWidth(val_width)
             lbl_dtg.setFixedHeight(42)
             lbl_dtg.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
@@ -527,7 +520,7 @@ class ThorCNC(QObject):
             btn_ref.setObjectName("dro_ref_btn")
             btn_ref.setFixedSize(btn_width, 42)
             btn_ref.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-            btn_ref.setStyleSheet(ref_btn_style_base)
+            self._add_class(btn_ref, "btn-green")
             glay.addWidget(btn_ref, i, 5)
             btn_ref.clicked.connect(lambda _=False, j=joint: self._home_joint(j))
 
@@ -3409,7 +3402,7 @@ class ThorCNC(QObject):
         lbl.setText(f'<div style="{style}">{content}</div>')
 
     def _setup_highlight_settings(self):
-        from PySide6.QtWidgets import QLineEdit, QPushButton, QColorDialog
+        from PySide6.QtWidgets import QLineEdit, QPushButton
         ui = self.ui
         s = self.settings
 
@@ -3475,23 +3468,19 @@ class ThorCNC(QObject):
 
         for i, axis in enumerate(("X", "Y", "Z")):
             is_homed = i < len(homed) and homed[i]
-            # DRO work label: grün wenn gehomed, rot wenn nicht
+            # DRO work label: Status via property
             if axis in self._dro_work:
-                color = "#00dd55" if is_homed else "#e74c3c"
-                self._dro_work[axis].setProperty("homed", is_homed)
-                self._dro_work[axis].setStyleSheet(
-                    f"QLabel {{ font: 18pt 'Bebas Kai'; color: {color}; border-radius:3px; padding: 2px 8px; }}")
-            # REF button: grün wenn gehomed
+                lbl = self._dro_work[axis]
+                lbl.setProperty("homed", str(is_homed).lower())
+                lbl.style().unpolish(lbl)
+                lbl.style().polish(lbl)
+            
+            # REF button: Status via property
             if axis in self._dro_ref_btn:
                 btn = self._dro_ref_btn[axis]
-                if is_homed:
-                    btn.setStyleSheet(
-                        "QPushButton { font: bold 10pt 'Bebas Kai'; border-radius:4px;"
-                        " background: #4e9a06; color: white; }"
-                        "QPushButton:hover { background: #64b408; }")
-                else:
-                    btn.setStyleSheet(
-                        "QPushButton { font: bold 9pt 'Bebas Kai'; border-radius:4px; }")
+                btn.setProperty("homed", str(is_homed).lower())
+                btn.style().unpolish(btn)
+                btn.style().polish(btn)
 
     @Slot(float)
     def _on_feed_override(self, val: float):
