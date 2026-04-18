@@ -76,7 +76,7 @@
         "M64 P2",
         "T99 M6 G43"
     ],
-    "theme": "dark",
+    "theme": "light",
     "backplot_msaa_samples": 16,
     "backplot_antialiasing": false,
     "show_html_tab": false,

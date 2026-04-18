@@ -10,7 +10,7 @@ class ToolSelectionDialog(QDialog):
     def __init__(self, tool_data, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Select Tool for M6")
-        self.setMinimumSize(500, 600)
+        self.setMinimumSize(600, 800)
         self.setModal(True)
         self.setWindowFlags(Qt.WindowType.Dialog | Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
