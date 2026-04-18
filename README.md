@@ -134,7 +134,7 @@ DISPLAY = thorcnc
 
 ### Required INI Settings
 
-To enable all industrial features, ensure your machine INI file contains the following entries:
+To enable all features, ensure your machine INI file contains the following entries:
 
 #### 1. UI Loading & Persistence
 ```ini
@@ -144,8 +144,8 @@ DISPLAY = thorcnc
 PREFS_FILE = config.prefs
 ```
 
-#### 2. Industrial Abort Handler
-To use the safe retraction logic when stopping a program, define an `ON_ABORT_COMMAND`:
+#### 2. Abort Handler
+To use the logic when stopping a program, define an `ON_ABORT_COMMAND`:
 ```ini
 [RS274NGC]
 ON_ABORT_COMMAND = O<on_abort> call
