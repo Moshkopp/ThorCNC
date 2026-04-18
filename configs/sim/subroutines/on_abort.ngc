@@ -2,12 +2,13 @@
 (--- Settings -> Machine -> Abort Handler ---)
 
 o<on_abort> sub
-  M5 M9
-    G4 P0.1
-    G54
-    G4 P0.1
+  G90
+  G80
+  M5 
+  M9
+  G4 P0.1
+  G54
+  G4 P0.1
   M65 P0
-    G90 G40
-  G21
 o<on_abort> endsub
 M2

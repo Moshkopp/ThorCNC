@@ -109,5 +109,5 @@
     "hlight_mc_color": "#00ff00",
     "hlight_gc_imp_list": "G43, G54,",
     "hlight_gc_imp_color": "#ffaa00",
-    "abort_gcode": "M5 M9\n  G4 P0.1\n  G54\n  G4 P0.1\nM65 P0\n  G90 G40\nG21"
+    "abort_gcode": "G90\nG80\nM5 \nM9\nG4 P0.1\nG54\nG4 P0.1\nM65 P0\n"
 }

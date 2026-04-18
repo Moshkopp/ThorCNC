@@ -3315,6 +3315,32 @@ class ThorCNC(QObject):
     def _on_gcodes(self, gcodes: tuple):
         self._current_gcodes = gcodes
         self._update_active_codes_display()
+        self._sync_wcs_from_gcodes(gcodes)
+
+    def _sync_wcs_from_gcodes(self, gcodes: tuple):
+        """Extrahiert das WCS aus den aktiven G-Codes und synchronisiert die Combo."""
+        # WCS ist in Modale Gruppe 6: G54=540, G55=550, ..., G59.3=593
+        for g in gcodes:
+            if 540 <= g <= 593:
+                # Berechne den Index (1-9)
+                idx = 0
+                if g <= 590: # G54..G59
+                    idx = (g - 540) // 10 + 1
+                else: # G59.1..G59.3
+                    idx = (g - 590) + 6
+                
+                # Jetzt die Combo synchronisieren
+                combo = getattr(self, "_wcs_combo", None)
+                if combo:
+                    for i in range(combo.count()):
+                        if int(combo.itemData(i) or 0) == idx:
+                            if combo.currentIndex() != i:
+                                # print(f"[ThorCNC] WCS-Sync via G-Code: G{g/10.0:g} -> Index {idx}")
+                                combo.blockSignals(True)
+                                combo.setCurrentIndex(i)
+                                combo.blockSignals(False)
+                            break
+                break
 
     @Slot(tuple)
     def _on_mcodes(self, mcodes: tuple):
