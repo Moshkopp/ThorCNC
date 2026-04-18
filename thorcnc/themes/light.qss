@@ -1322,3 +1322,8 @@ QPushButton#btnToolCancel:hover {
     background-color: #e2e8f0;
     color: #2d3748;
 }
+
+#active_gcodes_label {
+    font-size: 13pt;
+    line-height: 1.2;
+}

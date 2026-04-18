@@ -3,9 +3,9 @@
     "window_geometry": "01d9d0cb0003000000000000000000000000077f000004370000005b0000001c0000074a000004240000000100040000078000000000000000000000077f00000437",
     "window_state": "000000ff00000000fd00000000000007800000041c00000004000000040000000800000008fc00000000",
     "backplot_view": {
-        "distance": 488.75,
-        "elevation": 35,
-        "azimuth": -45,
+        "distance": 1277.0799114229544,
+        "elevation": 8.0,
+        "azimuth": -120.0,
         "center": [
             358.1000061035156,
             200.375,
@@ -25,6 +25,8 @@
     "ts_search_vel": 300.0,
     "ts_probe_vel": 10.0,
     "mdi_history": [
+        "G53 G0 X0",
+        "G53 G0 Y0",
         "G53 G0 Z0",
         "G53 G0 Y0",
         "G53 G0 X0",
@@ -72,9 +74,7 @@
         "G1 Y100 F150",
         "G0 Y250.",
         "G0 Y250",
-        "G0 -Y250",
-        "G0 Y250",
-        "T3 M6 G43"
+        "G0 -Y250"
     ],
     "theme": "dark",
     "backplot_msaa_samples": 16,
@@ -110,5 +110,5 @@
     "hlight_gc_imp_list": "G43, G54,",
     "hlight_gc_imp_color": "#ffaa00",
     "abort_gcode": "G90\nG80\nM5 \nM9\nG4 P0.1\nG54\nG4 P0.1\nM65 P0\n",
-    "homing_g53_conversion": true
+    "homing_g53_conversion": false
 }
