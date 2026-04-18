@@ -102,15 +102,15 @@ QPushButton:checked {
 .btn-blue:pressed { background-color: #2b6cb0; }
 
 .btn-green {
-    background-color: #38a169;
-    color: white;
+    background-color: #edf2f7;
+    color: #4a5568;
     font-family: 'Bebas Kai', 'Noto Sans', sans-serif;
     font-size: 10pt;
     font-weight: bold;
-    border: 1px solid #2f855a;
+    border: 1px solid #cbd5e0;
 }
-.btn-green:hover { background-color: #48bb78; }
-.btn-green[homed="true"] { background-color: #38a169; border-color: #68d391; }
+.btn-green:hover { background-color: #e2e8f0; border-color: #a0aec0; }
+.btn-green.btn-homed { background-color: #38a169; border-color: #68d391; color: white; }
 
 .btn-red {
     background-color: #e53e3e;

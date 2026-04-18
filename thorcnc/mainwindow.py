@@ -2237,8 +2237,8 @@ class ThorCNC(QObject):
             active = self.settings.get("backplot_antialiasing", True)
             self._cb_aa.setChecked(active)
             self._cb_aa.toggled.connect(self._on_aa_toggled)
-            
-            # --- MSAA Samples ---
+
+            gl_gfx.addWidget(self._cb_aa)
             lay_msaa = QHBoxLayout()
             lay_msaa.addWidget(QLabel("MSAA Samples:"))
             self._cb_msaa = QComboBox()
@@ -2338,6 +2338,24 @@ class ThorCNC(QObject):
             lay_color.addWidget(self._btn_probe_color)
             lay_color.addStretch()
             gl_safety.addLayout(lay_color)
+            
+            gl_safety.addSpacing(10)
+            sep2 = QFrame()
+            sep2.setFrameShape(QFrame.Shape.HLine)
+            sep2.setStyleSheet("background-color: #444;")
+            gl_safety.addWidget(sep2)
+            gl_safety.addSpacing(5)
+
+            # Homing conversion
+            self._cb_homing_g53 = QCheckBox("Homing-Buttons umfunktionieren (Ref -> G53 X0)")
+            self._cb_homing_g53.setToolTip("Ersetzt den REF-Button durch G53 X0, sobald die Achse homed ist.")
+            self._cb_homing_g53.setChecked(self.settings.get("homing_g53_conversion", False))
+            self._cb_homing_g53.toggled.connect(
+                lambda checked: (self.settings.set("homing_g53_conversion", checked), 
+                                 self.settings.save(), 
+                                 self._on_homed(getattr(self.poller, "_homed", [])))
+            )
+            gl_safety.addWidget(self._cb_homing_g53)
             
             fl_safety.addWidget(gb_safety)
             fl_safety.addStretch() # Push safety up
@@ -2770,9 +2788,34 @@ class ThorCNC(QObject):
         if btn_m1:
             btn_m1.setChecked(bool(self.poller.stat.optional_stop))
         
-        # Find M6 Button sperren wenn Maschine läuft
+        # Homing / G53 Buttons sperren wenn Maschine läuft
+        is_idle = self.poller.stat.interp_state == linuxcnc.INTERP_IDLE
+        can_mdi = is_idle and not self.poller.stat.estop and self.poller.stat.enabled
+
+        # Z-Safety: G53 X/Y shortcuts only if Z is at machine zero
+        homed = getattr(self.poller, "_homed", [])
+        enable_g53 = self.settings.get("homing_g53_conversion", False)
+        z_mach = getattr(self, "_last_pos", [0,0,-999])[2]
+        z_safe = abs(z_mach) < 0.1 # 0.1mm Toleranz
+
+        if hasattr(self, "_btn_ref_all") and self._btn_ref_all:
+            self._btn_ref_all.setEnabled(can_mdi)
+            
+        for i, axis in enumerate(("X", "Y", "Z")):
+            if axis in self._dro_ref_btn:
+                btn = self._dro_ref_btn[axis]
+                is_homed = i < len(homed) and homed[i]
+                
+                btn_enabled = can_mdi
+                # Wenn G53-Modus für X/Y aktiv ist, prüfen wir Z-Sicherheit
+                if axis in ("X", "Y") and enable_g53 and is_homed:
+                    if not z_safe:
+                        btn_enabled = False
+                
+                btn.setEnabled(btn_enabled)
+
+        # Find M6 Button sperren
         if hasattr(self, "_btn_find_m6") and self._btn_find_m6:
-            is_idle = self.poller.stat.interp_state == linuxcnc.INTERP_IDLE
             self._btn_find_m6.setEnabled(is_idle)
 
     def _toggle_sb_internal(self):
@@ -3505,33 +3548,22 @@ class ThorCNC(QObject):
             if m_str in m_list:
                 color = col_m
                 weight = "bold"
-                
+            
             active_m.append(f'<span style="color: {color}; font-weight: {weight};">{m_str}</span>')
-
-        # Combine into a single vertical list
-        total_active = active_g + active_m
-
-        lbl.setTextFormat(Qt.TextFormat.RichText)
-        # Use larger font size
-        style = "font-size: 13pt; line-height: 1.2;"
-        content = "<br>".join(total_active)
-        lbl.setText(f'<div style="{style}">{content}</div>')
+            
+        all_codes = "<br>".join(active_g + active_m)
+        lbl.setText(f'<html><body>{all_codes}</body></html>')
 
     def _setup_highlight_settings(self):
         from PySide6.QtWidgets import QLineEdit, QPushButton
-        ui = self.ui
         s = self.settings
-
-        # (LineEditName, ButtonName, Prefix)
-        self._hlight_cfg = [
-            ("le_gc_important", "btn_gc_color_important", "hlight_gc_imp"),
-            ("le_gc_warning",   "btn_gc_color_warning",   "hlight_gc_warn"),
-            ("le_mc_highlights", "btn_mc_color",          "hlight_mc"),
-        ]
-
-        for le_name, btn_name, prefix in self._hlight_cfg:
-            le = ui.findChild(QLineEdit, le_name)
-            btn = ui.findChild(QPushButton, btn_name)
+        for prefix, le_name, btn_name in [
+            ("hlight_gc_imp", "le_gc_imp", "btn_gc_imp_color"),
+            ("hlight_gc_warn", "le_gc_warn", "btn_gc_warn_color"),
+            ("hlight_mc", "le_mc", "btn_mc_color"),
+        ]:
+            le = self.ui.findChild(QLineEdit, le_name)
+            btn = self.ui.findChild(QPushButton, btn_name)
             
             if le:
                 le.setText(s.get(f"{prefix}_list", ""))
@@ -3581,6 +3613,12 @@ class ThorCNC(QObject):
         # Update REF ALL button text
         if hasattr(self, "_btn_ref_all"):
             self._btn_ref_all.setText("HOMED" if self._all_joints_homed else "REF ALL")
+            cls = "btn-green btn-homed" if self._all_joints_homed else "btn-green"
+            self._btn_ref_all.setProperty("class", cls)
+            self._btn_ref_all.style().unpolish(self._btn_ref_all)
+            self._btn_ref_all.style().polish(self._btn_ref_all)
+
+        enable_g53 = self.settings.get("homing_g53_conversion", False)
 
         for i, axis in enumerate(("X", "Y", "Z")):
             is_homed = i < len(homed) and homed[i]
@@ -3594,9 +3632,17 @@ class ThorCNC(QObject):
             # REF button: Status via property
             if axis in self._dro_ref_btn:
                 btn = self._dro_ref_btn[axis]
-                btn.setProperty("homed", str(is_homed).lower())
+                
+                if enable_g53 and is_homed:
+                    btn.setText(f"G53 {axis} 0")
+                    btn.setProperty("class", "btn-blue btn-homed")
+                else:
+                    btn.setText(f"REF {axis}")
+                    btn.setProperty("class", "btn-green btn-homed" if is_homed else "btn-green")
+                
                 btn.style().unpolish(btn)
                 btn.style().polish(btn)
+                btn.update()
 
     @Slot(float)
     def _on_feed_override(self, val: float):
@@ -4203,6 +4249,22 @@ class ThorCNC(QObject):
         self.cmd.home(-1)
 
     def _home_joint(self, joint: int):
+        # Check if we should do G53 instead
+        is_homed = False
+        homed_status = getattr(self.poller, "_homed", [])
+        if 0 <= joint < len(homed_status):
+            is_homed = homed_status[joint]
+            
+        enable_g53 = self.settings.get("homing_g53_conversion", False)
+        
+        if enable_g53 and is_homed:
+            # G53 Move
+            axis_map = {0: "X", 1: "Y", 2: "Z"}
+            axis = axis_map.get(joint)
+            if axis:
+                self._send_mdi(f"G53 G0 {axis}0")
+            return
+
         self.cmd.mode(linuxcnc.MODE_MANUAL)
         self.cmd.wait_complete()
         self.cmd.home(joint)
