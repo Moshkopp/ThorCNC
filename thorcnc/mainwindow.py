@@ -1047,6 +1047,7 @@ class ThorCNC(QObject):
         
         self.tool_table = self._w(QTableWidget, "toolTable")
         self.btn_add_tool = self._w(QPushButton, "btn_add_tool")
+        self.btn_delete_tool = self._w(QPushButton, "btn_delete_tool")
         self.btn_reload_tools = self._w(QPushButton, "btn_reload_tools")
         self.btn_save_tools = self._w(QPushButton, "btn_save_tools")
 
@@ -1070,10 +1071,16 @@ class ThorCNC(QObject):
 
         if self.btn_add_tool:
             self.btn_add_tool.clicked.connect(self._add_tool)
+        if self.btn_delete_tool:
+            self.btn_delete_tool.clicked.connect(self._delete_tool)
         if self.btn_reload_tools:
             self.btn_reload_tools.clicked.connect(self._load_tool_table)
         if self.btn_save_tools:
             self.btn_save_tools.clicked.connect(self._save_tool_table)
+
+        # Context Menu
+        self.tool_table.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.tool_table.customContextMenuRequested.connect(self._show_tool_table_context_menu)
 
         self._load_tool_table()
         
@@ -1127,6 +1134,31 @@ class ThorCNC(QObject):
             self._status(f"Error loading tool table: {e}", error=True)
         finally:
             self.tool_table.setSortingEnabled(True)
+
+    def _delete_tool(self):
+        """Löscht die ausgewählten Zeilen aus der Werkzeugliste."""
+        if not self.tool_table: return
+        rows = set()
+        for item in self.tool_table.selectedItems():
+            rows.add(item.row())
+        
+        if not rows and self.tool_table.currentRow() >= 0:
+            rows.add(self.tool_table.currentRow())
+
+        if not rows:
+            return
+
+        # Von unten nach oben löschen, damit die Indizes gültig bleiben
+        for row in sorted(list(rows), reverse=True):
+            self.tool_table.removeRow(row)
+
+    def _show_tool_table_context_menu(self, pos):
+        """Zeigt das Kontextmenü für die Werkzeugliste an."""
+        from PySide6.QtWidgets import QMenu
+        menu = QMenu(self.tool_table)
+        delete_action = menu.addAction("- Ausgewähltes Werkzeug löschen")
+        delete_action.triggered.connect(self._delete_tool)
+        menu.exec(self.tool_table.mapToGlobal(pos))
 
     def _add_tool(self):
         from PySide6.QtWidgets import QTableWidgetItem
