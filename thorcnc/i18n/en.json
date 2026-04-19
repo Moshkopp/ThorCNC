@@ -89,5 +89,9 @@
     "Current Tool": "Current Tool",
     "LOAD": "LOAD",
     "Position (DRO)": "Position (DRO)",
-    "Overrides": "Overrides"
+    "Overrides": "Overrides",
+    "COOLANT (M8)": "COOLANT (M8)",
+    "KÜHLUNG: ": "COOLANT: ",
+    "AN": "ON",
+    "AUS": "OFF"
 }

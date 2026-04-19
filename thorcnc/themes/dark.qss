@@ -369,27 +369,31 @@ QFrame#optExpandPanel {
 }
 
 QPushButton#btn_opt_sb, 
-QPushButton#btn_opt_m1 {
-    font-size: 12pt;
-    min-height: 40px;
-    background: transparent;
+QPushButton#btn_opt_m1,
+QPushButton#btn_opt_coolant {
+    font-size: 13px;
+    min-height: 45px;
+    background-color: #2a2a2a;
     border: 1px solid #333333;
     border-radius: 4px;
-    margin: 1px 6px;
+    margin: 2px 6px;
     color: #b0b0b0;
+    font-weight: bold;
+    padding: 0px;
 }
 
 QPushButton#btn_opt_sb:checked, 
-QPushButton#btn_opt_m1:checked {
+QPushButton#btn_opt_m1:checked,
+QPushButton#btn_opt_coolant:checked {
     background-color: #3a7abf;
     color: white;
     border-color: #5599dd;
 }
 
 QPushButton#btn_opt_sb:hover, 
-QPushButton#btn_opt_m1:hover {
-    background-color: #2a2a2a;
-    border-color: #5599dd;
+QPushButton#btn_opt_m1:hover,
+QPushButton#btn_opt_coolant:hover {
+    background-color: #383838;
 }
 
 /* Specific Machine Buttons */

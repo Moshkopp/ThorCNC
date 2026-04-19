@@ -89,5 +89,9 @@
     "Current Tool": "Aktuelles Werkzeug",
     "LOAD": "LADEN",
     "Position (DRO)": "Position (DRO)",
-    "Overrides": "Anpassungen"
+    "Overrides": "Anpassungen",
+    "COOLANT (M8)": "KÜHLUNG (M8)",
+    "KÜHLUNG: ": "KÜHLUNG: ",
+    "AN": "AN",
+    "AUS": "AUS"
 }

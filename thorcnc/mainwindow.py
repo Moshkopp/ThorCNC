@@ -2953,6 +2953,10 @@ class ThorCNC(QObject):
             btn_sb.clicked.connect(self._toggle_sb_internal)
         if btn_m1:
             btn_m1.clicked.connect(self._toggle_m1_internal)
+        
+        btn_coolant = self.ui.findChild(QPushButton, "btn_opt_coolant")
+        if btn_coolant:
+            btn_coolant.clicked.connect(self._toggle_coolant_internal)
             
         # Status-Sync für die neuen Buttons
         self.poller.periodic.connect(self._sync_opt_buttons)
@@ -2966,10 +2970,23 @@ class ThorCNC(QObject):
             btn_sb.setChecked(self.is_single_block)
         if btn_m1:
             btn_m1.setChecked(bool(self.poller.stat.optional_stop))
-        
+            
         # Homing / G53 Buttons sperren wenn Maschine läuft
         is_idle = self.poller.stat.interp_state == linuxcnc.INTERP_IDLE
-        can_mdi = is_idle and not self.poller.stat.estop and self.poller.stat.enabled
+        is_on = not self.poller.stat.estop and self.poller.stat.enabled
+        can_mdi = is_idle and is_on
+        
+        btn_coolant = self.ui.findChild(QPushButton, "btn_opt_coolant")
+        if btn_coolant:
+            # Button Status NUR vom Poller setzen
+            flood_active = (self.poller.stat.flood > 0)
+            if btn_coolant.isChecked() != flood_active:
+                btn_coolant.blockSignals(True)
+                btn_coolant.setChecked(flood_active)
+                btn_coolant.blockSignals(False)
+                # Display ebenfalls aktualisieren
+                self._update_active_codes_display()
+            btn_coolant.setEnabled(is_on)
 
         # Z-Safety: G53 X/Y shortcuts only if Z is at machine zero
         homed = getattr(self.poller, "_homed", [])
@@ -3006,6 +3023,31 @@ class ThorCNC(QObject):
         self.cmd.set_optional_stop(not curr)
         self._status(f"M1 Optional Stop: {'AN' if not curr else 'AUS'}")
 
+    def _toggle_coolant_internal(self):
+        """Toggles flood coolant (M8/M9)."""
+        curr_stat = self.poller.stat.flood
+        new_state = 1 if curr_stat == 0 else 0
+        
+        print(f"[ThorCNC] Coolant Toggle. Current: {curr_stat} -> Target: {new_state}")
+        
+        # Fresh command object often helps in sim/remote environments
+        c = linuxcnc.command()
+        
+        # If we are in AUTO and running, we MUST use flood()
+        # If we are IDLE, we can also try MDI as a fallback
+        if self.poller.stat.interp_state == linuxcnc.INTERP_IDLE:
+            c.mode(linuxcnc.MODE_MDI)
+            c.wait_complete()
+            c.mdi("M8" if new_state == 1 else "M9")
+        else:
+            c.flood(new_state)
+        
+        # Update UI immediately
+        self._update_active_codes_display()
+        
+        state_text = _t("AN") if new_state == 1 else _t("AUS")
+        self._status(_t("KÜHLUNG: ") + state_text)
+
     def _on_opt_clicked(self):
         """Toggle-Logik für das Jalousie-Panel."""
         if not hasattr(self, "_opt_panel") or not self._opt_panel:
@@ -3014,11 +3056,11 @@ class ThorCNC(QObject):
         is_expanded = self._opt_panel.maximumHeight() > 0
         
         if is_expanded:
-            self._opt_anim.setStartValue(100)
+            self._opt_anim.setStartValue(175)
             self._opt_anim.setEndValue(0)
         else:
             self._opt_anim.setStartValue(0)
-            self._opt_anim.setEndValue(105) # Höhe für 2 Buttons + Spacing
+            self._opt_anim.setEndValue(175) # Höhe für 3 Buttons + Spacing + Margins
             
         self._opt_anim.start()
 
@@ -3725,18 +3767,35 @@ class ThorCNC(QObject):
 
         # Format M-codes
         active_m = []
+        
+        # We handle M8/M9 (flood) and M7 (mist) based on REAL status,
+        # because manual toggles bypass the interpreter's modal list.
+        flood_active = (self.poller.stat.flood > 0)
+        mist_active  = (self.poller.stat.mist > 0)
+        
         for m in self._current_mcodes[1:]:
             if m == -1: continue
-            m_str = f"M{m}".upper()
             
+            # Skip interpreter's M7/M8/M9 - we insert our own based on real status
+            if m in (7, 8, 9):
+                continue
+                
+            m_str = f"M{m}".upper()
             color = col_def
             weight = "normal"
-            
             if m_str in m_list:
                 color = col_m
                 weight = "bold"
-            
             active_m.append(f'<span style="color: {color}; font-weight: {weight};">{m_str}</span>')
+            
+        # Insert real-time coolant codes
+        if flood_active:
+            active_m.append(f'<span style="color: {col_m if "M8" in m_list else col_def}; font-weight: bold;">M8</span>')
+        else:
+            active_m.append(f'<span style="color: {col_def};">M9</span>')
+            
+        if mist_active:
+            active_m.append(f'<span style="color: {col_m if "M7" in m_list else col_def}; font-weight: bold;">M7</span>')
             
         all_codes = "<br>".join(active_g + active_m)
         lbl.setText(f'<html><body>{all_codes}</body></html>')
