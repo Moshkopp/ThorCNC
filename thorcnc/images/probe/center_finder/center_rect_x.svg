@@ -1,12 +1,19 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80">
-  <!-- Workpiece -->
-  <rect x="22" y="22" width="36" height="36" fill="#5a5a5a" rx="2"/>
-  <!-- Center point -->
-  <circle cx="40" cy="40" r="3" fill="#cc22cc" stroke="#ff66ff" stroke-width="1"/>
-  <!-- Arrow Left -->
-  <line x1="4" y1="40" x2="14" y2="40" stroke="white" stroke-width="2"/>
-  <polygon points="14,36 20,40 14,44" fill="white"/>
-  <!-- Arrow Right -->
-  <line x1="76" y1="40" x2="66" y2="40" stroke="white" stroke-width="2"/>
-  <polygon points="66,36 60,40 66,44" fill="white"/>
+
+  <rect x="25" y="15" width="30" height="50" fill="#4a4a4a" stroke="#333" stroke-width="1" rx="2" />
+    <g stroke="#00ff00" stroke-width="1.5" fill="none">
+    <line x1="35" y1="40" x2="45" y2="40" />
+    <line x1="40" y1="35" x2="40" y2="45" />
+    <circle cx="40" cy="40" r="5" />
+  </g>
+  <line x1="40" y1="40" x2="10" y2="40" stroke="#00ff00" stroke-width="1.5" stroke-dasharray="3,3" />
+  <line x1="40" y1="40" x2="70" y2="40" stroke="#00ff00" stroke-width="1.5" stroke-dasharray="3,3" />
+  <g stroke="#00ffff" stroke-width="1.5" fill="none">
+    <line x1="10" y1="40" x2="25" y2="40" />
+    <polyline points="22,37 25,40 22,43" />
+    <line x1="70" y1="40" x2="55" y2="40" />
+    <polyline points="58,37 55,40 58,43" />
+  </g>
+  <circle cx="10" cy="40" r="3" fill="#ff00ff" stroke="none" />
+  <circle cx="70" cy="40" r="3" fill="#ff00ff" stroke="none" />
 </svg>

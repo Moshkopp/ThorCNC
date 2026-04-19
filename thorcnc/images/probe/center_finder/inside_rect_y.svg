@@ -1,14 +1,18 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80">
-  <!-- Pocket work area (grey border) -->
-  <path d="M5,5 H75 V75 H5 Z M20,20 V60 H60 V20 Z" fill="#5a5a5a"/>
-  <!-- Z-Probe point on the rim (Top-Left) -->
-  <circle cx="12" cy="12" r="3" fill="#cc22cc" stroke="#ff66ff" stroke-width="1"/>
-  <!-- Center reference (ghost point) -->
-  <circle cx="40" cy="40" r="1.5" fill="#444"/>
-  <!-- Arrow Top (towards wall) -->
-  <line x1="40" y1="32" x2="40" y2="22" stroke="white" stroke-width="2"/>
-  <polygon points="36,22 40,16 44,22" fill="white"/>
-  <!-- Arrow Bottom (towards wall) -->
-  <line x1="40" y1="48" x2="40" y2="58" stroke="white" stroke-width="2"/>
-  <polygon points="36,58 40,64 44,58" fill="white"/>
+
+  <rect x="5" y="5" width="70" height="70" fill="#4a4a4a" stroke="#333" stroke-width="1" rx="2" />
+  <rect x="15" y="35" width="50" height="30" fill="#1a1a1a" stroke="#000" stroke-width="1.5" rx="2" />
+    <g stroke="#00ff00" stroke-width="1.5" fill="none">
+    <line x1="35" y1="75" x2="45" y2="75" />
+    <line x1="40" y1="70" x2="40" y2="80" />
+    <circle cx="40" cy="75" r="5" />
+  </g>
+  <line x1="40" y1="70" x2="40" y2="50" stroke="#00ff00" stroke-width="1.5" stroke-dasharray="3,3" />
+  <g stroke="#00ffff" stroke-width="1.5" fill="none">
+    <line x1="40" y1="50" x2="40" y2="38" />
+    <polyline points="37,41 40,38 43,41" />
+    <line x1="40" y1="50" x2="40" y2="62" />
+    <polyline points="37,59 40,62 43,59" />
+  </g>
+  <circle cx="40" cy="50" r="3" fill="#ff00ff" stroke="none" />
 </svg>

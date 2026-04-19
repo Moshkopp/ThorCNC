@@ -24,8 +24,18 @@ O<inside_corner_br> sub
     O<check_dia> endif
     #<rapid> = #11
     #<rad> = [#<dia> / 2]
+    #<jump_x> = -[#12]
+    #<jump_y> = #12
     
-    ( 2. X-Probe to right wall )
+    ( 2. Move into Pocket & Plunge )
+    G91
+    G1 X#<jump_x> Y#<jump_y> F#11
+    G90
+    G1 Z-[#8] F#11
+    #<center_x> = #5061
+    #<center_y> = #5062
+    
+    ( 3. X-Probe to right wall )
     G91
     G38.2 X#3 F#5
     G1 X-[#13] F#11
@@ -33,9 +43,9 @@ O<inside_corner_br> sub
     #<x_hit> = #5061
     G1 X-[#13] F#11
     G90
-    G1 X#<start_x> F#11
+    G1 X#<center_x> F#11
     
-    ( 3. Y-Probe to bottom wall )
+    ( 4. Y-Probe to bottom wall )
     G91
     G38.2 Y-[#3] F#5
     G1 Y#13 F#11
@@ -43,9 +53,9 @@ O<inside_corner_br> sub
     #<y_hit> = #5062
     G1 Y#13 F#11
     G90
-    G1 Y#<start_y> F#11
+    G1 Y#<center_y> F#11
     
-    ( 4. Move to Corner & Zero )
+    ( 5. Move to Corner & Zero )
     #<x_corner> = [#<x_hit> + #<rad>]
     #<y_corner> = [#<y_hit> - #<rad>]
     G1 X#<x_corner> Y#<y_corner> F#11

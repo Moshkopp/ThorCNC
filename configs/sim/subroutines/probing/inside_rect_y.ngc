@@ -5,7 +5,7 @@ O<inside_rect_y> sub
     ( 1. Initialization )
     G90 G17 G40 G21
     
-    ( 1. Z-Probe to find floor )
+    ( 1. Z-Probe to find top )
     G91
     G38.2 Z-[#4] F#5
     G1 Z#13 F#11
@@ -26,8 +26,16 @@ O<inside_rect_y> sub
         #<rapid> = [#5 * 2]
     O<check_rapid> endif
     #<rad> = [#<dia> / 2]
+    #<jump_y> = [[#2 / 2] + #12]
     
-    ( 2. Y-Center Finding )
+    ( 2. Move to Center & Plunge )
+    G91
+    G1 Y#<jump_y> F#<rapid>
+    G90
+    G1 Z-[#8] F#<rapid>
+    #<center_y> = #5062
+    
+    ( 3. Y-Center Finding )
     G91
     G38.2 Y-[#3] F#5
     G1 Y#13 F#<rapid>
@@ -35,7 +43,7 @@ O<inside_rect_y> sub
     #<y1> = #5062
     G1 Y#13 F#<rapid>
     G90
-    G1 Y#<start_y> F#<rapid>
+    G1 Y#<center_y> F#<rapid>
     
     G91
     G38.2 Y#3 F#5
@@ -47,7 +55,7 @@ O<inside_rect_y> sub
     
     #<y_center> = [[#<y1> + #<y2>] / 2]
 
-    ( 3. Final Positioning & Zeroing )
+    ( 4. Final Positioning & Zeroing )
     G1 Y#<y_center> F#<rapid>
     O102 if [#9 GT 0.5]
         G10 L20 P0 Y0

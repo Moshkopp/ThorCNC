@@ -1,10 +1,20 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80">
-  <!-- Outside Top-Left Corner (Material is 45x45 in Bottom-Right) -->
-  <rect x="30" y="30" width="45" height="45" fill="#5a5a5a" rx="2"/>
-  <circle cx="45" cy="45" r="6" fill="#cc22cc" stroke="#ff66ff" stroke-width="1"/>
-  <!-- Arrows from Outside -->
-  <line x1="8" y1="45" x2="25" y2="45" stroke="white" stroke-width="2"/>
-  <polygon points="25,41 30,45 25,49" fill="white"/>
-  <line x1="45" y1="8" x2="45" y2="25" stroke="white" stroke-width="2"/>
-  <polygon points="41,25 45,30 49,25" fill="white"/>
+
+  <rect x="35" y="35" width="40" height="40" fill="#4a4a4a" stroke="#333" stroke-width="1" />
+    <g stroke="#00ff00" stroke-width="1.5" fill="none">
+    <line x1="45" y1="55" x2="55" y2="55" />
+    <line x1="50" y1="50" x2="50" y2="60" />
+    <circle cx="50" cy="55" r="5" />
+  </g>
+  <line x1="45" y1="50" x2="20" y2="20" stroke="#00ff00" stroke-width="1.5" stroke-dasharray="3,3" />
+  <g stroke="#00ffff" stroke-width="1.5" fill="none">
+    <line x1="20" y1="55" x2="35" y2="55" />
+    <polyline points="32,52 35,55 32,58" />
+    <line x1="55" y1="20" x2="55" y2="35" />
+    <polyline points="52,32 55,35 58,32" />
+  </g>
+  <line x1="20" y1="20" x2="20" y2="55" stroke="#00ff00" stroke-width="1.5" stroke-dasharray="3,3" />
+  <line x1="20" y1="20" x2="55" y2="20" stroke="#00ff00" stroke-width="1.5" stroke-dasharray="3,3" />
+  <circle cx="35" cy="55" r="3" fill="#ff00ff" stroke="none" />
+  <circle cx="55" cy="35" r="3" fill="#ff00ff" stroke="none" />
 </svg>

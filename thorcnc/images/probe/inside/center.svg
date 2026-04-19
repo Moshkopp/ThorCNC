@@ -1,8 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80">
-  <!-- Inside Center (Pocket floor is 45x45 grey) - NO ARROW -->
-  <rect x="0" y="0" width="80" height="80" fill="#2a2a2a"/>
-  <!-- Pocket Walls (Lighter Grey #5a5a5a) -->
-  <path d="M0,0 L80,0 L80,17.5 L17.5,17.5 L17.5,62.5 L80,62.5 L80,80 L0,80 Z" fill="#5a5a5a"/>
-  <!-- Probe Ball on Floor -->
-  <circle cx="40" cy="40" r="6" fill="#cc22cc" stroke="#ff66ff" stroke-width="1"/>
+  <rect x="5" y="5" width="70" height="70" fill="#4a4a4a" stroke="#333" stroke-width="1" rx="2" />
+  <circle cx="40" cy="40" r="22" fill="#1a1a1a" stroke="#000" stroke-width="1.5" />
+  
+  <g stroke="#00ff00" stroke-width="1.5" fill="none">
+    <line x1="35" y1="40" x2="45" y2="40" />
+    <line x1="40" y1="35" x2="40" y2="45" />
+    <circle cx="40" cy="40" r="5" />
+  </g>
+  
+  <circle cx="40" cy="40" r="3" fill="#ff00ff" stroke="none" />
 </svg>

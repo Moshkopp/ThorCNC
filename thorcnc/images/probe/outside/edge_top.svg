@@ -1,7 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80">
-  <!-- Outside Top Edge (Center) -->
-  <rect x="17.5" y="30" width="45" height="45" fill="#5a5a5a" rx="2"/>
-  <circle cx="40" cy="45" r="6" fill="#cc22cc" stroke="#ff66ff" stroke-width="1"/>
-  <line x1="40" y1="8" x2="40" y2="25" stroke="white" stroke-width="2"/>
-  <polygon points="36,25 40,30 44,25" fill="white"/>
+
+  <rect x="5" y="35" width="70" height="40" fill="#4a4a4a" stroke="#333" stroke-width="1" />
+    <g stroke="#00ff00" stroke-width="1.5" fill="none">
+    <line x1="35" y1="50" x2="45" y2="50" />
+    <line x1="40" y1="45" x2="40" y2="55" />
+    <circle cx="40" cy="50" r="5" />
+  </g>
+  <line x1="40" y1="45" x2="40" y2="20" stroke="#00ff00" stroke-width="1.5" stroke-dasharray="3,3" />
+  <g stroke="#00ffff" stroke-width="1.5" fill="none">
+    <line x1="40" y1="20" x2="40" y2="35" />
+    <polyline points="37,32 40,35 43,32" />
+  </g>
+  <circle cx="40" cy="20" r="3" fill="#ff00ff" stroke="none" />
 </svg>

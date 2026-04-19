@@ -1,10 +1,16 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80">
-  <!-- Inside Top Edge (Pocket wall is Top) -->
-  <rect x="0" y="0" width="80" height="80" fill="#2a2a2a"/>
-  <!-- Top Wall (Grey #5a5a5a) -->
-  <rect x="0" y="0" width="80" height="35" fill="#5a5a5a"/>
-  <!-- Probe Ball on Floor -->
-  <circle cx="40" cy="55" r="6" fill="#cc22cc" stroke="#ff66ff" stroke-width="1"/>
-  <line x1="40" y1="55" x2="40" y2="30" stroke="white" stroke-width="2"/>
-  <polygon points="36,30 40,25 44,30" fill="white"/>
+
+  <rect x="5" y="5" width="70" height="25" fill="#4a4a4a" stroke="#333" stroke-width="1" />
+  <rect x="5" y="30" width="70" height="45" fill="#1a1a1a" stroke="#000" stroke-width="1.5" />
+    <g stroke="#00ff00" stroke-width="1.5" fill="none">
+    <line x1="35" y1="15" x2="45" y2="15" />
+    <line x1="40" y1="10" x2="40" y2="20" />
+    <circle cx="40" cy="15" r="5" />
+  </g>
+  <line x1="40" y1="20" x2="40" y2="45" stroke="#00ff00" stroke-width="1.5" stroke-dasharray="3,3" />
+  <g stroke="#00ffff" stroke-width="1.5" fill="none">
+    <line x1="40" y1="45" x2="40" y2="33" />
+    <polyline points="37,36 40,33 43,36" />
+  </g>
+  <circle cx="40" cy="45" r="3" fill="#ff00ff" stroke="none" />
 </svg>
