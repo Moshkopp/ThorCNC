@@ -459,15 +459,15 @@ class ThorCNC(QObject):
         glay.setSpacing(6)
         
         # Define consistent widths
-        btn_width = 70
-        axis_width = 48
-        val_width = 115 # Slightly slimmer to fit 3 columns
+        btn_width = 85
+        axis_width = 50
+        val_width = 120 # Slightly slimmer to fit 3 columns
 
         # ── Row 0: Header ───────────────────────────────────────────────────
         
         # ZERO ALL button
         btn_zero_all = QPushButton("ZERO\nALL")
-        btn_zero_all.setFixedSize(btn_width, 36)
+        btn_zero_all.setFixedSize(btn_width, 44)
         btn_zero_all.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self._add_class(btn_zero_all, "btn-blue")
         btn_zero_all.clicked.connect(lambda: self._zero_axis("ALL"))
@@ -483,7 +483,7 @@ class ThorCNC(QObject):
         # WCS ComboBox
         self._wcs_combo = QComboBox()
         self._wcs_combo.setFixedWidth(val_width)
-        self._wcs_combo.setFixedHeight(32)
+        self._wcs_combo.setFixedHeight(40)
         self._wcs_combo.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         for label, index in [("G54", 1), ("G55", 2), ("G56", 3), ("G57", 4),
                               ("G58", 5), ("G59", 6), ("G59.1", 7), ("G59.2", 8), ("G59.3", 9)]:
@@ -508,7 +508,7 @@ class ThorCNC(QObject):
 
         # REF ALL button
         self._btn_ref_all = QPushButton("REF ALL")
-        self._btn_ref_all.setFixedSize(btn_width, 36)
+        self._btn_ref_all.setFixedSize(btn_width, 44)
         self._btn_ref_all.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self._add_class(self._btn_ref_all, "btn-green")
         self._btn_ref_all.clicked.connect(self._home_all)
@@ -527,7 +527,7 @@ class ThorCNC(QObject):
             # ZERO button
             btn_zero = QPushButton(f"ZERO\n{axis}")
             btn_zero.setObjectName("dro_zero_btn")
-            btn_zero.setFixedSize(btn_width, 42)
+            btn_zero.setFixedSize(btn_width, 52)
             btn_zero.setFocusPolicy(Qt.FocusPolicy.NoFocus)
             self._add_class(btn_zero, "btn-blue")
             btn_zero.clicked.connect(lambda _=False, a=axis: self._zero_axis(a))
@@ -544,7 +544,7 @@ class ThorCNC(QObject):
             lbl_work = QLabel("+0.000")
             self._add_class(lbl_work, "dro-value")
             lbl_work.setFixedWidth(val_width)
-            lbl_work.setFixedHeight(42)
+            lbl_work.setFixedHeight(52)
             lbl_work.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
             glay.addWidget(lbl_work, i, 2)
 
@@ -555,7 +555,7 @@ class ThorCNC(QObject):
             # Wait, Qt property "class" usually is a single string. To match multiple, we use space.
             lbl_mach.setProperty("class", "dro-value dro-machine")
             lbl_mach.setFixedWidth(val_width)
-            lbl_mach.setFixedHeight(42)
+            lbl_mach.setFixedHeight(52)
             lbl_mach.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
             glay.addWidget(lbl_mach, i, 3)
 
@@ -565,14 +565,14 @@ class ThorCNC(QObject):
             self._add_class(lbl_dtg, "dro-dtg")
             lbl_dtg.setProperty("class", "dro-value dro-dtg")
             lbl_dtg.setFixedWidth(val_width)
-            lbl_dtg.setFixedHeight(42)
+            lbl_dtg.setFixedHeight(52)
             lbl_dtg.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
             glay.addWidget(lbl_dtg, i, 4)
 
             # REF button
             btn_ref = QPushButton(f"REF {axis}")
             btn_ref.setObjectName("dro_ref_btn")
-            btn_ref.setFixedSize(btn_width, 42)
+            btn_ref.setFixedSize(btn_width, 52)
             btn_ref.setFocusPolicy(Qt.FocusPolicy.NoFocus)
             self._add_class(btn_ref, "btn-green")
             glay.addWidget(btn_ref, i, 5)

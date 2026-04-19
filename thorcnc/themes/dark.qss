@@ -1405,6 +1405,32 @@ QPushButton#btnToolCancel:hover {
     color: #ffffff;
 }
 
+/* ── Checkboxes ── */
+QCheckBox {
+    spacing: 8px;
+    color: #e0e0e0;
+    font-size: 11pt;
+    font-weight: bold;
+}
+QCheckBox::indicator {
+    width: 20px;
+    height: 20px;
+    background-color: #1a1a1a;
+    border: 1px solid #444444;
+    border-radius: 4px;
+}
+QCheckBox::indicator:hover {
+    border-color: #3a7abf;
+}
+QCheckBox::indicator:checked {
+    background-color: #3a7abf;
+    border-color: #5599dd;
+    image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'><polyline points='20 6 9 17 4 12'></polyline></svg>");
+}
+QCheckBox::indicator:unchecked {
+    background-color: #1a1a1a;
+}
+
 #active_gcodes_label {
     font-size: 13pt;
     line-height: 1.2;
