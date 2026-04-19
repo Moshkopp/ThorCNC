@@ -32,7 +32,7 @@ O<inside_rect_y> sub
     G91
     G1 Y#<jump_y> F#<rapid>
     G90
-    G1 Z-[#8] F#<rapid>
+    G1 Z-[#<rad> + #8] F#<rapid>
     #<center_y> = #5421
     
     ( 3. Y-Center Finding )

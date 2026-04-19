@@ -31,7 +31,7 @@ O<inside_corner_bl> sub
     G91
     G1 X#<jump_x> Y#<jump_y> F#11
     G90
-    G1 Z-[#8] F#11
+    G1 Z-[#<rad> + #8] F#11
     #<center_x> = #5420
     #<center_y> = #5421
     
@@ -58,11 +58,11 @@ O<inside_corner_bl> sub
     ( 5. Move to Corner & Zero )
     #<x_corner> = [#<x_hit> - #<rad>]
     #<y_corner> = [#<y_hit> - #<rad>]
+    G1 Z#7 F#11
     G1 X#<x_corner> Y#<y_corner> F#11
     O102 if [#9 GT 0.5]
         G10 L20 P0 X0 Y0
     O102 endif
-    G1 Z#7 F#11
 
 O<inside_corner_bl> endsub
 M2

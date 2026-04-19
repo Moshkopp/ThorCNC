@@ -28,7 +28,7 @@ O<outside_edge_bottom> sub
     #<rad> = [#<dia> / 2]
     
     ( 2. Y-Probe from bottom )
-    G1 Y[#<start_y> - #1 - #12] F#<rapid>
+    G1 Y[#<start_y> - #12] F#<rapid>
     G1 Z-[#<rad> + #8] F#<rapid>
     G91
     G38.2 Y[#12 + #3] F#5
@@ -40,11 +40,11 @@ O<outside_edge_bottom> sub
     
     ( 3. Move to Edge & Zero )
     #<y_wall> = [#<y_hit> + #<rad>]
+    G1 Z#7 F#<rapid>
     G1 Y#<y_wall> F#<rapid>
     O102 if [#9 GT 0.5]
         G10 L20 P0 Y0
     O102 endif
-    G1 Z#7 F#<rapid>
 
 O<outside_edge_bottom> endsub
 M2

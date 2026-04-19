@@ -29,7 +29,7 @@ O<inside_edge_bottom> sub
     G91
     G1 Y#<jump_y> F#11
     G90
-    G1 Z-[#8] F#11
+    G1 Z-[#<rad> + #8] F#11
     
     ( 3. Y-Probe to bottom wall )
     G91
@@ -42,11 +42,11 @@ O<inside_edge_bottom> sub
     
     ( 4. Move to Edge & Zero )
     #<y_wall> = [#<y_hit> - #<rad>]
+    G1 Z#7 F#11
     G1 Y#<y_wall> F#11
     O102 if [#9 GT 0.5]
         G10 L20 P0 Y0
     O102 endif
-    G1 Z#7 F#11
 
 O<inside_edge_bottom> endsub
 M2

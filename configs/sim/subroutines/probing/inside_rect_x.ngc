@@ -32,7 +32,7 @@ O<inside_rect_x> sub
     G91
     G1 X#<jump_x> F#<rapid>
     G90
-    G1 Z-[#8] F#<rapid>
+    G1 Z-[#<rad> + #8] F#<rapid>
     #<center_x> = #5420
     
     ( 3. X-Center Finding )

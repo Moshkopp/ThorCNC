@@ -30,7 +30,7 @@ O<outside_corner_bl> sub
     
     ( 2. X-Probe from left )
     ( Travel to approach position: EdgeWidth + XY_Clearance )
-    G1 X[#<start_x> - #1 - #12] Y#<start_y> F#<rapid>
+    G1 X[#<start_x> - #12] Y#<start_y> F#<rapid>
     ( Plunge to depth )
     G1 Z-[#<rad> + #8] F#<rapid>
     
@@ -50,7 +50,7 @@ O<outside_corner_bl> sub
     
     ( 3. Y-Probe from bottom )
     ( Travel to Y approach position )
-    G1 X#<start_x> Y[#<start_y> - #1 - #12] F#<rapid>
+    G1 X#<start_x> Y[#<start_y> - #12] F#<rapid>
     ( Plunge to depth )
     G1 Z-[#<rad> + #8] F#<rapid>
     
@@ -71,6 +71,7 @@ O<outside_corner_bl> sub
     ( 4. Move to Corner & Zero )
     #<x_corner> = [#<x_hit> + #<rad>]
     #<y_corner> = [#<y_hit> + #<rad>]
+    G1 Z#7 F#<rapid>
     
     ( Move to found corner at safe Z )
     G1 X#<x_corner> Y#<y_corner> F#<rapid>
@@ -81,7 +82,6 @@ O<outside_corner_bl> sub
     O102 endif
     
     ( End routine at clearance height Z )
-    G1 Z#7 F#<rapid>
 
 O<outside_corner_bl> endsub
 M2

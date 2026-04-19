@@ -29,7 +29,7 @@ O<inside_edge_left> sub
     G91
     G1 X#<jump_x> F#11
     G90
-    G1 Z-[#8] F#11
+    G1 Z-[#<rad> + #8] F#11
     
     ( 3. X-Probe to left wall )
     G91
@@ -42,11 +42,11 @@ O<inside_edge_left> sub
     
     ( 4. Move to Edge & Zero )
     #<x_wall> = [#<x_hit> - #<rad>]
+    G1 Z#7 F#11
     G1 X#<x_wall> F#11
     O102 if [#9 GT 0.5]
         G10 L20 P0 X0
     O102 endif
-    G1 Z#7 F#11
 
 O<inside_edge_left> endsub
 M2
