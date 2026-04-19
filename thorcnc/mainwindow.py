@@ -16,6 +16,7 @@ from .widgets.gcode_view import GCodeView
 from .widgets.backplot import BackplotWidget
 from .widgets.tool_dialog import ToolSelectionDialog
 from .widgets.simple_view import SimpleView
+from .i18n import TranslationManager, _t
 # from .widgets.opt_options import OptOptionsDialog
 
 _DIR = os.path.dirname(__file__)
@@ -64,7 +65,13 @@ class ThorCNC(QObject):
         self._parse_probe_warning_pins(self._probe_warning_pins_str)
         
         print(f"[ThorCNC] Probe Warning: {'ENABLED' if self._probe_warning_enabled else 'DISABLED'} on pins {self._probe_warning_pins}")
+        
+        # i18n
+        self.i18n = TranslationManager(self.settings.get("language", "Deutsch"))
+        
         self._load_ui()
+        self.i18n.apply_to_widget(self.ui)
+        
         self._replace_custom_widgets()
         self._restore_window_state()
         self._setup_dro()
@@ -1205,9 +1212,9 @@ class ThorCNC(QObject):
                 
             # Reload tool table in LinuxCNC
             self.cmd.load_tool_table()
-            self._status("Tool table saved and reloaded!")
+            self._status(_t("Tool table saved and reloaded!"))
         except Exception as e:
-            self._status(f"Error saving tool table: {e}", error=True)
+            self._status(_t("Error saving tool table: ") + str(e), error=True)
 
     # ── Settings Tab ──────────────────────────────────────────────────────────
 
@@ -1255,7 +1262,7 @@ class ThorCNC(QObject):
             
             self._hal_comp.ready()
             print(f"[HAL] Komponente 'thorcnc' ist READY.")
-            self._status("HAL component 'thorcnc' ready.")
+            self._status(_t("HAL component 'thorcnc' ready."))
             
             # LinuxCNC Core lädt keine Post-GUI Dateien. Dies ist Aufgabe der GUI!
             self._load_postgui_hal()
@@ -2159,7 +2166,7 @@ class ThorCNC(QObject):
         target_probe_tool = probe_tool_sb.value() if probe_tool_sb else 0
 
         if current_tool == 0:
-            self._status("Probing canceled: No tool loaded (T0)", error=True)
+            self._status(_t("Probing canceled: No tool loaded (T0)"), error=True)
             return
 
         if current_tool != target_probe_tool:
@@ -2375,17 +2382,17 @@ class ThorCNC(QObject):
             idx = cb.findText(saved_lang)
             if idx >= 0:
                 cb.setCurrentIndex(idx)
-            cb.currentTextChanged.connect(
-                lambda lang: self.settings.set("language", lang))
+            cb.currentTextChanged.connect(self._on_language_changed)
 
+        # ── UI Settings (Antialiasing, Tabs, etc) ──
         # ── Backplot Antialiasing ──
         if ui_tab := self._w(QWidget, "settings_tab_ui"):
             layout = ui_tab.layout()
-            gb_gfx = QGroupBox("Grafik / Performance")
+            gb_gfx = QGroupBox(_t("Grafik / Performance"))
             # Wir suchen uns einen Platz vor dem vertikalen Spacer
             gl_gfx = QVBoxLayout(gb_gfx)
-            self._cb_aa = QCheckBox("Backplot Antialiasing (Glättung)")
-            self._cb_aa.setToolTip("Verbessert die Linienqualität (MSAA). Erfordert Neustart für volle Wirkung.")
+            self._cb_aa = QCheckBox(_t("Backplot Antialiasing (Glättung)"))
+            self._cb_aa.setToolTip(_t("Verbessert die Linienqualität (MSAA). Erfordert Neustart für volle Wirkung."))
             
             active = self.settings.get("backplot_antialiasing", True)
             self._cb_aa.setChecked(active)
@@ -2393,7 +2400,7 @@ class ThorCNC(QObject):
 
             gl_gfx.addWidget(self._cb_aa)
             lay_msaa = QHBoxLayout()
-            lay_msaa.addWidget(QLabel("MSAA Samples:"))
+            lay_msaa.addWidget(QLabel(_t("MSAA Samples:")))
             self._cb_msaa = QComboBox()
             for x in [2, 4, 8, 16]:
                 self._cb_msaa.addItem(f"{x}x", userData=x)
@@ -2412,21 +2419,21 @@ class ThorCNC(QObject):
             layout.insertWidget(layout.count() - 1, gb_gfx)
 
             # ── Navigation / Tabs ──
-            gb_nav = QGroupBox("Navigation")
+            gb_nav = QGroupBox(_t("Navigation"))
             gl_nav = QVBoxLayout(gb_nav)
-            self._cb_html_tab = QCheckBox("HTML-Tab anzeigen")
+            self._cb_html_tab = QCheckBox(_t("HTML-Tab anzeigen"))
             self._cb_html_tab.setToolTip(
-                "Blendet den HTML/PDF-Dokumenten-Tab in der Navigation ein oder aus.")
+                _t("Blendet den HTML/PDF-Dokumenten-Tab in der Navigation ein oder aus."))
             self._cb_html_tab.setChecked(self.settings.get("show_html_tab", True))
             self._cb_html_tab.toggled.connect(self._on_html_tab_visibility)
             gl_nav.addWidget(self._cb_html_tab)
             layout.insertWidget(layout.count() - 1, gb_nav)
 
             # ── Werkzeugliste ──
-            gb_tools = QGroupBox("Werkzeugliste")
+            gb_tools = QGroupBox(_t("Werkzeugliste"))
             gl_tools = QVBoxLayout(gb_tools)
-            self._cb_show_pocket = QCheckBox("Pocket-Spalte anzeigen")
-            self._cb_show_pocket.setToolTip("Zeigt oder verbirgt die Pocket-Spalte (P) in der Werkzeugliste.")
+            self._cb_show_pocket = QCheckBox(_t("Pocket-Spalte anzeigen"))
+            self._cb_show_pocket.setToolTip(_t("Zeigt oder verbirgt die Pocket-Spalte (P) in der Werkzeugliste."))
             show_pocket = self.settings.get("show_pocket_column", True)
             self._cb_show_pocket.setChecked(show_pocket)
             self._cb_show_pocket.toggled.connect(self._on_show_pocket_column_changed)
@@ -2440,7 +2447,6 @@ class ThorCNC(QObject):
         from PySide6.QtCore import QTimer
         QTimer.singleShot(0, lambda: self._on_html_tab_visibility(
             self.settings.get("show_html_tab", True)))
-
 
         # ── Machine Tab Cleanup & Probe Warning Settings ──────────────────────
         if mach_tab := self._w(QWidget, "settings_tab_machine"):
@@ -2468,26 +2474,26 @@ class ThorCNC(QObject):
             f_safety.setObjectName("safetyFrame")
             
             fl_safety = QVBoxLayout(f_safety)
-            gb_safety = QGroupBox("Maschinensicherheit / Warnungen")
+            gb_safety = QGroupBox(_t("Maschinensicherheit / Warnungen"))
             gl_safety = QVBoxLayout(gb_safety)
             
             # Description
-            lbl_desc = QLabel("<b>Visuelle Taster-Warnung:</b><br>"
+            lbl_desc = QLabel(_t("<b>Visuelle Taster-Warnung:</b><br>"
                               "Färbt die Statuszeile auffällig ein, wenn digitale "
-                              "Ausgänge (M64) aktiv sind (z.B. für 3D-Taster).")
+                              "Ausgänge (M64) aktiv sind (z.B. für 3D-Taster)."))
             lbl_desc.setWordWrap(True)
             lbl_desc.setObjectName("settings_desc_label")
             gl_safety.addWidget(lbl_desc)
             
             # Enable Checkbox
-            self._cb_probe_warn = QCheckBox("Visuelle Warnung aktivieren")
+            self._cb_probe_warn = QCheckBox(_t("Visuelle Warnung aktivieren"))
             self._cb_probe_warn.setChecked(self._probe_warning_enabled)
             self._cb_probe_warn.toggled.connect(self._on_probe_warning_enabled_changed)
             gl_safety.addWidget(self._cb_probe_warn)
             
             # Pins Input
             lay_pins = QHBoxLayout()
-            lay_pins.addWidget(QLabel("M64 P... (Index):"))
+            lay_pins.addWidget(QLabel(_t("M64 P... (Index):")))
             self._le_probe_pins = QLineEdit(self._probe_warning_pins_str)
             self._le_probe_pins.setPlaceholderText("z.B. 0, 2")
             self._le_probe_pins.textChanged.connect(self._on_probe_warning_pins_changed)
@@ -2496,8 +2502,8 @@ class ThorCNC(QObject):
             
             # Color Selector
             lay_color = QHBoxLayout()
-            lay_color.addWidget(QLabel("Warnfarbe:"))
-            self._btn_probe_color = QPushButton("WÄHLEN")
+            lay_color.addWidget(QLabel(_t("Warnfarbe:")))
+            self._btn_probe_color = QPushButton(_t("WÄHLEN"))
             self._btn_probe_color.setFixedWidth(120)
             self._update_probe_color_button()
             self._btn_probe_color.clicked.connect(self._pick_probe_warning_color)
@@ -2513,8 +2519,8 @@ class ThorCNC(QObject):
             gl_safety.addSpacing(5)
 
             # Homing conversion
-            self._cb_homing_g53 = QCheckBox("Homing-Buttons umfunktionieren (Ref -> G53 X0)")
-            self._cb_homing_g53.setToolTip("Ersetzt den REF-Button durch G53 X0, sobald die Achse homed ist.")
+            self._cb_homing_g53 = QCheckBox(_t("Homing-Buttons umfunktionieren (Ref -> G53 X0)"))
+            self._cb_homing_g53.setToolTip(_t("Ersetzt den REF-Button durch G53 X0, sobald die Achse homed ist."))
             self._cb_homing_g53.setChecked(self.settings.get("homing_g53_conversion", False))
             self._cb_homing_g53.toggled.connect(
                 lambda checked: (self.settings.set("homing_g53_conversion", checked), 
@@ -2531,12 +2537,12 @@ class ThorCNC(QObject):
             
             # --- Column 2: Abort Handler (Middle) ---
             col_abort = QVBoxLayout()
-            gb_abort = QGroupBox("Abort Handler (STOP/Fehler)")
+            gb_abort = QGroupBox(_t("Abort Handler (STOP/Fehler)"))
             gl_abort = QVBoxLayout(gb_abort)
             
-            lbl_abort_desc = QLabel("<b>G-Code bei Abbruch:</b><br>"
+            lbl_abort_desc = QLabel(_t("<b>G-Code bei Abbruch:</b><br>"
                                      "Dieser Code wird ausgeführt, wenn das Programm gestoppt wird.<br>"
-                                     "<font color='#aaa'>INI [RS274NGC] ON_ABORT_COMMAND = O&lt;on_abort&gt; call</font>")
+                                     "<font color='#aaa'>INI [RS274NGC] ON_ABORT_COMMAND = O&lt;on_abort&gt; call</font>"))
             lbl_abort_desc.setWordWrap(True)
             gl_abort.addWidget(lbl_abort_desc)
             
@@ -2835,14 +2841,14 @@ class ThorCNC(QObject):
         self.backplot.set_antialiasing(enabled)
         if hasattr(self, "_cb_msaa"):
             self._cb_msaa.setEnabled(enabled)
-        self._status("Antialiasing-Master-Schalter geändert. (MSAA-Level braucht Neustart)")
+        self._status(_t("Antialiasing-Master-Schalter geändert. (MSAA-Level braucht Neustart)"))
 
     def _on_msaa_changed(self, index: int):
         """MSAA Samples (2x, 4x, etc) geändert."""
         val = self._cb_msaa.itemData(index)
         self.settings.set("backplot_msaa_samples", val)
         self.settings.save()
-        self._status(f"MSAA auf {val}x gesetzt. Ein Neustart ist nötig.")
+        self._status(_t("MSAA auf {}x gesetzt. Ein Neustart ist nötig.").format(val))
 
     def _on_html_tab_visibility(self, visible: bool):
         """Blendet den HTML-Tab-Button ein/aus."""
@@ -2889,7 +2895,7 @@ class ThorCNC(QObject):
 
         pos = getattr(self, "_last_pos", None)
         if pos is None:
-            self._status("Keine Positionsdaten verfügbar!", error=True)
+            self._status(_t("Keine Positionsdaten verfügbar!"), error=True)
             return
         mapping = [
             ("dsb_ts_wechsel_x", "ts_wechsel_x", 0),
@@ -2900,7 +2906,7 @@ class ThorCNC(QObject):
             dsb = self._w(QDoubleSpinBox, widget_name)
             if dsb:
                 dsb.setValue(pos[axis_idx])
-        self._status("Change position set from current machine position.")
+        self._status(_t("Change position set from current machine position."))
 
     def _set_taster_pos_from_machine(self):
         """Sets the current machine position as Probe Position X/Y/Z."""
@@ -2915,7 +2921,7 @@ class ThorCNC(QObject):
 
         pos = getattr(self, "_last_pos", None)
         if pos is None:
-            self._status("Keine Positionsdaten verfügbar!", error=True)
+            self._status(_t("Keine Positionsdaten verfügbar!"), error=True)
             return
         mapping = [
             ("dsb_ts_x", "ts_x", 0),
@@ -2926,7 +2932,7 @@ class ThorCNC(QObject):
             dsb = self._w(QDoubleSpinBox, widget_name)
             if dsb:
                 dsb.setValue(pos[axis_idx])
-        self._status("Probe position set from current machine position.")
+        self._status(_t("Probe position set from current machine position."))
 
     def _setup_opt_jalousie(self):
         """Initialisiert die Animation für das OPT-Panel."""
@@ -3031,11 +3037,11 @@ class ThorCNC(QObject):
         self._btn_edit_gcode.style().polish(self._btn_edit_gcode)
         
         if is_edit:
-            self._status("G-CODE EDIT MODE ENABLED")
+            self._status(_t("G-CODE EDIT MODE ENABLED"))
             # Update save button state based on current modification
             self._on_gcode_modification_changed(self.gcode_view.document().isModified())
         else:
-            self._status("G-CODE EDIT MODE DISABLED")
+            self._status(_t("G-CODE EDIT MODE DISABLED"))
             self._btn_save_gcode.setEnabled(False)
 
     @Slot(bool)
@@ -3056,7 +3062,7 @@ class ThorCNC(QObject):
     def _on_save_gcode(self):
         """Speichert den aktuell editierten G-Code zurück in die Datei."""
         if not self._user_program or not os.path.exists(self._user_program):
-            self._status("SAVE FAILED: NO FILE LOADED")
+            self._status(_t("SAVE FAILED: NO FILE LOADED"))
             return
             
         try:
@@ -3118,7 +3124,15 @@ class ThorCNC(QObject):
             self.gcode_view.set_current_line(found_idx + 1, move_cursor=True)
             self._status(f"M6 gefunden in Zeile {found_idx + 1}")
         else:
-            self._status("Kein M6 im Programm gefunden.")
+            self._status(_t("Kein M6 im Programm gefunden."))
+
+    def _on_language_changed(self, lang: str):
+        """Callback: Sprache geändert."""
+        if lang == self.settings.get("language"):
+            return
+        self.settings.set("language", lang)
+        self.settings.save()
+        self._status(_t("Sprache geändert. Ein Neustart ist erforderlich."), error=True)
 
     def _connect_signals(self):
         p = self.poller
@@ -4346,7 +4360,7 @@ class ThorCNC(QObject):
         import subprocess
         try:
             subprocess.Popen(["halshow"], start_new_session=True)
-            self._status("HAL Show gestartet.")
+            self._status(_t("HAL Show gestartet."))
         except Exception as e:
             self._status(f"Konnte halshow nicht starten: {e}", error=True)
 
@@ -4355,7 +4369,7 @@ class ThorCNC(QObject):
         import subprocess
         try:
             subprocess.Popen(["halscope"], start_new_session=True)
-            self._status("HAL Scope gestartet.")
+            self._status(_t("HAL Scope gestartet."))
         except Exception as e:
             self._status(f"Konnte halscope nicht starten: {e}", error=True)
 
@@ -4367,7 +4381,7 @@ class ThorCNC(QObject):
             # If it's a CLI tool, it might need a terminal emulator.
             # But we'll try launching it directly first as the user requested it.
             subprocess.Popen(["linuxcnctop"], start_new_session=True)
-            self._status("LinuxCNC Status (top) gestartet.")
+            self._status(_t("LinuxCNC Status (top) gestartet."))
         except Exception as e:
             self._status(f"Konnte linuxcnctop nicht starten: {e}", error=True)
 
@@ -4390,7 +4404,7 @@ class ThorCNC(QObject):
             start_t = time.time()
             timeout = 60.0 # Sekunden
             
-            self._status("Fahrt auf Home-Position (G53) läuft...")
+            self._status(_t("Fahrt auf Home-Position (G53) läuft..."))
             
             while time.time() - start_t < timeout:
                 # Wir geben der GUI Zeit zum Atmen und Aktualisieren
@@ -4404,7 +4418,7 @@ class ThorCNC(QObject):
             
             self.cmd.mode(old_mode)
             self.cmd.wait_complete()
-            self._status("Home-Position erreicht.")
+            self._status(_t("Home-Position erreicht."))
         except Exception as e:
             self._status(f"Homing error: {e}", error=True)
 

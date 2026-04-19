@@ -2,6 +2,7 @@ from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLineEdit,
                              QTableWidget, QTableWidgetItem, QPushButton, 
                              QLabel, QHeaderView, QAbstractItemView, QFrame)
 from PySide6.QtCore import Qt, Slot
+from ..i18n import _t
 
 class ToolSelectionDialog(QDialog):
     """
@@ -9,7 +10,7 @@ class ToolSelectionDialog(QDialog):
     """
     def __init__(self, tool_data, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Select Tool for M6")
+        self.setWindowTitle(_t("Select Tool for M6"))
         self.setMinimumSize(600, 800)
         self.setModal(True)
         self.setWindowFlags(Qt.WindowType.Dialog | Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint)
@@ -35,61 +36,52 @@ class ToolSelectionDialog(QDialog):
         layout.setContentsMargins(25, 25, 25, 25)
 
         # Header
-        header_label = QLabel("MANUAL TOOL SELECTION")
+        header_label = QLabel(_t("MANUAL TOOL SELECTION"))
         header_label.setObjectName("toolDialogHeader")
         header_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(header_label)
 
         # Search field
-        layout.addWidget(QLabel("FILTER TOOLS:"))
+        layout.addWidget(QLabel(_t("FILTER TOOLS:")))
         self.search_input = QLineEdit()
         self.search_input.setObjectName("toolSearchInput")
-        self.search_input.setPlaceholderText("Type tool number or name...")
+        self.search_input.setPlaceholderText(_t("Type tool number or name..."))
         self.search_input.textChanged.connect(self._on_search_changed)
         self.search_input.returnPressed.connect(self._accept_from_search)
         layout.addWidget(self.search_input)
 
-        # Table
-        self.table = QTableWidget(0, 3)
-        self.table.setObjectName("toolSelectionTable")
+        # Tool Table
+        self.table = QTableWidget()
+        self.table.setColumnCount(3)
+        self.table.setHorizontalHeaderLabels([_t("Tool (T)"), _t("Diameter (D)"), _t("Description")])
+        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
+        self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.table.setSelectionMode(QAbstractItemView.SingleSelection)
+        self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.table.setAlternatingRowColors(True)
-        self.table.setHorizontalHeaderLabels(["T#", "DIAMETER", "COMMENT"])
-        self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
-        self.table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
-        self.table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.table.verticalHeader().setVisible(False)
         self.table.itemDoubleClicked.connect(self.accept)
-        
-        header = self.table.horizontalHeader()
-        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Fixed)
-        header.setSectionResizeMode(1, QHeaderView.ResizeMode.Fixed)
-        header.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
-        self.table.setColumnWidth(0, 60)
-        self.table.setColumnWidth(1, 110)
-        
         layout.addWidget(self.table)
-        self._populate_table()
 
-        # Buttons
+        # Action Buttons
         btn_layout = QHBoxLayout()
-        btn_layout.setSpacing(10)
-        btn_layout.addStretch()
-        
-        self.btn_cancel = QPushButton("CANCEL")
-        self.btn_cancel.setObjectName("btnToolCancel")
-        self.btn_cancel.setMinimumWidth(120)
+        self.btn_cancel = QPushButton(_t("CANCEL"))
+        self.btn_cancel.setObjectName("toolDialogCancel")
+        self.btn_cancel.setFixedHeight(50)
         self.btn_cancel.clicked.connect(self.reject)
-        btn_layout.addWidget(self.btn_cancel)
         
-        self.btn_confirm = QPushButton("SELECT TOOL")
-        self.btn_confirm.setObjectName("btnToolConfirm")
-        self.btn_confirm.setMinimumWidth(150)
+        self.btn_confirm = QPushButton(_t("SELECT TOOL"))
+        self.btn_confirm.setObjectName("toolDialogConfirm")
+        self.btn_confirm.setFixedHeight(50)
         self.btn_confirm.clicked.connect(self.accept)
+        
+        btn_layout.addWidget(self.btn_cancel)
         btn_layout.addWidget(self.btn_confirm)
-
         layout.addLayout(btn_layout)
         
         self.search_input.setFocus()
+        self._populate_table()
 
     def _populate_table(self):
         self.table.setRowCount(0)

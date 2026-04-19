@@ -1,5 +1,6 @@
 from PySide6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QFrame
 from PySide6.QtCore import Qt, Property
+from ..i18n import _t
 
 class M6Dialog(QDialog):
     """
@@ -7,7 +8,7 @@ class M6Dialog(QDialog):
     """
     def __init__(self, tool_number: int, tool_data: dict = None, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Manual Tool Change")
+        self.setWindowTitle(_t("Manual Tool Change"))
         self.setMinimumSize(500, 450)
         self.setWindowFlags(Qt.WindowType.Dialog | Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
@@ -31,7 +32,7 @@ class M6Dialog(QDialog):
         content_layout.setSpacing(15)
 
         # Header
-        header_label = QLabel("MANUAL TOOL CHANGE")
+        header_label = QLabel(_t("MANUAL TOOL CHANGE"))
         header_label.setObjectName("m6Header")
         header_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         content_layout.addWidget(header_label)
@@ -48,31 +49,25 @@ class M6Dialog(QDialog):
         content_layout.addWidget(self.tool_frame)
         
         # Details section
-        details_layout = QVBoxLayout()
-        details_layout.setSpacing(10)
+        details_frame = QFrame()
+        details_frame.setObjectName("m6DetailsFrame")
+        details_layout = QVBoxLayout(details_frame)
         
-        # Description (Comment)
-        comment = self._tool_data.get('comment', '--- No Description ---')
-        self.lbl_desc = QLabel(comment)
-        self.lbl_desc.setObjectName("m6ToolDescription")
-        self.lbl_desc.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.lbl_desc.setWordWrap(True)
-        details_layout.addWidget(self.lbl_desc)
+        desc = self._tool_data.get('description', '---')
+        dia = self._tool_data.get('diameter', '0.000')
         
-        # Diameter Badge (Centered)
-        dia = self._tool_data.get('diameter', 0.0)
-        self.lbl_dia = QLabel(f"DIAMETER: {dia:.2f} mm")
-        self.lbl_dia.setObjectName("m6ToolSpec")
-        self.lbl_dia.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        details_layout.addWidget(self.lbl_dia, 0, Qt.AlignmentFlag.AlignCenter)
+        lbl_desc = QLabel(f"<b>{_t('Description')}:</b> {desc}")
+        lbl_dia = QLabel(f"<b>{_t('Diameter (D)')}:</b> {dia} mm")
         
-        content_layout.addLayout(details_layout)
+        details_layout.addWidget(lbl_desc)
+        details_layout.addWidget(lbl_dia)
+        content_layout.addWidget(details_frame)
         
         content_layout.addStretch()
 
         # Confirm Button
-        self.btn_confirm = QPushButton("LOADED & SECURED")
-        self.btn_confirm.setObjectName("m6ConfirmBtn")
-        self.btn_confirm.setMinimumHeight(60)
+        self.btn_confirm = QPushButton(_t("LOADED & SECURED"))
+        self.btn_confirm.setObjectName("m6ConfirmButton")
+        self.btn_confirm.setFixedHeight(60)
         self.btn_confirm.clicked.connect(self.accept)
         content_layout.addWidget(self.btn_confirm)
