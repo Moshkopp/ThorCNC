@@ -1757,12 +1757,37 @@ class ThorCNC(QObject):
 
 
     def _update_probe_marker_pos(self):
-        """Reposition the Home marker to bottom-left of its parent frame."""
+        """Reposition the Home marker based on INI limits. Default is bottom-left."""
         if hasattr(self, "_probe_marker") and hasattr(self, "_probe_grid_frm"):
+            w = self._probe_grid_frm.width()
             h = self._probe_grid_frm.height()
             sz = self._probe_marker_sz
-            # Align with 12px margin
-            self._probe_marker.move(12, h - sz - 12)
+            
+            # Default: Bottom-Left (12px margin)
+            x = 12
+            y = h - sz - 12
+
+            # Try to detect from INI
+            if self.ini:
+                try:
+                    # X Axis
+                    h_x = float(self.ini.find("JOINT_0", "HOME") or 0.0)
+                    min_x = float(self.ini.find("AXIS_X", "MIN_LIMIT") or 0.0)
+                    max_x = float(self.ini.find("AXIS_X", "MAX_LIMIT") or 1000.0)
+                    if abs(h_x - max_x) < abs(h_x - min_x):
+                        x = w - sz - 12 # Move to Right
+
+                    # Y Axis
+                    h_y = float(self.ini.find("JOINT_1", "HOME") or 0.0)
+                    min_y = float(self.ini.find("AXIS_Y", "MIN_LIMIT") or 0.0)
+                    max_y = float(self.ini.find("AXIS_Y", "MAX_LIMIT") or 1000.0)
+                    # Note: Y-axis in Qt is top-down, so "Top" is small Y value
+                    if abs(h_y - max_y) < abs(h_y - min_y):
+                        y = 12 # Move to Top
+                except:
+                    pass
+
+            self._probe_marker.move(x, y)
             self._probe_marker.raise_()
             self._probe_marker.show()
 
