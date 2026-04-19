@@ -158,27 +158,6 @@ class SimpleView(QWidget):
 
         from PySide6.QtWidgets import QPushButton
         from PySide6.QtCore import Qt
-        
-        # Style matching the industrial dark theme
-        btn_style = """
-            QPushButton {
-                background-color: #34495e;
-                color: #ffffff;
-                border: 1px solid #5d6d7e;
-                border-radius: 4px;
-                font-size: 11pt;
-                font-weight: bold;
-                padding: 4px 12px;
-                min-height: 32px;
-            }
-            QPushButton:hover {
-                background-color: #3a7abf; /* ThorCNC Blue */
-                border-color: #3498db;
-            }
-            QPushButton:pressed {
-                background-color: #2980b9;
-            }
-        """
 
         views = [
             ("ISO",   self.backplot.set_view_iso),
@@ -190,7 +169,7 @@ class SimpleView(QWidget):
 
         for label, fn in views:
             btn = QPushButton(label)
-            btn.setStyleSheet(btn_style)
+            btn.setObjectName("simple_backplot_btn")
             btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
             btn.clicked.connect(fn)
             tb_lay.addWidget(btn)

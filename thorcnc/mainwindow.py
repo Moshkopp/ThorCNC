@@ -6,8 +6,8 @@ directly to LinuxCNC via custom implementations (no qtpyvcp).
 import os
 import re
 import linuxcnc
-from PySide6.QtWidgets import QMainWindow, QHBoxLayout, QLabel, QFrame, QPushButton
-from PySide6.QtCore import Qt, QObject, Slot, QTimer, QPropertyAnimation, QEasingCurve
+from PySide6.QtWidgets import QMainWindow, QHBoxLayout, QLabel, QFrame, QPushButton, QTableWidgetItem
+from PySide6.QtCore import Qt, QObject, Slot, QTimer, QPropertyAnimation, QEasingCurve, QByteArray
 from PySide6.QtUiTools import QUiLoader
 
 from .status_poller import StatusPoller
@@ -20,6 +20,12 @@ from .widgets.simple_view import SimpleView
 
 _DIR = os.path.dirname(__file__)
 
+class NumericTableWidgetItem(QTableWidgetItem):
+    def __lt__(self, other):
+        try:
+            return float(self.text()) < float(other.text())
+        except (ValueError, TypeError):
+            return super().__lt__(other)
 
 class ThorCNC(QObject):
     """
@@ -809,15 +815,15 @@ class ThorCNC(QObject):
         from PySide6.QtGui import QIcon
         if self._btn_nav_up:
             self._btn_nav_up.setText("")
-            self._btn_nav_up.setIcon(QIcon.fromTheme("go-up"))
             self._btn_nav_up.setFixedWidth(60)
             self._btn_nav_up.setToolTip("Übergeordnetes Verzeichnis")
             
         if self._btn_nav_home:
             self._btn_nav_home.setText("")
-            self._btn_nav_home.setIcon(QIcon.fromTheme("go-home"))
             self._btn_nav_home.setFixedWidth(60)
             self._btn_nav_home.setToolTip("Home-Verzeichnis")
+
+        self._update_nav_icons()
 
         self._breadcrumb_container = self._w(QWidget, "breadcrumb_container")
         self._breadcrumb_layout = None
@@ -921,7 +927,7 @@ class ThorCNC(QObject):
         for part in parts:
             # Separator
             sep = QLabel("›")
-            sep.setStyleSheet("color: #666; font-weight: bold; margin: 0 2px;")
+            sep.setObjectName("breadcrumb_sep")
             self._breadcrumb_layout.addWidget(sep)
             
             current_acc = os.path.join(current_acc, part)
@@ -1035,6 +1041,7 @@ class ThorCNC(QObject):
             if tab := self._w(QTabWidget, "tabWidget"):
                 tab.setCurrentIndex(0)
 
+
     def _setup_tool_table(self):
         from PySide6.QtWidgets import QTableWidget, QPushButton
         
@@ -1045,6 +1052,10 @@ class ThorCNC(QObject):
 
         if not self.tool_table:
             return
+
+        # UI Cleanup for tool table
+        self.tool_table.verticalHeader().setVisible(False)
+        self.tool_table.setSortingEnabled(True)
 
         # Path resolvieren
         self._tool_tbl_path = None
@@ -1075,9 +1086,11 @@ class ThorCNC(QObject):
     def _load_tool_table(self):
         import os, re
         from PySide6.QtWidgets import QTableWidgetItem
+        from PySide6.QtCore import Qt
         if not self._tool_tbl_path or not os.path.exists(self._tool_tbl_path):
             return
 
+        self.tool_table.setSortingEnabled(False)
         self.tool_table.setRowCount(0)
         try:
             with open(self._tool_tbl_path, "r", encoding="utf-8") as f:
@@ -1095,16 +1108,25 @@ class ThorCNC(QObject):
                     d = re.search(r'D([+-]?\d*\.\d+|\d+)', data)
                     z = re.search(r'Z([+-]?\d*\.\d+|\d+)', data)
                     
+                    dia_str = d.group(1) if d else ""
+                    if dia_str.startswith("+"):
+                        dia_str = dia_str[1:]
+                    
                     row = self.tool_table.rowCount()
                     self.tool_table.insertRow(row)
                     
-                    self.tool_table.setItem(row, 0, QTableWidgetItem(t.group(1) if t else ""))
-                    self.tool_table.setItem(row, 1, QTableWidgetItem(p.group(1) if p else ""))
-                    self.tool_table.setItem(row, 2, QTableWidgetItem(d.group(1) if d else ""))
-                    self.tool_table.setItem(row, 3, QTableWidgetItem(z.group(1) if z else ""))
+                    self.tool_table.setItem(row, 0, NumericTableWidgetItem(t.group(1) if t else ""))
+                    self.tool_table.setItem(row, 1, NumericTableWidgetItem(p.group(1) if p else ""))
+                    self.tool_table.setItem(row, 2, NumericTableWidgetItem(dia_str))
+                    self.tool_table.setItem(row, 3, NumericTableWidgetItem(z.group(1) if z else ""))
                     self.tool_table.setItem(row, 4, QTableWidgetItem(comment))
+            
+            # Sort by Tool Number initially
+            self.tool_table.sortByColumn(0, Qt.SortOrder.AscendingOrder)
         except Exception as e:
             self._status(f"Error loading tool table: {e}", error=True)
+        finally:
+            self.tool_table.setSortingEnabled(True)
 
     def _add_tool(self):
         from PySide6.QtWidgets import QTableWidgetItem
@@ -1128,8 +1150,8 @@ class ThorCNC(QObject):
             
             ts = t.text().strip() if t and t.text().strip() else ""
             ps = p.text().strip() if p and p.text().strip() else ""
-            ds = d.text().strip() if d and d.text().strip() else ""
-            zs = z.text().strip() if z and z.text().strip() else ""
+            ds = d.text().strip().replace(",", ".") if d and d.text().strip() else ""
+            zs = z.text().strip().replace(",", ".") if z and z.text().strip() else ""
             cs = c.text().strip() if c and c.text().strip() else ""
             
             if not ts: continue # T is required
@@ -2223,10 +2245,7 @@ class ThorCNC(QObject):
         left_lay.setSpacing(2)
         left_lay.addWidget(QLabel("HTML / PDF im NGC-Ordner:"))
         self._html_list = QListWidget()
-        self._html_list.setStyleSheet(
-            "QListWidget::item { padding: 4px 6px; }"
-            "QListWidget::item:selected { background:#2d5fa8; color:white; }"
-            "QListWidget::item:hover { background:#2a2a2a; }")
+        self._html_list.setObjectName("html_doc_list")
         left_lay.addWidget(self._html_list)
         left.setMinimumWidth(160)
         splitter.addWidget(left)
@@ -2371,6 +2390,20 @@ class ThorCNC(QObject):
             gl_nav.addWidget(self._cb_html_tab)
             layout.insertWidget(layout.count() - 1, gb_nav)
 
+            # ── Werkzeugliste ──
+            gb_tools = QGroupBox("Werkzeugliste")
+            gl_tools = QVBoxLayout(gb_tools)
+            self._cb_show_pocket = QCheckBox("Pocket-Spalte anzeigen")
+            self._cb_show_pocket.setToolTip("Zeigt oder verbirgt die Pocket-Spalte (P) in der Werkzeugliste.")
+            show_pocket = self.settings.get("show_pocket_column", True)
+            self._cb_show_pocket.setChecked(show_pocket)
+            self._cb_show_pocket.toggled.connect(self._on_show_pocket_column_changed)
+            gl_tools.addWidget(self._cb_show_pocket)
+            layout.insertWidget(layout.count() - 1, gb_tools)
+            
+            # Initiale Sichtbarkeit anwenden
+            self._on_show_pocket_column_changed(show_pocket)
+
         # Initiale Sichtbarkeit anwenden (nach dem UI-Aufbau)
         from PySide6.QtCore import QTimer
         QTimer.singleShot(0, lambda: self._on_html_tab_visibility(
@@ -2401,7 +2434,6 @@ class ThorCNC(QObject):
             f_safety = QFrame()
             f_safety.setFrameShape(QFrame.Shape.StyledPanel)
             f_safety.setObjectName("safetyFrame")
-            f_safety.setStyleSheet("QFrame#safetyFrame { border: 1px solid #444; border-radius: 4px; background-color: rgba(255,255,255,5); }")
             
             fl_safety = QVBoxLayout(f_safety)
             gb_safety = QGroupBox("Maschinensicherheit / Warnungen")
@@ -2412,7 +2444,7 @@ class ThorCNC(QObject):
                               "Färbt die Statuszeile auffällig ein, wenn digitale "
                               "Ausgänge (M64) aktiv sind (z.B. für 3D-Taster).")
             lbl_desc.setWordWrap(True)
-            lbl_desc.setStyleSheet("color: #aaa; margin-bottom: 4px;")
+            lbl_desc.setObjectName("settings_desc_label")
             gl_safety.addWidget(lbl_desc)
             
             # Enable Checkbox
@@ -2444,7 +2476,7 @@ class ThorCNC(QObject):
             gl_safety.addSpacing(10)
             sep2 = QFrame()
             sep2.setFrameShape(QFrame.Shape.HLine)
-            sep2.setStyleSheet("background-color: #444;")
+            sep2.setObjectName("settings_separator")
             gl_safety.addWidget(sep2)
             gl_safety.addSpacing(5)
 
@@ -2793,6 +2825,13 @@ class ThorCNC(QObject):
                 html_idx = self._html_tab_index()
                 if tab.currentIndex() == html_idx:
                     tab.setCurrentIndex(0)
+
+    def _on_show_pocket_column_changed(self, visible: bool):
+        """Blendet die Pocket-Spalte in der Werkzeugliste ein/aus."""
+        if self.tool_table:
+            self.tool_table.setColumnHidden(1, not visible)
+        self.settings.set("show_pocket_column", visible)
+        self.settings.save()
 
     def _html_tab_index(self) -> int:
         """Gibt den tabWidget-Index von tab_html zurück."""
@@ -4066,12 +4105,18 @@ class ThorCNC(QObject):
         log: QListWidget = self.ui.findChild(QListWidget, "status_log")
         if log is None:
             return
+        # Ensure alternating rows are disabled (sometimes UI file setting is overridden)
+        log.setAlternatingRowColors(False)
         ts = QDateTime.currentDateTime().toString("HH:mm:ss")
         item = QListWidgetItem(f"[{ts}]  {msg}")
         if error:
             item.setForeground(QColor("#ff5555"))
         else:
-            item.setForeground(QColor("#aaaaaa"))
+            theme = self.settings.get("theme", "dark")
+            if theme == "light":
+                item.setForeground(QColor("#1a2332"))
+            else:
+                item.setForeground(QColor("#d0d0d0"))
         log.addItem(item)
         log.scrollToBottom()
 
@@ -4128,21 +4173,7 @@ class ThorCNC(QObject):
             self._lbl_simple_view_indicator.setObjectName("simple_view_indicator")
             self._lbl_simple_view_indicator.setAlignment(_Qt.AlignmentFlag.AlignCenter)
             # Subtle styling: Blue border instead of solid background
-            self._lbl_simple_view_indicator.setStyleSheet("""
-                QLabel#simple_view_indicator {
-                    background-color: transparent;
-                    color: #3a7abf;
-                    font-weight: bold;
-                    font-size: 9pt;
-                    padding: 1px 40px;
-                    border: 1px solid #3a7abf;
-                    border-radius: 4px;
-                }
-                QLabel#simple_view_indicator:hover {
-                    background-color: rgba(58, 122, 191, 40);
-                    color: #ffffff;
-                }
-            """)
+            # Styling via QSS: QLabel#simple_view_indicator
             
             # Create a container to hold and center everything
             container = QWidget()
@@ -4162,7 +4193,7 @@ class ThorCNC(QObject):
             # Configure status bar
             sb.setVisible(True)
             sb.setMinimumHeight(28)
-            sb.setStyleSheet("QStatusBar { background: #1a1a1a; border-top: 1px solid #444444; }")
+            # Styling via QSS: QStatusBar
             sb.clearMessage()
             sb.addWidget(container, 1)
             
@@ -4475,6 +4506,32 @@ class ThorCNC(QObject):
         from .main import load_theme
         load_theme(QApplication.instance(), name)
         self.settings.set("theme", name)
+        self._update_nav_icons()
+
+    def _update_nav_icons(self):
+        theme = self.settings.get("theme", "dark")
+        color = "#1a2332" if theme == "light" else "#ffffff"
+        
+        up_svg = f"""<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>"""
+        home_svg = f"""<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>"""
+        
+        from PySide6.QtGui import QPixmap, QIcon
+        from PySide6.QtCore import QByteArray
+        
+        def svg_to_icon(svg_str):
+            pixmap = QPixmap()
+            # Try loading as SVG format explicitly
+            if not pixmap.loadFromData(QByteArray(svg_str.encode('utf-8')), "SVG"):
+                # Fallback or debug print could go here
+                pass
+            return QIcon(pixmap)
+
+        if hasattr(self, "_btn_nav_up") and self._btn_nav_up:
+            self._btn_nav_up.setIcon(svg_to_icon(up_svg))
+            self._btn_nav_up.setIconSize(self._btn_nav_up.size() * 0.7)
+        if hasattr(self, "_btn_nav_home") and self._btn_nav_home:
+            self._btn_nav_home.setIcon(svg_to_icon(home_svg))
+            self._btn_nav_home.setIconSize(self._btn_nav_home.size() * 0.7)
 
     def _drain_startup_errors(self):
         """Liest den LinuxCNC Error-Channel einmalig beim Start aus und loggt alle Meldungen."""

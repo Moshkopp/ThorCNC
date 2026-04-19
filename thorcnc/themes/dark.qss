@@ -127,7 +127,7 @@ QPushButton:checked {
     font-weight: bold;
     border: 1px solid #4a4a4a;
 }
-.btn-green:hover { background-color: #4a4a4a; border-color: #666666; }
+.btn-green:hover { background-color: #4a4a4a; border-color: #17dc62ff; }
 .btn-green.btn-homed { background-color: #4e9a06; border-color: #a4ef0a; }
 
 .btn-red {
@@ -1086,12 +1086,15 @@ QLabel#jog_vel_label {
 /* ── Status Log ── */
 QListWidget#status_log {
     font-family: monospace;
-    font-size: 11px;
+    font-size: 12px;
+    color: #d0d0d0;
+    background-color: #1a1a1a;
 }
 
 QListWidget#status_log::item {
     padding: 3px 6px;
-    border-bottom: 1px solid #333333;
+    border-bottom: 1px solid #2a2a2a;
+    color: #d0d0d0;
 }
 
 /* ── Tool Labels (Status Bar) ── */
@@ -1434,4 +1437,92 @@ QCheckBox::indicator:unchecked {
 #active_gcodes_label {
     font-size: 13pt;
     line-height: 1.2;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   Selektoren für ehemals hardcoded Styles
+   ══════════════════════════════════════════════════════════════════ */
+
+/* ── Breadcrumb Separator ── */
+QLabel#breadcrumb_sep {
+    color: #666666;
+    font-weight: bold;
+    margin: 0 2px;
+    background: transparent;
+    border: none;
+}
+
+/* ── HTML/PDF Document List ── */
+QListWidget#html_doc_list::item {
+    padding: 4px 6px;
+}
+QListWidget#html_doc_list::item:selected {
+    background: #2d5fa8;
+    color: white;
+}
+QListWidget#html_doc_list::item:hover {
+    background: #2a2a2a;
+}
+
+/* ── Settings Safety Frame ── */
+QFrame#safetyFrame {
+    border: 1px solid #444444;
+    border-radius: 4px;
+    background-color: rgba(255, 255, 255, 5);
+}
+
+/* ── Settings Description Label ── */
+QLabel#settings_desc_label {
+    color: #aaaaaa;
+    margin-bottom: 4px;
+}
+
+/* ── Settings Separator Line ── */
+QFrame#settings_separator {
+    background-color: #444444;
+}
+
+/* ── Simple View Indicator (Statusbar) ── */
+QLabel#simple_view_indicator {
+    background-color: transparent;
+    color: #3a7abf;
+    font-weight: bold;
+    font-size: 9pt;
+    padding: 1px 40px;
+    border: 1px solid #3a7abf;
+    border-radius: 4px;
+}
+
+/* ── StatusBar ── */
+QStatusBar {
+    background: #1a1a1a;
+    border-top: 1px solid #444444;
+}
+
+/* ── Persistent Status Message ── */
+QLabel#persistent_status_msg {
+    color: #cccccc;
+    font-weight: bold;
+    margin-left: 10px;
+}
+
+/* ── Simple View Backplot Toolbar Buttons ── */
+QPushButton#simple_backplot_btn {
+    background-color: #34495e;
+    color: #ffffff;
+    border: 1px solid #5d6d7e;
+    border-radius: 4px;
+    font-size: 11pt;
+    font-weight: bold;
+    padding: 4px 12px;
+    min-height: 32px;
+}
+
+QPushButton#simple_backplot_btn:hover {
+    background-color: #3a7abf;
+    border-color: #3498db;
+}
+
+QPushButton#simple_backplot_btn:pressed {
+    background-color: #2980b9;
 }
