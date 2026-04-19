@@ -140,15 +140,10 @@ class StatusPoller(QObject):
             self.interp_changed.emit(s.interp_state)
 
         # -- Position update --
-        # During homing, LinuxCNC is in "Joint Mode" (TRAJ_MODE_FREE).
-        # In this mode, Cartesian 'actual_position' often doesn't update on real machines.
-        # We switch to 'joint_actual_position' if we are in joint mode to ensure the DRO moves.
-        if s.motion_mode == linuxcnc.TRAJ_MODE_FREE:
-            # We take the first 3 joints as a mapping for X, Y, Z
-            pos = list(s.joint_actual_position[:3])
-        else:
-            # Standard Cartesian world mode
-            pos = list(s.actual_position[:3])
+        # Always use Cartesian 'actual_position'. In modern LinuxCNC (2.8+),
+        # this updates correctly even during TRAJ_MODE_FREE (Homing), avoiding
+        # joint-to-axis mapping issues on gantry machines.
+        pos = list(s.actual_position[:3])
             
         if pos != self._position:
             self._position = pos
