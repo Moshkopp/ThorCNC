@@ -3558,9 +3558,9 @@ class ThorCNC(QObject):
         from PySide6.QtWidgets import QLineEdit, QPushButton
         s = self.settings
         for prefix, le_name, btn_name in [
-            ("hlight_gc_imp", "le_gc_imp", "btn_gc_imp_color"),
-            ("hlight_gc_warn", "le_gc_warn", "btn_gc_warn_color"),
-            ("hlight_mc", "le_mc", "btn_mc_color"),
+            ("hlight_gc_imp", "le_gc_important", "btn_gc_color_important"),
+            ("hlight_gc_warn", "le_gc_warning", "btn_gc_color_warning"),
+            ("hlight_mc", "le_mc_highlights", "btn_mc_color"),
         ]:
             le = self.ui.findChild(QLineEdit, le_name)
             btn = self.ui.findChild(QPushButton, btn_name)
