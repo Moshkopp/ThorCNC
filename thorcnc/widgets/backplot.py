@@ -309,7 +309,7 @@ class _BackplotGL(QWidget):
         # Alle Linien-Items durchgehen
         for item in self._view.items:
             if isinstance(item, gl.GLLinePlotItem):
-                item.setAntialiasing(enabled)
+                item.setData(antialias=enabled)
             elif isinstance(item, gl.GLScatterPlotItem):
                  # ScatterPlotItems haben oft kein explizites setAntialiasing in pyqtgraph-opengl
                  # aber die globalen pg-options helfen ggf.
