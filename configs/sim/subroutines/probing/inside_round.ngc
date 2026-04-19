@@ -34,11 +34,11 @@ O<inside_round> sub
     G1 X#<jump_x> F#<rapid>
     G90
     G1 Z-[#8] F#<rapid>
-    #<center_x> = #5061
+    #<center_x> = #5420
     
     ( 3. X-Center Finding )
     G91
-    G38.2 X-[#3] F#5
+    G38.2 X-[[#1 / 2] + #3] F#5
     G1 X#13 F#<rapid>
     G38.2 X-[#13 * 1.5] F#6
     #<x1> = #5061
@@ -47,7 +47,7 @@ O<inside_round> sub
     G1 X#<center_x> F#<rapid>
     
     G91
-    G38.2 X#3 F#5
+    G38.2 X[[#1 / 2] + #3] F#5
     G1 X-[#13] F#<rapid>
     G38.2 X[#13 * 1.5] F#6
     #<x2> = #5061
@@ -59,7 +59,7 @@ O<inside_round> sub
 
     ( 4. Y-Center Finding )
     G91
-    G38.2 Y-[#3] F#5
+    G38.2 Y-[[#1 / 2] + #3] F#5
     G1 Y#13 F#<rapid>
     G38.2 Y-[#13 * 1.5] F#6
     #<y1> = #5062
@@ -68,7 +68,7 @@ O<inside_round> sub
     G1 Y#<start_y> F#<rapid>
     
     G91
-    G38.2 Y#3 F#5
+    G38.2 Y[[#1 / 2] + #3] F#5
     G1 Y-[#13] F#<rapid>
     G38.2 Y[#13 * 1.5] F#6
     #<y2> = #5062
