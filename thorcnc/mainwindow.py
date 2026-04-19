@@ -1306,7 +1306,7 @@ class ThorCNC(QObject):
         outer.addWidget(title)
 
         # Table
-        cols = ["WCS", "X", "Y", "Z", ""]
+        cols = ["WCS", "X", "Y", "Z", "R", ""]
         tbl = QTableWidget(len(self._WCS_LIST), len(cols))
         tbl.setObjectName("offsetTable")
         tbl.setHorizontalHeaderLabels(cols)
@@ -1321,9 +1321,10 @@ class ThorCNC(QObject):
         hdr.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
         hdr.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
         hdr.setSectionResizeMode(3, QHeaderView.ResizeMode.Stretch)
-        hdr.setSectionResizeMode(4, QHeaderView.ResizeMode.Fixed)
+        hdr.setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)
+        hdr.setSectionResizeMode(5, QHeaderView.ResizeMode.Fixed)
         tbl.setColumnWidth(0, 100)
-        tbl.setColumnWidth(4, 110)
+        tbl.setColumnWidth(5, 110)
         tbl.verticalHeader().setDefaultSectionSize(48)
 
         _bold = QFont()
@@ -1337,7 +1338,7 @@ class ThorCNC(QObject):
             name_item.setFont(_bold)
             tbl.setItem(row, 0, name_item)
             # X / Y / Z (Platzhalter – werden per _refresh_offsets_table befüllt)
-            for col in range(1, 4):
+            for col in range(1, 5):
                 it = QTableWidgetItem("–")
                 it.setTextAlignment(_Qt.AlignmentFlag.AlignRight | _Qt.AlignmentFlag.AlignVCenter)
                 tbl.setItem(row, col, it)
@@ -1347,7 +1348,7 @@ class ThorCNC(QObject):
             btn.setFocusPolicy(_Qt.FocusPolicy.NoFocus)
             btn.setFixedSize(80, 30)
             btn.clicked.connect(lambda _=False, n=p_idx: self._clear_wcs(n))
-            tbl.setCellWidget(row, 4, btn)
+            tbl.setCellWidget(row, 5, btn)
 
         outer.addWidget(tbl)
         # Removed stretch to allow table to fill the space
@@ -1377,7 +1378,7 @@ class ThorCNC(QObject):
         tbl = self._offset_table
 
         for row, (_, _, base) in enumerate(self._WCS_LIST):
-            for col, offset in enumerate((0, 1, 2)):
+            for col, offset in enumerate((0, 1, 2, 9)):
                 val = params.get(base + offset, 0.0)
                 it = tbl.item(row, col + 1)
                 if it:
@@ -1393,7 +1394,7 @@ class ThorCNC(QObject):
         for row, (_, p_idx, _) in enumerate(self._WCS_LIST):
             active = p_idx == index
             bg = QColor("#194a82") if active else QColor("#252525")
-            for col in range(4):
+            for col in range(6):
                 it = tbl.item(row, col)
                 if it:
                     it.setBackground(bg)
@@ -1403,10 +1404,10 @@ class ThorCNC(QObject):
         try:
             self.cmd.mode(linuxcnc.MODE_MDI)
             self.cmd.wait_complete()
-            self.cmd.mdi(f"G10 L2 P{p_idx} X0 Y0 Z0")
+            self.cmd.mdi(f"G10 L2 P{p_idx} X0 Y0 Z0 R0")
             self.cmd.wait_complete()
             self.cmd.mode(linuxcnc.MODE_MANUAL)
-            self._status(f"WCS G{53 + p_idx if p_idx <= 6 else '59.' + str(p_idx - 6)} → X0 Y0 Z0")
+            self._status(f"WCS G{53 + p_idx if p_idx <= 6 else '59.' + str(p_idx - 6)} → X0 Y0 Z0 R0")
             self._offset_var_mtime = 0.0   # mtime invalidieren → sofortiger Refresh
         except Exception as e:
             self._status(f"Offset clear error: {e}")
@@ -1432,7 +1433,8 @@ class ThorCNC(QObject):
         for obj_name, mode in [
             ("btn_mode_outside", "OUTSIDE CORNERS"),
             ("btn_mode_inside",  "INSIDE CORNERS"),
-            ("btn_mode_center",  "CENTER FINDER")
+            ("btn_mode_center",  "CENTER FINDER"),
+            ("btn_mode_angle",  "EDGE ANGLE")
         ]:
             if btn := self._w(QPushButton, obj_name):
                 self._probe_mode_grp.addButton(btn)
@@ -1615,6 +1617,37 @@ class ThorCNC(QObject):
 
         self._probe_stack.addWidget(p)
         self._probe_pages["CENTER FINDER"] = p
+
+        # ANGLE FINDER page
+        ANGLE_CELLS = [
+            (0, 1, "angle_edge_top",    "edge_top.svg"),
+            (1, 0, "angle_edge_left",   "edge_left.svg"),
+            (1, 2, "angle_edge_right",  "edge_right.svg"),
+            (2, 1, "angle_edge_bottom", "edge_bottom.svg"),
+        ]
+        p_angle = make_grid_page("outside", ANGLE_CELLS)
+        
+        # Reparent Edge Width to this page
+        lay_angle = p_angle.layout()
+        from PySide6.QtWidgets import QLabel, QDoubleSpinBox, QHBoxLayout
+        lbl_ew = self._w(QLabel, "lbl_probe_param_edge_width")
+        dsb_ew = self._w(QDoubleSpinBox, "dsb_probe_edge_width")
+        if lbl_ew and dsb_ew:
+            lbl_ew.setText("MEASUREMENT DIST")
+            # Create a horizontal layout for it
+            hl = QHBoxLayout()
+            hl.addWidget(lbl_ew)
+            hl.addWidget(dsb_ew)
+            lay_angle.addLayout(hl, 3, 0, 1, 3)
+            lbl_ew.setVisible(True)
+            dsb_ew.setVisible(True)
+            # Set constraints
+            dsb_ew.setMinimum(-9999)
+            dsb_ew.setMaximum(9999)
+
+        self._probe_stack.addWidget(p_angle)
+        self._probe_pages["EDGE ANGLE"] = p_angle
+
 
 
 
@@ -1952,7 +1985,8 @@ class ThorCNC(QObject):
         btn_map = {
             "OUTSIDE CORNERS": "btn_mode_outside",
             "INSIDE CORNERS":  "btn_mode_inside",
-            "CENTER FINDER":   "btn_mode_center"
+            "CENTER FINDER":   "btn_mode_center",
+            "EDGE ANGLE":      "btn_mode_angle"
         }
         if mode in btn_map:
             if btn := self._w(QPushButton, btn_map[mode]):
@@ -2041,7 +2075,7 @@ class ThorCNC(QObject):
 
         # Parameter für Center Finder und Corners/Edges sammeln
         params = ""
-        is_corner_edge = ngc_name.startswith("outside_") or ngc_name.startswith("inside_")
+        is_corner_edge = ngc_name.startswith("outside_") or ngc_name.startswith("inside_") or ngc_name.startswith("angle_")
         if ngc_name.startswith("center_") or is_corner_edge:
             from PySide6.QtWidgets import QLineEdit, QDoubleSpinBox
             def val(name, default="0.0"):
