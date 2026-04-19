@@ -53,11 +53,16 @@ class M6Dialog(QDialog):
         details_frame.setObjectName("m6DetailsFrame")
         details_layout = QVBoxLayout(details_frame)
         
-        desc = self._tool_data.get('description', '---')
+        desc = self._tool_data.get('comment', '---')
         dia = self._tool_data.get('diameter', '0.000')
         
-        lbl_desc = QLabel(f"<b>{_t('Description')}:</b> {desc}")
-        lbl_dia = QLabel(f"<b>{_t('Diameter (D)')}:</b> {dia} mm")
+        lbl_desc = QLabel(f"{desc}")
+        lbl_desc.setObjectName("m6ToolDescription")
+        lbl_desc.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        lbl_dia = QLabel(f"Ø {dia} mm")
+        lbl_dia.setObjectName("m6ToolSpec")
+        lbl_dia.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
         details_layout.addWidget(lbl_desc)
         details_layout.addWidget(lbl_dia)
@@ -67,7 +72,7 @@ class M6Dialog(QDialog):
 
         # Confirm Button
         self.btn_confirm = QPushButton(_t("LOADED & SECURED"))
-        self.btn_confirm.setObjectName("m6ConfirmButton")
-        self.btn_confirm.setFixedHeight(60)
+        self.btn_confirm.setObjectName("m6ConfirmBtn")
+        self.btn_confirm.setFixedHeight(120)
         self.btn_confirm.clicked.connect(self.accept)
         content_layout.addWidget(self.btn_confirm)

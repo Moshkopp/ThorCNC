@@ -1224,7 +1224,7 @@ QLabel#m6ToolNumLarge {
 
 QLabel#m6ToolDescription {
     color: #1e293b;
-    font-size: 20pt;
+    font-size: 24pt;
     font-weight: bold;
     font-style: italic;
     padding: 15px;
@@ -1235,25 +1235,25 @@ QLabel#m6ToolDescription {
 
 QLabel#m6ToolSpec {
     color: #64748b;
-    font-size: 12pt;
+    font-size: 18pt;
     background-color: #eef1f6;
     padding: 6px 16px;
     border: 1px solid #b8c4d0;
-    border-radius: 20px;
+    border-radius: 10px;
 }
 
 QPushButton#m6ConfirmBtn {
-    background-color: #16a34a;
+    background-color: #27ae60;
     color: white;
-    font-size: 16pt;
+    font-size: 22pt;
     font-weight: bold;
-    border: none;
-    border-radius: 8px;
-    padding: 10px;
+    border: 2px solid #1e8449;
+    border-radius: 12px;
 }
 
 QPushButton#m6ConfirmBtn:hover {
-    background-color: #22c55e;
+    background-color: #2ecc71;
+    border: 2px solid #1e293b;
 }
 
 /* ── Tool Selection Dialog ── */
