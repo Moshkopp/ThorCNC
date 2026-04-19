@@ -1665,18 +1665,35 @@ class ThorCNC(QObject):
             gl.setContentsMargins(12, 12, 12, 12)
             gl.addWidget(self._probe_stack, 0, 0)
             # Fixed Home-Marker bottom-left (X=left, Y=bottom → origin)
-            self._probe_marker_sz = 16
-            self._probe_marker = QLabel("⌂", frm)
+            self._probe_marker_sz = 22
+            self._probe_marker = QLabel("⌂", self.ui.tab_probing)
             self._probe_marker.setFixedSize(self._probe_marker_sz, self._probe_marker_sz)
             self._probe_marker.setAlignment(Qt.AlignCenter)
             self._probe_marker.setStyleSheet(
                 f"background:#e67e00;color:white;border-radius:{self._probe_marker_sz//2}px;"
                 "font-size:8pt;font-weight:bold;")
             self._probe_marker.setToolTip("Machine Zero")
+
+            # Orange Corner Accent
+            from PySide6.QtWidgets import QFrame
+            self._probe_home_accent = QFrame(self.ui.tab_probing)
+            self._probe_home_accent.setFixedSize(14, 14)
+            self._probe_home_accent.setStyleSheet("background:#e67e00; border-radius:3px;")
+            self._probe_home_accent.lower() # Place behind icon
+            
+            # L-Shaped Corner Accent (inside the frame)
+            self._probe_corner_accent = QFrame(frm)
+            self._probe_corner_accent.setFixedSize(20, 20)
+            self._probe_corner_accent.setAttribute(Qt.WA_TransparentForMouseEvents)
             
             # Install event filter to handle resize
             self._probe_grid_frm = frm
             self._probe_grid_frm.installEventFilter(self)
+            
+            # Remove the previous unsuccessful accent
+            if hasattr(self, "_probe_home_accent"):
+                self._probe_home_accent.deleteLater()
+                del self._probe_home_accent
             
             # Initial placement
             QTimer.singleShot(100, self._update_probe_marker_pos)
@@ -1757,15 +1774,22 @@ class ThorCNC(QObject):
 
 
     def _update_probe_marker_pos(self):
-        """Reposition the Home marker based on INI limits. Default is bottom-left."""
+        """Reposition the Home marker based on INI limits. Badge-style on the edge."""
+        from PySide6.QtCore import QPoint
         if hasattr(self, "_probe_marker") and hasattr(self, "_probe_grid_frm"):
             w = self._probe_grid_frm.width()
             h = self._probe_grid_frm.height()
             sz = self._probe_marker_sz
             
-            # Default: Bottom-Left (12px margin)
-            x = 12
-            y = h - sz - 12
+            # Absolute position relative to the tab
+            pos_in_tab = self._probe_grid_frm.mapTo(self.ui.tab_probing, QPoint(0, 0))
+            
+            # Sit exactly on the border (half icon size)
+            badge_offset = - (sz // 2)
+            
+            # Default: Bottom-Left
+            x = pos_in_tab.x() + badge_offset
+            y = pos_in_tab.y() + h + badge_offset
 
             # Try to detect from INI
             if self.ini:
@@ -1775,21 +1799,40 @@ class ThorCNC(QObject):
                     min_x = float(self.ini.find("AXIS_X", "MIN_LIMIT") or 0.0)
                     max_x = float(self.ini.find("AXIS_X", "MAX_LIMIT") or 1000.0)
                     if abs(h_x - max_x) < abs(h_x - min_x):
-                        x = w - sz - 12 # Move to Right
+                        x = pos_in_tab.x() + w + badge_offset # Right
 
                     # Y Axis
                     h_y = float(self.ini.find("JOINT_1", "HOME") or 0.0)
                     min_y = float(self.ini.find("AXIS_Y", "MIN_LIMIT") or 0.0)
                     max_y = float(self.ini.find("AXIS_Y", "MAX_LIMIT") or 1000.0)
-                    # Note: Y-axis in Qt is top-down, so "Top" is small Y value
                     if abs(h_y - max_y) < abs(h_y - min_y):
-                        y = 12 # Move to Top
+                        y = pos_in_tab.y() + badge_offset # Top
                 except:
                     pass
 
             self._probe_marker.move(x, y)
             self._probe_marker.raise_()
             self._probe_marker.show()
+            
+            # Position the L-accent inside the frame corner
+            if hasattr(self, "_probe_corner_accent"):
+                # Determine which borders to color based on position
+                is_right = x > pos_in_tab.x() + (w/2)
+                is_bottom = y > pos_in_tab.y() + (h/2)
+                
+                # Create a CSS that colors only the corner borders
+                border_x = "right" if is_right else "left"
+                border_y = "bottom" if is_bottom else "top"
+                
+                style = f"background: transparent; border-{border_x}: 4px solid #e67e00; border-{border_y}: 4px solid #e67e00;"
+                self._probe_corner_accent.setStyleSheet(style)
+                
+                # Move to the absolute corner of the frame
+                ax = w - 20 if is_right else 0
+                ay = h - 20 if is_bottom else 0
+                self._probe_corner_accent.move(ax, ay)
+                self._probe_corner_accent.show()
+                self._probe_corner_accent.raise_()
 
     def eventFilter(self, watched, event):
         from PySide6.QtCore import QEvent
