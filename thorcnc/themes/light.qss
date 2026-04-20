@@ -222,50 +222,45 @@ QPushButton#btn_opt:hover {
     color: white;
 }
 
-#combo_machine_mode {
-    background-color: #ffffff;
+/* ── Flyout System (Sidebar) ── */
+QPushButton[is_flyout_toggle="true"] {
+    background-color: #f8f9fb;
     border: 1px solid #b8c4d0;
     border-radius: 6px;
-    padding: 0px 5px;
-    min-width: 180px;
-    min-height: 40px;
-    max-height: 40px;
+    color: #64748b;
     font-weight: bold;
-    font-size: 11pt;
-    color: #16a34a;
-    qproperty-comboboxPopup: 0;
+    font-size: 13pt;
+    padding: 10px;
 }
-#combo_machine_mode::drop-down {
-    subcontrol-origin: padding;
-    subcontrol-position: top right;
-    width: 24px;
-    border-left: 1px solid #b8c4d0;
-    border-top-right-radius: 6px;
-    border-bottom-right-radius: 6px;
-}
-#combo_machine_mode::down-arrow {
-    width: 12px;
-    height: 12px;
-}
-#combo_machine_mode:hover {
-    border-color: #94a3b8;
-    background-color: #f8f9fb;
-}
-#combo_machine_mode QAbstractItemView {
+QPushButton[is_flyout_toggle="true"]:hover {
     background-color: #ffffff;
-    border: 1px solid #2563eb;
-    border-radius: 6px;
-    outline: none;
-    padding: 5px;
+    border-color: #2563eb;
 }
-#combo_machine_mode QAbstractItemView::item {
-    min-height: 60px;
-    padding-left: 20px;
+
+QFrame#flyout_panel_mode, QFrame#flyout_panel_shorts, QFrame#flyout_panel_opt {
+    background-color: #f1f5f9;
+    border: 2px solid #2563eb;
+    border-top-right-radius: 12px;
+    border-bottom-right-radius: 12px;
+    border-left: none;
+}
+
+QPushButton#btn_flyout_item {
+    background-color: #ffffff;
     color: #1e293b;
-    border-bottom: 1px solid #e2e8f0;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-weight: bold;
+    font-size: 13pt;
+    margin: 2px;
 }
-#combo_machine_mode QAbstractItemView::item:selected {
+QPushButton#btn_flyout_item:hover {
     background-color: #2563eb;
+    color: white;
+}
+QPushButton#btn_flyout_item[active="true"] {
+    background-color: #2563eb;
+    border: 2px solid #1d4ed8;
     color: white;
 }
 

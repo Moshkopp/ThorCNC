@@ -240,50 +240,45 @@ QPushButton#btn_opt:hover {
     color: white;
 }
 
-#combo_machine_mode {
-    background-color: #2a2a2a;
+/* ── Flyout System (Sidebar) ── */
+QPushButton[is_flyout_toggle="true"] {
+    background-color: #1a1a1a;
     border: 1px solid #444444;
     border-radius: 6px;
-    padding: 0px 5px;
-    min-width: 180px;
-    min-height: 40px;
-    max-height: 40px;
+    color: #e0e0e0;
     font-weight: bold;
-    font-size: 11pt;
-    color: #2ecc71; 
-    qproperty-comboboxPopup: 0;
+    font-size: 13pt;
+    padding: 10px;
 }
-#combo_machine_mode::drop-down {
-    subcontrol-origin: padding;
-    subcontrol-position: top right;
-    width: 24px;
-    border-left: 1px solid #444444;
-    border-top-right-radius: 6px;
-    border-bottom-right-radius: 6px;
+QPushButton[is_flyout_toggle="true"]:hover {
+    background-color: #2a2a2a;
+    border-color: #3a7abf;
 }
-#combo_machine_mode::down-arrow {
-    width: 12px;
-    height: 12px;
+
+QFrame#flyout_panel_mode, QFrame#flyout_panel_shorts, QFrame#flyout_panel_opt {
+    background-color: #151515;
+    border: 2px solid #3a7abf;
+    border-top-right-radius: 12px;
+    border-bottom-right-radius: 12px;
+    border-left: none;
 }
-#combo_machine_mode:hover {
-    border-color: #555555;
-    background-color: #333333;
-}
-#combo_machine_mode QAbstractItemView {
-    background-color: #1e1e1e;
-    border: 1px solid #3a7abf;
-    border-radius: 6px;
-    outline: none;
-    padding: 5px;
-}
-#combo_machine_mode QAbstractItemView::item {
-    min-height: 60px;
-    padding-left: 20px;
+
+QPushButton#btn_flyout_item {
+    background-color: #222222;
     color: #ffffff;
-    border-bottom: 1px solid #333;
+    border: 1px solid #444444;
+    border-radius: 8px;
+    font-weight: bold;
+    font-size: 13pt;
+    margin: 2px;
 }
-#combo_machine_mode QAbstractItemView::item:selected {
+QPushButton#btn_flyout_item:hover {
     background-color: #3a7abf;
+    border-color: #5599ff;
+}
+QPushButton#btn_flyout_item[active="true"] {
+    background-color: #3a7abf;
+    border: 2px solid #5599ff;
     color: white;
 }
 

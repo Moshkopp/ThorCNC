@@ -1,0 +1,6 @@
+o<goto_zero_xy> sub
+    (ThorCNC: Goto Zero XY Safe Move)
+    G53 G0 Z0
+    G0 X0 Y0
+o<goto_zero_xy> endsub
+M2

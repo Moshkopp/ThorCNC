@@ -6,8 +6,11 @@ directly to LinuxCNC via custom implementations (no qtpyvcp).
 import os
 import re
 import linuxcnc
-from PySide6.QtWidgets import QMainWindow, QHBoxLayout, QLabel, QFrame, QPushButton, QTableWidgetItem
-from PySide6.QtCore import Qt, QObject, Slot, QTimer, QPropertyAnimation, QEasingCurve, QByteArray
+from PySide6.QtWidgets import (QMainWindow, QHBoxLayout, QLabel, QFrame, QPushButton, 
+                               QTableWidgetItem, QWidget, QVBoxLayout, QSplitter, 
+                               QStackedWidget, QLineEdit, QListWidget, QSizePolicy, 
+                               QComboBox, QListView)
+from PySide6.QtCore import Qt, QObject, Slot, QTimer, QPropertyAnimation, QEasingCurve, QByteArray, QPoint
 from PySide6.QtUiTools import QUiLoader
 
 from .status_poller import StatusPoller
@@ -167,7 +170,7 @@ class ThorCNC(QObject):
         self.ui = loader.load(ui_file)
         
         # Load modular status bar
-        from PySide6.QtWidgets import QWidget, QVBoxLayout
+        # Load Status Bar UI (if it exists)
         status_ui_file = os.path.join(_DIR, "widgets", "status_bar.ui")
         if os.path.exists(status_ui_file):
             status_container = self.ui.findChild(QWidget, "statusBarContainer")
@@ -182,7 +185,7 @@ class ThorCNC(QObject):
             self.status_bar = self.ui
 
         # Load Sidebar Modules (Split between Left and Right)
-        from PySide6.QtWidgets import QFrame, QSizePolicy, QVBoxLayout
+        # Load Sidebar Modules (Split between Left and Right)
         right_panel = self.ui.findChild(QFrame, "rightPanel")
         left_panel  = self.ui.findChild(QFrame, "runControlsPanel")
         
@@ -217,7 +220,7 @@ class ThorCNC(QObject):
                                 
                         if m_name == "run_controls":
                             sub_w.setObjectName("runControls")
-                            from PySide6.QtCore import Qt
+        # Determine sidebar layout
                             sub_w.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
                             sub_w.setFixedHeight(230)
                             if l_lay:
@@ -237,9 +240,7 @@ class ThorCNC(QObject):
 
     def _replace_custom_widgets(self):
         """Replace GCodeEditor and VTKBackPlot with custom implementations."""
-        from PySide6.QtWidgets import (QWidget, QSplitter, QVBoxLayout, QHBoxLayout,
-                                       QPushButton, QStackedWidget, QLineEdit,
-                                       QListWidget, QSizePolicy)
+        # ── GCode-Panel: Buttons sind fix in der UI (gcodeToggleBar)
 
         # ── GCode-Panel: Buttons sind fix in der UI (gcodeToggleBar)
         #    Hier nur den gcodeEditor-Placeholder durch QStackedWidget ersetzen
@@ -402,23 +403,85 @@ class ThorCNC(QObject):
         self._update_goto_home_style(all_homed=False)
         tb_lay.addWidget(self._btn_go_to_home)
         
-        # Move mode combobox to top toolbar (Reorganization)
-        from PySide6.QtWidgets import QComboBox
-        combo = self.ui.findChild(QComboBox, "combo_machine_mode")
-        if combo:
-            # Remove from old layout (leftPanel)
-            if combo.parent() and combo.parent().layout():
-                combo.parent().layout().removeWidget(combo)
-            # Add to top toolbar
-            combo.setMinimumWidth(180)
-            from PySide6.QtWidgets import QListView
-            combo.setView(QListView()) # Force QListView to make QSS ::item styling work reliably
-            combo.setMaxVisibleItems(10)
-            # Force dropdown behavior via property (more robust than QSS qproperty)
-            combo.setProperty("comboboxPopup", False)
-            combo.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-            tb_lay.insertWidget(tb_lay.indexOf(self._btn_go_to_home), combo)
-            self.combo_machine_mode = combo
+        # --- Flyout System Implementation ---
+        # 1. Cleanup old elements
+        for name in ("combo_machine_mode", "btn_opt", "optExpandPanel"):
+            if w := self.ui.findChild(QWidget, name):
+                w.hide()
+                if w.parent() and w.parent().layout():
+                    w.parent().layout().removeWidget(w)
+
+        # 2. Create the Flyout Buttons in Sidebar
+        self.cmd.set_block_delete(0)
+        self.cmd.set_optional_stop(0)
+        
+        self._flyout_panels = {} # Store panels by name
+        self._flyout_item_buttons = {} # Store buttons for highlighting
+        
+        # Container for the sidebar buttons
+        self.flyout_btn_group = QWidget()
+        self.flyout_btn_group.setObjectName("flyout_btn_group")
+        group_lay = QVBoxLayout(self.flyout_btn_group)
+        group_lay.setContentsMargins(0, 50, 0, 0) # 50px spacing at the top
+        group_lay.setSpacing(6)
+        
+        # Define the three musketeers
+        self._flyout_configs = [
+            ("MODE",   ["MANUAL", "AUTO", "MDI"]),
+            ("SHORTS", ["GO TO HOME", "GOTO ZERO XY"]),
+            ("OPT",    ["COOLANT", "M1 STOP", "SINGLE BLOCK", "BLOCK DELETE"])
+        ]
+        
+        for name, items in self._flyout_configs:
+            # Create the Sidebar Button
+            btn = QPushButton(name)
+            btn.setObjectName(f"btn_flyout_toggle_{name.lower()}")
+            btn.setProperty("is_flyout_toggle", True)
+            btn.setMinimumHeight(60)
+            btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+            group_lay.addWidget(btn)
+            
+            # Create the Overlay Panel (Floating Top-Level for absolute rendering)
+            panel = QFrame(self.ui, Qt.WindowType.FramelessWindowHint | Qt.WindowType.ToolTip)
+            panel.setObjectName(f"flyout_panel_{name.lower()}")
+            panel.setMaximumWidth(0) # Initially closed
+            panel.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+            panel.hide()
+            
+            p_lay = QVBoxLayout(panel) # Vertical layout now
+            p_lay.setContentsMargins(5, 5, 5, 5)
+            p_lay.setSpacing(5)
+            
+            # Add items to panel
+            for item_text in items:
+                i_btn = QPushButton(_t(item_text))
+                i_btn.setObjectName("btn_flyout_item")
+                i_btn.setMinimumHeight(60)
+                i_btn.setMinimumWidth(180)
+                i_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+                p_lay.addWidget(i_btn)
+                # Store for highlighting (e.g. MODE)
+                self._flyout_item_buttons[f"{name}_{item_text}"] = i_btn
+                # Logic connection
+                i_btn.clicked.connect(lambda checked=False, t=item_text, n=name: self._handle_flyout_action(n, t))
+            
+            p_lay.addStretch() # Keep items to the left
+            
+            self._flyout_panels[name] = panel
+            btn.clicked.connect(lambda checked=False, n=name, b=btn: self._toggle_flyout(n, b))
+            
+        # Add the group to the sidebar
+        sidebar_lay = self.ui.leftPanel.layout()
+        if sidebar_lay:
+            # Insert right below the navigation (after QUIT button)
+            sidebar_lay.insertWidget(9, self.flyout_btn_group)
+        
+        # Save references for direct access
+        self.btn_mode_toggle = self.ui.findChild(QPushButton, "btn_flyout_toggle_mode")
+        # Initialize animation attributes
+        self._current_flyout = None
+        self._flyout_anim = None
+        self.is_single_block = False # Initialize Single Block state
 
         if parent_vtk:
             if isinstance(parent_vtk, QSplitter):
@@ -1750,7 +1813,6 @@ class ThorCNC(QObject):
             self._probe_marker.setToolTip("Machine Zero")
 
             # Orange Corner Accent
-            from PySide6.QtWidgets import QFrame
             self._probe_home_accent = QFrame(self.ui.tab_probing)
             self._probe_home_accent.setFixedSize(14, 14)
             self._probe_home_accent.setStyleSheet("background:#e67e00; border-radius:3px;")
@@ -3156,6 +3218,154 @@ class ThorCNC(QObject):
             
         self._opt_anim.start()
 
+    def _toggle_flyout(self, name, button):
+        panel = self._flyout_panels.get(name)
+        if not panel: 
+            print(f"[ThorCNC] Flyout Error: Panel '{name}' not found")
+            return
+        
+        # 1. Close current if different (IMMEDIATE)
+        if self._current_flyout and self._current_flyout != name:
+            old_panel = self._flyout_panels.get(self._current_flyout)
+            if old_panel:
+                old_panel.hide()
+                old_panel.setMaximumWidth(0)
+            self._current_flyout = None
+            
+        is_opening = panel.maximumWidth() == 0
+        print(f"[ThorCNC] Toggle Flyout '{name}' - Opening: {is_opening}")
+        
+        if is_opening:
+            # 2. Update highlights before showing to ensure correct colors
+            self._update_flyout_highlights()
+            
+            # Position panel next to button
+            global_pos = button.mapToGlobal(QPoint(button.width(), 0))
+            
+            panel.move(global_pos.x(), global_pos.y())
+            
+            # Calculate height based on number of items (60px per button + spacing/margins)
+            num_items = panel.layout().count()
+            panel_height = (num_items * 60) + ((num_items - 1) * 5) + 10
+            panel.setFixedHeight(panel_height)
+            
+            panel.show()
+            panel.raise_()
+            panel.repaint() # Force redraw
+            
+            self._flyout_anim = QPropertyAnimation(panel, b"maximumWidth")
+            self._flyout_anim.setDuration(300)
+            self._flyout_anim.setStartValue(0)
+            self._flyout_anim.setEndValue(200) # Compact width
+            self._flyout_anim.start()
+            self._current_flyout = name
+        else:
+            self._close_flyout(name)
+
+    def _close_flyout(self, name):
+        panel = self._flyout_panels.get(name)
+        if not panel: return
+        
+        self._flyout_anim = QPropertyAnimation(panel, b"maximumWidth")
+        self._flyout_anim.setDuration(200)
+        self._flyout_anim.setStartValue(panel.width())
+        self._flyout_anim.setEndValue(0)
+        self._flyout_anim.finished.connect(panel.hide)
+        self._flyout_anim.start()
+        self._current_flyout = None
+
+    def _handle_flyout_action(self, flyout_name, action_text):
+        print(f"[ThorCNC] Flyout Action: {flyout_name} -> {action_text}")
+        
+        if flyout_name == "MODE":
+            _MODE_MAP = {"MANUAL": linuxcnc.MODE_MANUAL, "AUTO": linuxcnc.MODE_AUTO, "MDI": linuxcnc.MODE_MDI}
+            if mode := _MODE_MAP.get(action_text):
+                self.cmd.mode(mode)
+                
+        elif flyout_name == "SHORTS":
+            if action_text == "GO TO HOME":
+                # If all homed, move to home. Otherwise start homing.
+                if getattr(self, "_all_joints_homed", False):
+                    self._run_mdi_command("O<go_to_home> call")
+                else:
+                    self._home_all()
+            elif action_text == "GOTO ZERO XY":
+                self._run_mdi_command("O<goto_zero_xy> call")
+                self._status(_t("Fahre zu WCS X0 Y0 (via NGC)"))
+                
+        elif flyout_name == "OPT":
+            if action_text == "COOLANT":
+                self._toggle_coolant_internal()
+            elif action_text == "M1 STOP":
+                new_state = not self.poller.stat.optional_stop
+                self.cmd.set_optional_stop(new_state)
+                self._status(_t("OPTIONAL STOP: ") + (_t("AN") if new_state else _t("AUS")))
+            elif action_text == "SINGLE BLOCK":
+                # Toggle internal Single Block state
+                self.is_single_block = not getattr(self, "is_single_block", False)
+                self._status(_t("SINGLE BLOCK: ") + (_t("AN") if self.is_single_block else _t("AUS")))
+            elif action_text == "BLOCK DELETE":
+                new_state = not self.poller.stat.block_delete
+                self.cmd.set_block_delete(new_state)
+                self._status(_t("BLOCK DELETE: ") + (_t("AN") if new_state else _t("AUS")))
+        
+        # Always close after action
+        self._close_flyout(flyout_name)
+        self._update_flyout_highlights()
+
+    def _run_mdi_command(self, cmd_text):
+        """Helper to run MDI commands with robust mode switching."""
+        if not self._is_machine_on: return
+        
+        import time
+        # Switch to MDI and wait until it's really there (max 1s)
+        self.cmd.mode(linuxcnc.MODE_MDI)
+        for _ in range(10):
+            if self.poller.stat.task_mode == linuxcnc.MODE_MDI:
+                break
+            time.sleep(0.05)
+            
+        self.cmd.mdi(cmd_text)
+
+    def _update_flyout_highlights(self):
+        if not hasattr(self, "_flyout_item_buttons"): return
+        
+        # 1. OPT Status
+        if b := self._flyout_item_buttons.get("OPT_COOLANT"):
+            active = getattr(self.poller.stat, "flood", 0) > 0
+            if b.property("active") != active:
+                b.setProperty("active", active)
+                b.style().unpolish(b); b.style().polish(b)
+                
+        if b := self._flyout_item_buttons.get("OPT_M1 STOP"):
+            active = getattr(self.poller.stat, "optional_stop", False)
+            if b.property("active") != active:
+                b.setProperty("active", active)
+                b.style().unpolish(b); b.style().polish(b)
+                
+        if b := self._flyout_item_buttons.get("OPT_BLOCK DELETE"):
+            active = getattr(self.poller.stat, "block_delete", False)
+            if b.property("active") != active:
+                b.setProperty("active", active)
+                b.style().unpolish(b); b.style().polish(b)
+                
+        if b := self._flyout_item_buttons.get("OPT_SINGLE BLOCK"):
+            active = getattr(self, "is_single_block", False)
+            if b.property("active") != active:
+                b.setProperty("active", active)
+                b.style().unpolish(b); b.style().polish(b)
+
+        # 2. MODE Status (backup to _on_mode)
+        _MODES = {linuxcnc.MODE_MANUAL: "MANUAL", linuxcnc.MODE_AUTO: "AUTO", linuxcnc.MODE_MDI: "MDI"}
+        current_txt = _MODES.get(self._current_mode, "")
+        for m_txt in ("MANUAL", "AUTO", "MDI"):
+            if b := self._flyout_item_buttons.get(f"MODE_{m_txt}"):
+                active = (m_txt == current_txt)
+                if b.property("active") != active:
+                    b.setProperty("active", active)
+                    b.style().unpolish(b); b.style().polish(b)
+                    b.update() # Force individual button update
+
     def _on_toggle_gcode_edit(self):
         """Schaltet den G-Code Viewer in den Editiermodus um."""
         if not self.gcode_view:
@@ -3527,11 +3737,33 @@ class ThorCNC(QObject):
     def _on_mode(self, mode: int):
         from PySide6.QtWidgets import QPushButton, QComboBox
         self._current_mode = mode
+        
+        # Sync Sidebar Buttons (Classic)
         for name, m in (("manual_mode_button", linuxcnc.MODE_MANUAL),
                         ("mdi_mode_button",    linuxcnc.MODE_MDI),
                         ("auto_mode_button",   linuxcnc.MODE_AUTO)):
             if b := self._w(QPushButton, name):
                 b.setChecked(mode == m)
+                
+        # Sync New Jalousie Buttons
+        _MODES = {linuxcnc.MODE_MANUAL: "MANUAL", linuxcnc.MODE_AUTO: "AUTO", linuxcnc.MODE_MDI: "MDI"}
+        if hasattr(self, "btn_mode_toggle"):
+            txt = _MODES.get(mode, "MANUAL")
+            self.btn_mode_toggle.setText(f"MODE: {txt}")
+            # Color logic via style property
+            self.btn_mode_toggle.setProperty("active_mode", txt)
+            self.btn_mode_toggle.style().unpolish(self.btn_mode_toggle)
+            self.btn_mode_toggle.style().polish(self.btn_mode_toggle)
+            
+            # Highlight items in Flyout
+            _MODES = {linuxcnc.MODE_MANUAL: "MANUAL", linuxcnc.MODE_AUTO: "AUTO", linuxcnc.MODE_MDI: "MDI"}
+            current_txt = _MODES.get(mode, "")
+            for m_txt in ("MANUAL", "AUTO", "MDI"):
+                if b := self._flyout_item_buttons.get(f"MODE_{m_txt}"):
+                    b.setProperty("active", m_txt == current_txt)
+                    b.style().unpolish(b)
+                    b.style().polish(b)
+
         _IDX = {linuxcnc.MODE_MANUAL: 0, linuxcnc.MODE_AUTO: 1, linuxcnc.MODE_MDI: 2}
         if cb := self._w(QComboBox, "combo_machine_mode"):
             cb.blockSignals(True)
@@ -3633,6 +3865,8 @@ class ThorCNC(QObject):
         else:
             set_status(btn_stop, "idle")
             set_status(s_stop, "idle")
+            
+        self._update_flyout_highlights()
 
     @Slot(list)
     def _on_position(self, pos: list):
@@ -4635,6 +4869,9 @@ class ThorCNC(QObject):
 
     def _stop_program(self):
         self.cmd.abort()
+        self.cmd.wait_complete()
+        self.cmd.mode(linuxcnc.MODE_MANUAL)
+        self._status(_t("PROGRAMM ABGEBROCHEN"))
 
     def _send_mdi(self, text: str, widget=None):
         text = text.strip()
