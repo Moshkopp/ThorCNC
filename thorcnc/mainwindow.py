@@ -9,7 +9,7 @@ import linuxcnc
 from PySide6.QtWidgets import (QMainWindow, QHBoxLayout, QLabel, QFrame, QPushButton, 
                                QTableWidgetItem, QWidget, QVBoxLayout, QSplitter, 
                                QStackedWidget, QLineEdit, QListWidget, QSizePolicy, 
-                               QComboBox, QListView)
+                               QComboBox, QListView, QSpinBox)
 from PySide6.QtCore import Qt, QObject, Slot, QTimer, QPropertyAnimation, QEasingCurve, QByteArray, QPoint
 from PySide6.QtUiTools import QUiLoader
 
@@ -278,6 +278,46 @@ class ThorCNC(QObject):
         self._btn_find_m6.clicked.connect(self._find_next_m6)
         h_lay.addWidget(self._btn_find_m6)
 
+        # Run From Line Button
+        self._btn_run_from_line = QPushButton(_t("START AT LINE"))
+        self._btn_run_from_line.setObjectName("btn_run_from_line")
+        self._btn_run_from_line.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self._btn_run_from_line.clicked.connect(self._toggle_line_queue_flyout)
+        h_lay.addWidget(self._btn_run_from_line)
+
+        # Create the mini-flyout for line selection
+        self._line_queue_panel = QFrame(self.ui, Qt.WindowType.FramelessWindowHint | Qt.WindowType.ToolTip)
+        self._line_queue_panel.setObjectName("line_queue_panel")
+        self._line_queue_panel.setFixedWidth(220)
+        self._line_queue_panel.setFixedHeight(170) # Taller for two buttons
+        self._line_queue_panel.hide()
+        
+        lq_lay = QVBoxLayout(self._line_queue_panel)
+        lq_lay.setContentsMargins(10, 10, 10, 10)
+        lq_lay.setSpacing(8)
+        
+        lq_title = QLabel(_t("STARTZEILE WÄHLEN:"))
+        lq_title.setStyleSheet("font-weight: bold; color: #3a7abf;")
+        lq_lay.addWidget(lq_title)
+        
+        self._line_input = QSpinBox()
+        self._line_input.setRange(1, 999999)
+        self._line_input.setFixedHeight(40)
+        self._line_input.setStyleSheet("font-size: 14pt; font-weight: bold;")
+        lq_lay.addWidget(self._line_input)
+        
+        lq_ok_btn = QPushButton(_t("SET QUEUE"))
+        lq_ok_btn.setFixedHeight(40)
+        lq_ok_btn.setObjectName("btn_flyout_item")
+        lq_ok_btn.clicked.connect(self._confirm_line_queue)
+        lq_lay.addWidget(lq_ok_btn)
+
+        lq_clear_btn = QPushButton(_t("CLEAR QUEUE"))
+        lq_clear_btn.setFixedHeight(35)
+        lq_clear_btn.setObjectName("btn_flyout_item_clear") # New style
+        lq_clear_btn.clicked.connect(self._clear_line_queue)
+        lq_lay.addWidget(lq_clear_btn)
+
         h_lay.addStretch()
 
         # Edit Toggle
@@ -477,6 +517,7 @@ class ThorCNC(QObject):
         self._current_flyout = None
         self._flyout_anim = None
         self.is_single_block = False # Initialize Single Block state
+        self._queued_start_line = None # For "Run from Line"
 
         if parent_vtk:
             if isinstance(parent_vtk, QSplitter):
@@ -3166,6 +3207,8 @@ class ThorCNC(QObject):
         # Find M6 Button sperren
         if hasattr(self, "_btn_find_m6") and self._btn_find_m6:
             self._btn_find_m6.setEnabled(is_idle)
+        if hasattr(self, "_btn_run_from_line") and self._btn_run_from_line:
+            self._btn_run_from_line.setEnabled(is_idle)
 
     def _toggle_sb_internal(self):
         self.is_single_block = not self.is_single_block
@@ -3311,6 +3354,51 @@ class ThorCNC(QObject):
         # Always close after action
         self._close_flyout(flyout_name)
         self._update_flyout_highlights()
+
+    def _toggle_line_queue_flyout(self):
+        """Toggles the mini-flyout for line selection."""
+        if self._line_queue_panel.isVisible():
+            self._line_queue_panel.hide()
+            # If we were toggling OFF, but no line is queued, reset color
+            if self._queued_start_line is None:
+                self._update_run_from_line_visual(False)
+        else:
+            # Pre-fill with current line
+            if self.gcode_view:
+                cursor = self.gcode_view.textCursor()
+                self._line_input.setValue(cursor.blockNumber() + 1)
+            
+            # Position below the button
+            pos = self._btn_run_from_line.mapToGlobal(QPoint(0, self._btn_run_from_line.height()))
+            self._line_queue_panel.move(pos)
+            self._line_queue_panel.show()
+            self._line_queue_panel.raise_()
+
+    def _confirm_line_queue(self):
+        """Confirmed the line from the mini-flyout."""
+        line_num = self._line_input.value()
+        self._queued_start_line = line_num
+        self._line_queue_panel.hide()
+        self._status(f"START AB ZEILE {line_num} VORGEMERKT. Drücke CYCLE START!")
+        self._update_run_from_line_visual(True)
+
+    def _clear_line_queue(self):
+        """Clears the queued line and resets the UI."""
+        self._queued_start_line = None
+        self._line_queue_panel.hide()
+        self._status(_t("Start-Vormerkung aufgehoben"))
+        self._update_run_from_line_visual(False)
+
+    def _update_run_from_line_visual(self, active):
+        if hasattr(self, "_btn_run_from_line"):
+            self._btn_run_from_line.setProperty("active", active)
+            self._btn_run_from_line.style().unpolish(self._btn_run_from_line)
+            self._btn_run_from_line.style().polish(self._btn_run_from_line)
+            self._btn_run_from_line.update()
+
+    def _run_from_selected_line(self):
+        # Legacy for potential cleanup
+        self._toggle_line_queue_flyout()
 
     def _run_mdi_command(self, cmd_text):
         """Helper to run MDI commands with robust mode switching."""
@@ -4745,6 +4833,7 @@ class ThorCNC(QObject):
         current_mode = s.task_mode
         interp_state = self._interp_state
         is_sb = getattr(self, "is_single_block", False)
+        q_line = getattr(self, "_queued_start_line", None)
 
         # In Automatik-Modus wechseln falls nötig
         if current_mode != linuxcnc.MODE_AUTO:
@@ -4760,8 +4849,18 @@ class ThorCNC(QObject):
                 print("[DIAGNOSTIC] Resume click: Sending AUTO_RESUME")
                 self.cmd.auto(linuxcnc.AUTO_RESUME)
         else:
-            # Wenn nicht pausiert, entweder Steppen oder normal Starten
-            if is_sb:
+            # Wenn nicht pausiert, entweder Queued-Line, Steppen oder normal Starten
+            if q_line:
+                print(f"[DIAGNOSTIC] Queued Start: Sending AUTO_RUN from line {q_line}")
+                self.cmd.auto(linuxcnc.AUTO_RUN, q_line)
+                # Reset Queue
+                self._queued_start_line = None
+                if hasattr(self, "_btn_run_from_line"):
+                    self._btn_run_from_line.setProperty("active", False)
+                    self._btn_run_from_line.style().unpolish(self._btn_run_from_line)
+                    self._btn_run_from_line.style().polish(self._btn_run_from_line)
+                    self._btn_run_from_line.update()
+            elif is_sb:
                 print("[DIAGNOSTIC] Step click (Start): Sending AUTO_STEP")
                 self.cmd.auto(linuxcnc.AUTO_STEP)
             else:

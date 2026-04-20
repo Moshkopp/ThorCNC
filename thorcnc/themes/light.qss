@@ -263,6 +263,21 @@ QPushButton#btn_flyout_item[active="true"] {
     border: 2px solid #1d4ed8;
     color: white;
 }
+QPushButton#btn_run_from_line[active="true"] {
+    background-color: #16a34a; /* Green 600 */
+    border: 2px solid #15803d; /* Green 700 */
+    color: white;
+}
+QPushButton#btn_flyout_item_clear {
+    background-color: #f8fafc;
+    border: 1px solid #ef4444; /* Red border */
+    color: #475569;
+    border-radius: 6px;
+}
+QPushButton#btn_flyout_item_clear:hover {
+    background-color: #ef4444;
+    color: white;
+}
 
 QPushButton#btn_go_to_home {
     min-height: 40px;
