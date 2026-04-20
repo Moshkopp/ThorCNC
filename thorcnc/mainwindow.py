@@ -4076,9 +4076,11 @@ class ThorCNC(QObject):
             rev_style = ""
 
         if b := self._w(QPushButton, "btn_spindle_fwd"):
-            b.setStyleSheet(fwd_style if direction == 1 else "")
+            # fwd button is now on the left and labeled CCW (direction -1)
+            b.setStyleSheet(fwd_style if direction == -1 else "")
         if b := self._w(QPushButton, "btn_spindle_rev"):
-            b.setStyleSheet(rev_style if direction == -1 else "")
+            # rev button is now on the right and labeled CW (direction 1)
+            b.setStyleSheet(rev_style if direction == 1 else "")
 
     def _set_hal_pin(self, name: str, val):
         if self._hal_comp:
