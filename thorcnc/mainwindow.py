@@ -20,6 +20,7 @@ from .widgets.backplot import BackplotWidget
 from .widgets.tool_dialog import ToolSelectionDialog
 from .widgets.simple_view import SimpleView
 from .i18n import TranslationManager, _t
+from .mixins.navigation_mixin import NavigationMixin
 # from .widgets.opt_options import OptOptionsDialog
 
 _DIR = os.path.dirname(__file__)
@@ -31,13 +32,14 @@ class NumericTableWidgetItem(QTableWidgetItem):
         except (ValueError, TypeError):
             return super().__lt__(other)
 
-class ThorCNC(QObject):
+class ThorCNC(QObject, NavigationMixin):
     """
     Controller class. The loaded QMainWindow from probe_basic.ui IS the window.
     """
 
     def __init__(self, ini_path: str = "", parent=None):
         super().__init__(parent)
+        self._init_navigation() # Initialize NavigationMixin state
 
         self.ini_path = ini_path or os.environ.get("INI_FILE_NAME", "")
         self.ini = linuxcnc.ini(self.ini_path) if self.ini_path else None
@@ -80,8 +82,8 @@ class ThorCNC(QObject):
         QApplication.instance().installEventFilter(self)
         self._restore_window_state()
         self._setup_dro()
-        self._hal_comp = None
         self._setup_hal()
+        print(f"[ThorCNC] Registered Flyouts: {list(self._flyout_panels.keys())}")
         self._setup_poller()
         self._setup_file_manager()
         self._setup_tool_table()
@@ -137,6 +139,15 @@ class ThorCNC(QObject):
             self._warn_missing_prefs = True
         else:
             self._warn_missing_prefs = False
+
+        # Update probe marker on first show and subsequent resizes
+        QTimer.singleShot(500, self._update_probe_marker_pos)
+
+    def resizeEvent(self, event):
+        """Handle window resizing to update floating UI elements."""
+        super().resizeEvent(event)
+        # Update probing marker position as it depends on absolute tab coordinates
+        self._update_probe_marker_pos()
 
     def _restore_window_state(self):
         from PySide6.QtCore import QByteArray
@@ -453,9 +464,6 @@ class ThorCNC(QObject):
         self.cmd.set_block_delete(0)
         self.cmd.set_optional_stop(0)
         
-        self._flyout_panels = {} # Store panels by name
-        self._flyout_item_buttons = {} # Store buttons for highlighting
-        
         # Container for the sidebar buttons
         self.flyout_btn_group = QWidget()
         self.flyout_btn_group.setObjectName("flyout_btn_group")
@@ -514,11 +522,10 @@ class ThorCNC(QObject):
             # Insert right below the navigation (after QUIT button)
             sidebar_lay.insertWidget(9, self.flyout_btn_group)
         
+        print(f"[ThorCNC] Registered Flyouts: {list(self._flyout_panels.keys())}")
+        
         # Save references for direct access
         self.btn_mode_toggle = self.ui.findChild(QPushButton, "btn_flyout_toggle_mode")
-        # Initialize animation attributes
-        self._current_flyout = None
-        self._flyout_anim = None
         self.is_single_block = False # Initialize Single Block state
         self._queued_start_line = None # For "Run from Line"
 
@@ -1973,23 +1980,21 @@ class ThorCNC(QObject):
             y = pos_in_tab.y() + h + badge_offset
 
             # Try to detect from INI
+            # Force Top-Right logic based on INI or fallback
             if self.ini:
                 try:
-                    # X Axis
+                    # X Axis (Joint 0)
                     h_x = float(self.ini.find("JOINT_0", "HOME") or 0.0)
-                    min_x = float(self.ini.find("AXIS_X", "MIN_LIMIT") or 0.0)
                     max_x = float(self.ini.find("AXIS_X", "MAX_LIMIT") or 1000.0)
-                    if abs(h_x - max_x) < abs(h_x - min_x):
+                    if abs(h_x - max_x) < 5.0:
                         x = pos_in_tab.x() + w + badge_offset # Right
 
-                    # Y Axis
+                    # Y Axis (Joint 1)
                     h_y = float(self.ini.find("JOINT_1", "HOME") or 0.0)
-                    min_y = float(self.ini.find("AXIS_Y", "MIN_LIMIT") or 0.0)
                     max_y = float(self.ini.find("AXIS_Y", "MAX_LIMIT") or 1000.0)
-                    if abs(h_y - max_y) < abs(h_y - min_y):
+                    if abs(h_y - max_y) < 5.0:
                         y = pos_in_tab.y() + badge_offset # Top
-                except:
-                    pass
+                except: pass
 
             self._probe_marker.move(x, y)
             self._probe_marker.raise_()
@@ -1997,16 +2002,16 @@ class ThorCNC(QObject):
             
             # Position the L-accent inside the frame corner
             if hasattr(self, "_probe_corner_accent"):
-                # Determine which borders to color based on position
-                is_right = x > pos_in_tab.x() + (w/2)
-                is_bottom = y > pos_in_tab.y() + (h/2)
+                is_right = (x > pos_in_tab.x() + (w // 2))
+                is_bottom = (y > pos_in_tab.y() + (h // 2))
                 
                 # Create a CSS that colors only the corner borders
                 border_x = "right" if is_right else "left"
                 border_y = "bottom" if is_bottom else "top"
                 
-                style = f"background: transparent; border-{border_x}: 4px solid #e67e00; border-{border_y}: 4px solid #e67e00;"
-                self._probe_corner_accent.setStyleSheet(style)
+                self._probe_corner_accent.setStyleSheet(
+                    f"background: transparent; border-{border_x}: 4px solid #e67e00; border-{border_y}: 4px solid #e67e00;"
+                )
                 
                 # Move to the absolute corner of the frame
                 ax = w - 20 if is_right else 0
@@ -2016,6 +2021,16 @@ class ThorCNC(QObject):
                 self._probe_corner_accent.raise_()
 
     def eventFilter(self, watched, event):
+        import shiboken6
+        if not shiboken6.isValid(self) or not shiboken6.isValid(watched):
+            return False
+        if hasattr(self, "ui") and not shiboken6.isValid(self.ui):
+            return False
+
+        # Delegate to NavigationMixin for light-dismiss
+        if self._handle_navigation_event(event):
+            return True
+
         from PySide6.QtCore import QEvent
         if watched == getattr(self, "_probe_grid_frm", None):
             if event.type() == QEvent.Resize:
@@ -2031,7 +2046,7 @@ class ThorCNC(QObject):
                     cw = self.ui.centralWidget()
                     self.simple_view.setGeometry(cw.rect() if cw else self.ui.rect())
             
-            elif event.type() == QEvent.Type.Close:
+            elif watched is self.ui and event.type() == QEvent.Type.Close:
                 # Safe-Exit: Confirm always to prevent accidental shutdowns
                 from PySide6.QtWidgets import QMessageBox
                 res = QMessageBox.question(
@@ -2043,7 +2058,13 @@ class ThorCNC(QObject):
                 )
                 if res == QMessageBox.StandardButton.No:
                     event.ignore()
-                    return True # Event handled
+                    return True 
+                else:
+                    # If Yes, we let it pass, but we must ensure we don't ask again
+                    # We can remove the filter right here
+                    QApplication.instance().removeEventFilter(self)
+                    event.accept()
+                    return True
 
             elif event.type() == QEvent.Type.KeyPress:
                 if event.key() == Qt.Key.Key_F11:
@@ -3263,170 +3284,6 @@ class ThorCNC(QObject):
             
         self._opt_anim.start()
 
-    def eventFilter(self, obj, event):
-        """Detects clicks outside of flyouts to close them automatically."""
-        if event.type() == QEvent.MouseButtonPress:
-            if self._current_flyout:
-                panel = self._flyout_panels.get(self._current_flyout)
-                if panel and panel.isVisible():
-                    # Check if the click is outside the flyout panel
-                    global_pt = event.globalPosition().toPoint()
-                    if not panel.geometry().contains(global_pt):
-                        # Check if the click is on the toggle button itself
-                        btn = self.ui.findChild(QPushButton, f"btn_flyout_toggle_{self._current_flyout.lower()}")
-                        if btn and btn.rect().contains(btn.mapFromGlobal(global_pt)):
-                            return super().eventFilter(obj, event)
-                            
-                        # Also check the Start-At-Line mini flyout
-                        if hasattr(self, "_line_queue_panel") and self._line_queue_panel.isVisible():
-                            if self._line_queue_panel.geometry().contains(global_pt):
-                                return super().eventFilter(obj, event)
-
-                        # Click is truly outside -> close flyout
-                        self._close_flyout(self._current_flyout)
-                        
-        return super().eventFilter(obj, event)
-
-    def _toggle_flyout(self, name, button):
-        panel = self._flyout_panels.get(name)
-        if not panel: 
-            print(f"[ThorCNC] Flyout Error: Panel '{name}' not found")
-            return
-        
-        # 1. Close current if different (IMMEDIATE)
-        if self._current_flyout and self._current_flyout != name:
-            old_panel = self._flyout_panels.get(self._current_flyout)
-            if old_panel:
-                old_panel.hide()
-                old_panel.setMaximumWidth(0)
-            self._current_flyout = None
-            
-        is_opening = panel.maximumWidth() == 0
-        print(f"[ThorCNC] Toggle Flyout '{name}' - Opening: {is_opening}")
-        
-        if is_opening:
-            # 2. Update highlights before showing to ensure correct colors
-            self._update_flyout_highlights()
-            
-            # Position panel next to button
-            global_pos = button.mapToGlobal(QPoint(button.width(), 0))
-            
-            panel.move(global_pos.x(), global_pos.y())
-            
-            # Calculate height based on number of items (60px per button + spacing/margins)
-            num_items = panel.layout().count()
-            panel_height = (num_items * 60) + ((num_items - 1) * 5) + 10
-            panel.setFixedHeight(panel_height)
-            
-            panel.show()
-            panel.raise_()
-            panel.repaint() # Force redraw
-            
-            self._flyout_anim = QPropertyAnimation(panel, b"maximumWidth")
-            self._flyout_anim.setDuration(300)
-            self._flyout_anim.setStartValue(0)
-            self._flyout_anim.setEndValue(200) # Compact width
-            self._flyout_anim.start()
-            self._current_flyout = name
-        else:
-            self._close_flyout(name)
-
-    def _close_flyout(self, name):
-        panel = self._flyout_panels.get(name)
-        if not panel: return
-        
-        self._flyout_anim = QPropertyAnimation(panel, b"maximumWidth")
-        self._flyout_anim.setDuration(200)
-        self._flyout_anim.setStartValue(panel.width())
-        self._flyout_anim.setEndValue(0)
-        self._flyout_anim.finished.connect(panel.hide)
-        self._flyout_anim.start()
-        self._current_flyout = None
-
-    def _handle_flyout_action(self, flyout_name, action_text):
-        print(f"[ThorCNC] Flyout Action: {flyout_name} -> {action_text}")
-        
-        if flyout_name == "MODE":
-            _MODE_MAP = {"MANUAL": linuxcnc.MODE_MANUAL, "AUTO": linuxcnc.MODE_AUTO, "MDI": linuxcnc.MODE_MDI}
-            if mode := _MODE_MAP.get(action_text):
-                self.cmd.mode(mode)
-                
-        elif flyout_name == "SHORTS":
-            if action_text == "GO TO HOME":
-                # If all homed, move to home. Otherwise start homing.
-                if getattr(self, "_all_joints_homed", False):
-                    self._run_mdi_command("O<go_to_home> call")
-                else:
-                    self._home_all()
-            elif action_text == "GOTO ZERO XY":
-                self._run_mdi_command("O<goto_zero_xy> call")
-                self._status(_t("Fahre zu WCS X0 Y0 (via NGC)"))
-                
-        elif flyout_name == "OPT":
-            if action_text == "COOLANT":
-                self._toggle_coolant_internal()
-            elif action_text == "M1 STOP":
-                new_state = not self.poller.stat.optional_stop
-                self.cmd.set_optional_stop(new_state)
-                self._status(_t("OPTIONAL STOP: ") + (_t("AN") if new_state else _t("AUS")))
-            elif action_text == "SINGLE BLOCK":
-                # Toggle internal Single Block state
-                self.is_single_block = not getattr(self, "is_single_block", False)
-                self._status(_t("SINGLE BLOCK: ") + (_t("AN") if self.is_single_block else _t("AUS")))
-            elif action_text == "BLOCK DELETE":
-                new_state = not self.poller.stat.block_delete
-                self.cmd.set_block_delete(new_state)
-                self._status(_t("BLOCK DELETE: ") + (_t("AN") if new_state else _t("AUS")))
-        
-        # Always close after action
-        self._close_flyout(flyout_name)
-        self._update_flyout_highlights()
-
-    def _toggle_line_queue_flyout(self):
-        """Toggles the mini-flyout for line selection."""
-        if self._line_queue_panel.isVisible():
-            self._line_queue_panel.hide()
-            # If we were toggling OFF, but no line is queued, reset color
-            if self._queued_start_line is None:
-                self._update_run_from_line_visual(False)
-        else:
-            # Pre-fill with current line
-            if self.gcode_view:
-                cursor = self.gcode_view.textCursor()
-                self._line_input.setValue(cursor.blockNumber() + 1)
-            
-            # Position below the button
-            pos = self._btn_run_from_line.mapToGlobal(QPoint(0, self._btn_run_from_line.height()))
-            self._line_queue_panel.move(pos)
-            self._line_queue_panel.show()
-            self._line_queue_panel.raise_()
-
-    def _confirm_line_queue(self):
-        """Confirmed the line from the mini-flyout."""
-        line_num = self._line_input.value()
-        self._queued_start_line = line_num
-        self._line_queue_panel.hide()
-        self._status(f"START AB ZEILE {line_num} VORGEMERKT. Drücke CYCLE START!")
-        self._update_run_from_line_visual(True)
-
-    def _clear_line_queue(self):
-        """Clears the queued line and resets the UI."""
-        self._queued_start_line = None
-        self._line_queue_panel.hide()
-        self._status(_t("Start-Vormerkung aufgehoben"))
-        self._update_run_from_line_visual(False)
-
-    def _update_run_from_line_visual(self, active):
-        if hasattr(self, "_btn_run_from_line"):
-            self._btn_run_from_line.setProperty("active", active)
-            self._btn_run_from_line.style().unpolish(self._btn_run_from_line)
-            self._btn_run_from_line.style().polish(self._btn_run_from_line)
-            self._btn_run_from_line.update()
-
-    def _run_from_selected_line(self):
-        # Legacy for potential cleanup
-        self._toggle_line_queue_flyout()
-
     def _run_mdi_command(self, cmd_text):
         """Helper to run MDI commands with robust mode switching."""
         if not self._is_machine_on: return
@@ -3441,44 +3298,6 @@ class ThorCNC(QObject):
             
         self.cmd.mdi(cmd_text)
 
-    def _update_flyout_highlights(self):
-        if not hasattr(self, "_flyout_item_buttons"): return
-        
-        # 1. OPT Status
-        if b := self._flyout_item_buttons.get("OPT_COOLANT"):
-            active = getattr(self.poller.stat, "flood", 0) > 0
-            if b.property("active") != active:
-                b.setProperty("active", active)
-                b.style().unpolish(b); b.style().polish(b)
-                
-        if b := self._flyout_item_buttons.get("OPT_M1 STOP"):
-            active = getattr(self.poller.stat, "optional_stop", False)
-            if b.property("active") != active:
-                b.setProperty("active", active)
-                b.style().unpolish(b); b.style().polish(b)
-                
-        if b := self._flyout_item_buttons.get("OPT_BLOCK DELETE"):
-            active = getattr(self.poller.stat, "block_delete", False)
-            if b.property("active") != active:
-                b.setProperty("active", active)
-                b.style().unpolish(b); b.style().polish(b)
-                
-        if b := self._flyout_item_buttons.get("OPT_SINGLE BLOCK"):
-            active = getattr(self, "is_single_block", False)
-            if b.property("active") != active:
-                b.setProperty("active", active)
-                b.style().unpolish(b); b.style().polish(b)
-
-        # 2. MODE Status (backup to _on_mode)
-        _MODES = {linuxcnc.MODE_MANUAL: "MANUAL", linuxcnc.MODE_AUTO: "AUTO", linuxcnc.MODE_MDI: "MDI"}
-        current_txt = _MODES.get(self._current_mode, "")
-        for m_txt in ("MANUAL", "AUTO", "MDI"):
-            if b := self._flyout_item_buttons.get(f"MODE_{m_txt}"):
-                active = (m_txt == current_txt)
-                if b.property("active") != active:
-                    b.setProperty("active", active)
-                    b.style().unpolish(b); b.style().polish(b)
-                    b.update() # Force individual button update
 
     def _on_toggle_gcode_edit(self):
         """Schaltet den G-Code Viewer in den Editiermodus um."""
@@ -5119,42 +4938,6 @@ class ThorCNC(QObject):
             )
             self._warn_missing_prefs = False
 
-    def _apply_theme(self, name: str):
-        valid_themes = ["dark", "light"]
-        if name not in valid_themes:
-            return
-            
-        from PySide6.QtWidgets import QApplication
-        from .main import load_theme
-        load_theme(QApplication.instance(), name)
-        self.settings.set("theme", name)
-        self._update_nav_icons()
-
-    def _update_nav_icons(self):
-        theme = self.settings.get("theme", "dark")
-        color = "#1a2332" if theme == "light" else "#ffffff"
-        
-        up_svg = f"""<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>"""
-        home_svg = f"""<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>"""
-        
-        from PySide6.QtGui import QPixmap, QIcon
-        from PySide6.QtCore import QByteArray
-        
-        def svg_to_icon(svg_str):
-            pixmap = QPixmap()
-            # Try loading as SVG format explicitly
-            if not pixmap.loadFromData(QByteArray(svg_str.encode('utf-8')), "SVG"):
-                # Fallback or debug print could go here
-                pass
-            return QIcon(pixmap)
-
-        if hasattr(self, "_btn_nav_up") and self._btn_nav_up:
-            self._btn_nav_up.setIcon(svg_to_icon(up_svg))
-            self._btn_nav_up.setIconSize(self._btn_nav_up.size() * 0.7)
-        if hasattr(self, "_btn_nav_home") and self._btn_nav_home:
-            self._btn_nav_home.setIcon(svg_to_icon(home_svg))
-            self._btn_nav_home.setIconSize(self._btn_nav_home.size() * 0.7)
-
     def _drain_startup_errors(self):
         """Liest den LinuxCNC Error-Channel einmalig beim Start aus und loggt alle Meldungen."""
         self._append_status_log("── Session gestartet ──")
@@ -5168,6 +4951,7 @@ class ThorCNC(QObject):
                 msg = ec.poll()
         except Exception:
             pass
+
 
     def start(self):
         from PySide6.QtWidgets import QApplication
@@ -5188,7 +4972,8 @@ class ThorCNC(QObject):
                 self._sb_for_filter.removeEventFilter(self)
             except Exception: pass
         try:
-            self.ui.removeEventFilter(self)
+            from PySide6.QtWidgets import QApplication
+            QApplication.instance().removeEventFilter(self)
         except Exception: pass
 
         self.poller.stop()
