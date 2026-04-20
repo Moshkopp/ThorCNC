@@ -4851,8 +4851,36 @@ class ThorCNC(QObject):
         else:
             # Wenn nicht pausiert, entweder Queued-Line, Steppen oder normal Starten
             if q_line:
+                print(f"[DIAGNOSTIC] Queued Start: Preparing state for line {q_line}")
+                
+                # 1. Prepare Preamble (WCS and G43)
+                # Get current WCS from status (540=G54, 550=G55, etc.)
+                g5x_code = 54
+                g43_active = False
+                for g in s.gcodes:
+                    if 540 <= g <= 590:
+                        g5x_code = 54 + (g - 540) // 10
+                    if g == 430 or g == 431: # G43 or G43.1
+                        g43_active = True
+                
+                # Build preamble command
+                pre_cmd = f"G{g5x_code}"
+                if g43_active:
+                    pre_cmd += " G43"
+                
+                # Send Preamble via MDI first
+                self.cmd.mode(linuxcnc.MODE_MDI)
+                self.cmd.wait_complete()
+                self.cmd.mdi(pre_cmd)
+                self.cmd.wait_complete()
+                
+                # 2. Switch back to AUTO and RUN
+                self.cmd.mode(linuxcnc.MODE_AUTO)
+                self.cmd.wait_complete()
+                
                 print(f"[DIAGNOSTIC] Queued Start: Sending AUTO_RUN from line {q_line}")
                 self.cmd.auto(linuxcnc.AUTO_RUN, q_line)
+                
                 # Reset Queue
                 self._queued_start_line = None
                 if hasattr(self, "_btn_run_from_line"):
