@@ -2631,6 +2631,8 @@ class ThorCNC(QObject):
         # "Aktuelle Position" Buttons
         if b := self._w(QPushButton, "btn_set_wechsel_pos"):
             b.clicked.connect(self._set_wechsel_pos_from_machine)
+        if b := self._w(QPushButton, "btn_set_taster_pos"):
+            b.clicked.connect(self._set_taster_pos_from_machine)
             
     def _save_abort_handler(self):
         """Speichert den G-Code für den Abort-Handler und aktualisiert die .ngc Datei."""
@@ -2687,8 +2689,6 @@ class ThorCNC(QObject):
             self._status(f"Abort-Handler aktualisiert: {target_path}")
         except Exception as e:
             self._status(f"Fehler beim Speichern des Abort-Handlers: {e}", error=True)
-        if b := self._w(QPushButton, "btn_set_taster_pos"):
-            b.clicked.connect(self._set_taster_pos_from_machine)
 
         # Before / After Toolsetter TextEdits
         from PySide6.QtWidgets import QTextEdit
@@ -2904,8 +2904,8 @@ class ThorCNC(QObject):
         from PySide6.QtWidgets import QDoubleSpinBox, QMessageBox
         
         # Sicherheitsabfrage
-        res = QMessageBox.question(self.ui, "Position übernehmen", 
-                                  "Möchtest du die aktuelle Maschinenposition wirklich als neue WECHSELPOSITION übernehmen?",
+        res = QMessageBox.question(self.ui, _t("Position übernehmen"), 
+                                  _t("Möchtest du die aktuelle Maschinenposition wirklich als neue WECHSELPOSITION übernehmen?"),
                                   QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
         if res != QMessageBox.StandardButton.Yes:
             return
@@ -2930,8 +2930,8 @@ class ThorCNC(QObject):
         from PySide6.QtWidgets import QDoubleSpinBox, QMessageBox
         
         # Sicherheitsabfrage
-        res = QMessageBox.question(self.ui, "Position übernehmen", 
-                                  "Möchtest du die aktuelle Maschinenposition wirklich als neue MESSPOSITION übernehmen?",
+        res = QMessageBox.question(self.ui, _t("Position übernehmen"), 
+                                  _t("Möchtest du die aktuelle Maschinenposition wirklich als neue MESSPOSITION übernehmen?"),
                                   QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
         if res != QMessageBox.StandardButton.Yes:
             return
@@ -3268,9 +3268,11 @@ class ThorCNC(QObject):
             self.cmd.spindle(direction, speed)
 
         if b := btn("btn_spindle_fwd"):
-            b.clicked.connect(lambda: _start_spindle(linuxcnc.SPINDLE_FORWARD))
-        if b := btn("btn_spindle_rev"):
+            b.setText("CCW")
             b.clicked.connect(lambda: _start_spindle(linuxcnc.SPINDLE_REVERSE))
+        if b := btn("btn_spindle_rev"):
+            b.setText("CW")
+            b.clicked.connect(lambda: _start_spindle(linuxcnc.SPINDLE_FORWARD))
         if b := btn("btn_spindle_stop"):
             b.clicked.connect(lambda: self.cmd.spindle(linuxcnc.SPINDLE_OFF))
 

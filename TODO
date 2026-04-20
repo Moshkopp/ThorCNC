@@ -7,3 +7,5 @@
 - [x] **Finde next M6**: (Erklärung folgt) Automatisches Finden des nächsten Werkzeugwechsels im G-Code.
 - [x] **ON_ABORT_COMMAND Implementieren**: Einen globalen Abort-Handler (`O<on_abort> call`) in der INI definieren und die zugehörige Subroutine erstellen, um die Maschine bei STOP/Fehler in einen sicheren Zustand zu bringen (z.B. Pins zurücksetzen).
 - [x] **Einstellbares Abort-Cleanup**: Ein Setting in der GUI (Settings-Tab) hinzufügen, um das "Aufräumen" des Koordinatensystems (WCS) zu bearbeiten. Der G-Code wird in den `prefs` gespeichert und schreibt die `on_abort.ngc` Datei live um.
+CW und CCW tauschen 
+aktuelle Position übernehmen Messposition (probeposition) funktioniert nicht mehr
