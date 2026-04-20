@@ -396,12 +396,7 @@ class ThorCNC(QObject):
             tb_lay.addWidget(b)
         tb_lay.addStretch()   # Stretch wieder einfügen (trennt links von rechts)
 
-        self._btn_go_to_home = QPushButton(_t("GO TO HOME"))
-        self._btn_go_to_home.setObjectName("btn_go_to_home")
-        self._btn_go_to_home.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        self._btn_go_to_home.clicked.connect(self._go_to_home)
         self._update_goto_home_style(all_homed=False)
-        tb_lay.addWidget(self._btn_go_to_home)
         
         # --- Flyout System Implementation ---
         # 1. Cleanup old elements
@@ -506,10 +501,14 @@ class ThorCNC(QObject):
             b.setChecked(idx == active_idx)
 
     def _update_goto_home_style(self, all_homed: bool):
-        if not hasattr(self, "_btn_go_to_home"):
-            return
         in_auto = getattr(self, "_current_mode", None) == linuxcnc.MODE_AUTO
-        btn = self._btn_go_to_home
+        
+        # Target the button in the Flyout
+        btn = None
+        if hasattr(self, "_flyout_item_buttons"):
+            btn = self._flyout_item_buttons.get("SHORTS_GO TO HOME")
+        
+        if not btn: return
         
         if in_auto:
             btn.setEnabled(False)
