@@ -70,7 +70,6 @@ class ThorCNC(QObject):
         self.i18n = TranslationManager(self.settings.get("language", "Deutsch"))
         
         self._load_ui()
-        self.i18n.apply_to_widget(self.ui)
         
         self._replace_custom_widgets()
         self._restore_window_state()
@@ -101,6 +100,9 @@ class ThorCNC(QObject):
         from PySide6.QtWidgets import QTabWidget
         if tab := self._w(QTabWidget, "tabWidget"):
             tab.setCurrentIndex(0)
+
+        # Apply translations to ALL widgets (including dynamic ones)
+        self.i18n.apply_to_widget(self.ui)
 
     def _add_class(self, widget, class_name: str):
         """Helper to add a QSS class and ensure it's applied."""
@@ -269,7 +271,7 @@ class ThorCNC(QObject):
         h_lay.setSpacing(6)
 
         # Find M6
-        self._btn_find_m6 = QPushButton("FIND M6")
+        self._btn_find_m6 = QPushButton(_t("FIND M6"))
         self._btn_find_m6.setObjectName("btn_find_m6")
         self._btn_find_m6.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self._btn_find_m6.clicked.connect(self._find_next_m6)
@@ -278,7 +280,7 @@ class ThorCNC(QObject):
         h_lay.addStretch()
 
         # Edit Toggle
-        self._btn_edit_gcode = QPushButton("EDIT")
+        self._btn_edit_gcode = QPushButton(_t("EDIT"))
         self._btn_edit_gcode.setCheckable(True)
         self._btn_edit_gcode.setObjectName("btn_edit_gcode")
         self._btn_edit_gcode.setFocusPolicy(Qt.FocusPolicy.NoFocus)
@@ -286,7 +288,7 @@ class ThorCNC(QObject):
         h_lay.addWidget(self._btn_edit_gcode)
 
         # Save Button
-        self._btn_save_gcode = QPushButton("SAVE")
+        self._btn_save_gcode = QPushButton(_t("SAVE"))
         self._btn_save_gcode.setObjectName("btn_save_gcode")
         self._btn_save_gcode.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self._btn_save_gcode.clicked.connect(self._on_save_gcode)
@@ -329,7 +331,7 @@ class ThorCNC(QObject):
 
         self._mdi_input = QLineEdit()
         self._mdi_input.setObjectName("mdiEntry")
-        self._mdi_input.setPlaceholderText("MDI COMMAND...")
+        self._mdi_input.setPlaceholderText(_t("MDI COMMAND..."))
         self._mdi_input.setMinimumHeight(40)
         self._mdi_input.returnPressed.connect(
             lambda: self._send_mdi(self._mdi_input.text(), self._mdi_input))
@@ -381,11 +383,11 @@ class ThorCNC(QObject):
         tb_lay = self.backplot.toolbar_layout()
         # View-Buttons links (vor dem Stretch)
         tb_lay.takeAt(0)   # den initialen Stretch kurz rausnehmen (wird unten neu eingefügt)
-        for label, fn in (("ISO",        self.backplot.set_view_iso),
-                          ("TOP",        self.backplot.set_view_z),
-                          ("FRONT",      self.backplot.set_view_y),
-                          ("SIDE",       self.backplot.set_view_x),
-                          ("CLR TRAIL",  self.backplot.clear_trail)):
+        for label, fn in ((_t("ISO"),        self.backplot.set_view_iso),
+                          (_t("TOP"),        self.backplot.set_view_z),
+                          (_t("FRONT"),      self.backplot.set_view_y),
+                          (_t("SIDE"),       self.backplot.set_view_x),
+                          (_t("CLR TRAIL"),  self.backplot.clear_trail)):
             b = QPushButton(label)
             b.setObjectName("btn_backplot_view")
             b.setFocusPolicy(Qt.FocusPolicy.NoFocus)
@@ -393,7 +395,7 @@ class ThorCNC(QObject):
             tb_lay.addWidget(b)
         tb_lay.addStretch()   # Stretch wieder einfügen (trennt links von rechts)
 
-        self._btn_go_to_home = QPushButton("GO TO HOME")
+        self._btn_go_to_home = QPushButton(_t("GO TO HOME"))
         self._btn_go_to_home.setObjectName("btn_go_to_home")
         self._btn_go_to_home.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self._btn_go_to_home.clicked.connect(self._go_to_home)
@@ -479,7 +481,7 @@ class ThorCNC(QObject):
         # ── Row 0: Header ───────────────────────────────────────────────────
         
         # ZERO ALL button
-        btn_zero_all = QPushButton("ZERO\nALL")
+        btn_zero_all = QPushButton(_t("ZERO\nALL"))
         btn_zero_all.setFixedSize(btn_width, 44)
         btn_zero_all.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self._add_class(btn_zero_all, "btn-blue")
@@ -487,7 +489,7 @@ class ThorCNC(QObject):
         glay.addWidget(btn_zero_all, 0, 0)
 
         # AXIS header
-        lbl_axis_hdr = QLabel("AXIS")
+        lbl_axis_hdr = QLabel(_t("AXIS"))
         self._add_class(lbl_axis_hdr, "dro-header")
         lbl_axis_hdr.setFixedWidth(axis_width)
         lbl_axis_hdr.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -506,21 +508,21 @@ class ThorCNC(QObject):
         glay.addWidget(self._wcs_combo, 0, 2)
 
         # MACHINE header
-        lbl_mach_hdr = QLabel("MACHINE")
+        lbl_mach_hdr = QLabel(_t("MACHINE"))
         self._add_class(lbl_mach_hdr, "dro-header")
         lbl_mach_hdr.setFixedWidth(val_width)
         lbl_mach_hdr.setAlignment(Qt.AlignmentFlag.AlignCenter)
         glay.addWidget(lbl_mach_hdr, 0, 3)
 
         # DTG header (Distance to Go)
-        lbl_dtg_hdr = QLabel("DTG")
+        lbl_dtg_hdr = QLabel(_t("DTG"))
         self._add_class(lbl_dtg_hdr, "dro-header")
         lbl_dtg_hdr.setFixedWidth(val_width)
         lbl_dtg_hdr.setAlignment(Qt.AlignmentFlag.AlignCenter)
         glay.addWidget(lbl_dtg_hdr, 0, 4)
 
         # REF ALL button
-        self._btn_ref_all = QPushButton("REF ALL")
+        self._btn_ref_all = QPushButton(_t("REF ALL"))
         self._btn_ref_all.setFixedSize(btn_width, 44)
         self._btn_ref_all.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self._add_class(self._btn_ref_all, "btn-green")
@@ -538,7 +540,7 @@ class ThorCNC(QObject):
 
         for i, (axis, joint) in enumerate([("X", 0), ("Y", 1), ("Z", 2)], start=2):
             # ZERO button
-            btn_zero = QPushButton(f"ZERO\n{axis}")
+            btn_zero = QPushButton(_t("ZERO\n{}").format(axis))
             btn_zero.setObjectName("dro_zero_btn")
             btn_zero.setFixedSize(btn_width, 52)
             btn_zero.setFocusPolicy(Qt.FocusPolicy.NoFocus)
@@ -583,7 +585,7 @@ class ThorCNC(QObject):
             glay.addWidget(lbl_dtg, i, 4)
 
             # REF button
-            btn_ref = QPushButton(f"REF {axis}")
+            btn_ref = QPushButton(_t("REF {}").format(axis))
             btn_ref.setObjectName("dro_ref_btn")
             btn_ref.setFixedSize(btn_width, 52)
             btn_ref.setFocusPolicy(Qt.FocusPolicy.NoFocus)
@@ -645,7 +647,7 @@ class ThorCNC(QObject):
             self.cmd.mdi(f"G10 L20 P{g5x_index} {coords}")
             self.cmd.wait_complete()
             self.cmd.mode(linuxcnc.MODE_MANUAL)
-            self._status(f"ZERO {axis} → {wcs_name}")
+            self._status(_t("ZERO {} → {}").format(axis, wcs_name))
         except Exception:
             pass
 
@@ -823,12 +825,12 @@ class ThorCNC(QObject):
         if self._btn_nav_up:
             self._btn_nav_up.setText("")
             self._btn_nav_up.setFixedWidth(60)
-            self._btn_nav_up.setToolTip("Übergeordnetes Verzeichnis")
+            self._btn_nav_up.setToolTip(_t("Übergeordnetes Verzeichnis"))
             
         if self._btn_nav_home:
             self._btn_nav_home.setText("")
             self._btn_nav_home.setFixedWidth(60)
-            self._btn_nav_home.setToolTip("Home-Verzeichnis")
+            self._btn_nav_home.setToolTip(_t("Home-Verzeichnis"))
 
         self._update_nav_icons()
 
@@ -982,7 +984,7 @@ class ThorCNC(QObject):
             self.settings.set("last_file_dir", path)
             self._selected_filepath = None
             self._btn_load.setEnabled(False)
-            self._file_preview.setPlainText("[ORDNER AUSGEWÄHLT]")
+            self._file_preview.setPlainText(_t("[ORDNER AUSGEWÄHLT]"))
         else:
             self.settings.set("last_file_dir", os.path.dirname(path))
             self._selected_filepath = path
@@ -997,7 +999,7 @@ class ThorCNC(QObject):
                     content = f.read()
                 self._file_preview.setPlainText(content)
             except Exception as e:
-                self._file_preview.setPlainText(f"Error loading:\n{e}")
+                self._file_preview.setPlainText(_t("Error loading:") + f"\n{e}")
 
     def _save_file(self):
         if not self._selected_filepath:
@@ -1007,7 +1009,7 @@ class ThorCNC(QObject):
             content = self._file_preview.toPlainText()
             with open(self._selected_filepath, "w", encoding="utf-8") as f:
                 f.write(content)
-            self._status(f"Datei gespeichert: {os.path.basename(self._selected_filepath)}")
+            self._status(_t("Datei gespeichert: {}").format(os.path.basename(self._selected_filepath)))
         except Exception as e:
             self._status(f"Error saving file: {e}", error=True)
 
@@ -1016,7 +1018,7 @@ class ThorCNC(QObject):
         import os
         
         start_dir = self._current_dir if hasattr(self, "_current_dir") else os.path.expanduser("~")
-        path, _ = QFileDialog.getSaveFileName(self.ui, "Speichern unter...", start_dir, "G-Code (*.ngc *.tap *.txt);;All Files (*)")
+        path, _ = QFileDialog.getSaveFileName(self.ui, _t("SAVE AS"), start_dir, "G-Code (*.ngc *.tap *.txt);;All Files (*)")
         
         if path:
             try:
@@ -1024,7 +1026,7 @@ class ThorCNC(QObject):
                 with open(path, "w", encoding="utf-8") as f:
                     f.write(content)
                 self._selected_filepath = path
-                self._status(f"Datei gespeichert unter: {os.path.basename(path)}")
+                self._status(_t("Datei gespeichert unter: {}").format(os.path.basename(path)))
                 # Refresh file tree if possible - fs_model updates automatically usually
             except Exception as e:
                 self._status(f"Error saving file: {e}", error=True)
@@ -1138,7 +1140,7 @@ class ThorCNC(QObject):
             # Sort by Tool Number initially
             self.tool_table.sortByColumn(0, Qt.SortOrder.AscendingOrder)
         except Exception as e:
-            self._status(f"Error loading tool table: {e}", error=True)
+            self._status(_t("Error loading tool table: ") + str(e), error=True)
         finally:
             self.tool_table.setSortingEnabled(True)
 
@@ -1163,7 +1165,7 @@ class ThorCNC(QObject):
         """Zeigt das Kontextmenü für die Werkzeugliste an."""
         from PySide6.QtWidgets import QMenu
         menu = QMenu(self.tool_table)
-        delete_action = menu.addAction("- Ausgewähltes Werkzeug löschen")
+        delete_action = menu.addAction(_t("- Delete Selected"))
         delete_action.triggered.connect(self._delete_tool)
         menu.exec(self.tool_table.mapToGlobal(pos))
 
@@ -1362,7 +1364,7 @@ class ThorCNC(QObject):
         outer.setSpacing(8)
 
         # Titel
-        title = QLabel("Work Coordinate Offsets (G54 – G59.3)")
+        title = QLabel(_t("Work Coordinate Offsets (G54 – G59.3)"))
         title.setObjectName("section_title")
         outer.addWidget(title)
 
@@ -1404,7 +1406,7 @@ class ThorCNC(QObject):
                 it.setTextAlignment(_Qt.AlignmentFlag.AlignRight | _Qt.AlignmentFlag.AlignVCenter)
                 tbl.setItem(row, col, it)
             # Clear-Button
-            btn = QPushButton("CLEAR")
+            btn = QPushButton(_t("CLEAR"))
             btn.setObjectName("wcs_clear_btn")
             btn.setFocusPolicy(_Qt.FocusPolicy.NoFocus)
             btn.setFixedSize(80, 30)
@@ -1468,10 +1470,10 @@ class ThorCNC(QObject):
             self.cmd.mdi(f"G10 L2 P{p_idx} X0 Y0 Z0 R0")
             self.cmd.wait_complete()
             self.cmd.mode(linuxcnc.MODE_MANUAL)
-            self._status(f"WCS G{53 + p_idx if p_idx <= 6 else '59.' + str(p_idx - 6)} → X0 Y0 Z0 R0")
+            self._status(_t("WCS G{}{} → X0 Y0 Z0 R0").format(53 + p_idx if p_idx <= 6 else '59.', p_idx - 6 if p_idx > 6 else ""))
             self._offset_var_mtime = 0.0   # mtime invalidieren → sofortiger Refresh
         except Exception as e:
-            self._status(f"Offset clear error: {e}")
+            self._status(_t("Error:") + f" {e}")
 
     # ── Probing Tab ───────────────────────────────────────────────────────────
 
@@ -1491,15 +1493,15 @@ class ThorCNC(QObject):
         self._probe_mode_grp = QButtonGroup(self)
         self._probe_mode_grp.setExclusive(True)
 
-        for obj_name, mode in [
+        for obj_name, mode_key in [
             ("btn_mode_outside", "OUTSIDE CORNERS"),
             ("btn_mode_inside",  "INSIDE CORNERS"),
             ("btn_mode_center",  "CENTER FINDER"),
-            ("btn_mode_angle",  "EDGE ANGLE")
+            ("btn_mode_angle",   "EDGE ANGLE")
         ]:
             if btn := self._w(QPushButton, obj_name):
                 self._probe_mode_grp.addButton(btn)
-                btn.clicked.connect(lambda _=False, m=mode: self._probe_set_mode(m))
+                btn.clicked.connect(lambda _=False, m=mode_key: self._probe_set_mode(m))
 
         # ── QStackedWidget Setup ───────────────────────────────────────────
         self._probe_stack = QStackedWidget()
@@ -1537,15 +1539,15 @@ class ThorCNC(QObject):
 
         # Tooltip mapping
         TT_MAP = {
-            "corner_tl": "Top-Left Corner",
-            "edge_top":  "Top Edge",
-            "corner_tr": "Top-Right Corner",
-            "edge_left": "Left Edge",
-            "center":    "Z Probe (Surface)",
-            "edge_right":"Right Edge",
-            "corner_bl": "Bottom-Left Corner",
-            "edge_bottom":"Bottom Edge",
-            "corner_br": "Bottom-Right Corner",
+            "corner_tl": _t("Top-Left Corner"),
+            "edge_top":  _t("Top Edge"),
+            "corner_tr": _t("Top-Right Corner"),
+            "edge_left": _t("Left Edge"),
+            "center":    _t("Z Probe (Surface)"),
+            "edge_right":_t("Right Edge"),
+            "corner_bl": _t("Bottom-Left Corner"),
+            "edge_bottom":_t("Bottom Edge"),
+            "corner_br": _t("Bottom-Right Corner"),
         }
 
         def make_grid_page(subfolder, cells):
@@ -1562,8 +1564,8 @@ class ThorCNC(QObject):
                 
                 # Set Tooltip
                 prefix = subfolder.capitalize() if "angle" not in subfolder else "Measure Angle at"
-                if subfolder == "outside": prefix = "Probe Outside"
-                if subfolder == "inside":  prefix = "Probe Inside"
+                if subfolder == "outside": prefix = _t("OUTSIDE")
+                if subfolder == "inside":  prefix = _t("INSIDE")
                 
                 label = TT_MAP.get(ngc, ngc.replace("_", " ").title())
                 btn.setToolTip(f"{prefix} {label}")
@@ -1589,7 +1591,7 @@ class ThorCNC(QObject):
 
         # Header: Inside/Outside Toggle
         hl_toggle = QHBoxLayout()
-        self._btn_probe_center_mode = QPushButton("MODE: OUTSIDE")
+        self._btn_probe_center_mode = QPushButton(_t("MODE: OUTSIDE"))
         self._btn_probe_center_mode.setObjectName("btn_probe_center_mode")
         self._btn_probe_center_mode.setCheckable(True)
         self._btn_probe_center_mode.setMinimumHeight(45)
@@ -1796,7 +1798,7 @@ class ThorCNC(QObject):
     def _on_probe_center_mode_toggled(self, inside: bool):
         """Umschaltung zwischen OUTSIDE und INSIDE."""
         self._probe_center_inside = inside
-        self._btn_probe_center_mode.setText("MODE: INSIDE" if inside else "MODE: OUTSIDE")
+        self._btn_probe_center_mode.setText(_t("MODE: INSIDE") if inside else _t("MODE: OUTSIDE"))
         
         # Helper for SVGs
         def svg(filename):
@@ -2108,7 +2110,7 @@ class ThorCNC(QObject):
     def _probe_set_mode(self, mode: str):
         from PySide6.QtWidgets import QLabel, QPushButton
         if lbl := self._w(QLabel, "lbl_probe_section_title"):
-            lbl.setText(mode)
+            lbl.setText(_t(mode))
 
         # Update button highlights
         btn_map = {
@@ -2368,21 +2370,36 @@ class ThorCNC(QObject):
                                        QGroupBox, QVBoxLayout, QWidget, QLineEdit, QHBoxLayout, QLabel, QTextEdit)
 
         # ── UI Tab: Theme & Language ───────────────────────────────────────────
-        if cb := self._w(QComboBox, "combo_theme"):
-            # Gespeichertes Theme vorauswählen und sofort anwenden
+        if cb_theme := self._w(QComboBox, "combo_theme"):
+            # Set internal keys as userData before translation
+            for i in range(cb_theme.count()):
+                cb_theme.setItemData(i, cb_theme.itemText(i))
+            
+            valid_themes = ["dark", "light", "dark_green", "dark_orange"]
             saved = self.settings.get("theme", "dark")
-            idx = cb.findText(saved)
+            if saved not in valid_themes:
+                saved = "dark"
+                
+            idx = cb_theme.findData(saved)
             if idx >= 0:
-                cb.setCurrentIndex(idx)
-            cb.currentTextChanged.connect(self._apply_theme)
+                cb_theme.setCurrentIndex(idx)
+            
+            # Use blockSignals to avoid triggering _apply_theme during translation later
+            cb_theme.currentTextChanged.connect(
+                lambda t, c=cb_theme: self._apply_theme(c.currentData() or t)
+            )
             self._apply_theme(saved)
 
-        if cb := self._w(QComboBox, "combo_language"):
+        if cb_lang := self._w(QComboBox, "combo_language"):
+            # Set internal keys as userData before translation
+            for i in range(cb_lang.count()):
+                cb_lang.setItemData(i, cb_lang.itemText(i))
+                
             saved_lang = self.settings.get("language", "Deutsch")
-            idx = cb.findText(saved_lang)
+            idx = cb_lang.findData(saved_lang)
             if idx >= 0:
-                cb.setCurrentIndex(idx)
-            cb.currentTextChanged.connect(self._on_language_changed)
+                cb_lang.setCurrentIndex(idx)
+            cb_lang.currentIndexChanged.connect(lambda i, c=cb_lang: self._on_language_changed(c.itemData(i)))
 
         # ── UI Settings (Antialiasing, Tabs, etc) ──
         # ── Backplot Antialiasing ──
@@ -2495,7 +2512,7 @@ class ThorCNC(QObject):
             lay_pins = QHBoxLayout()
             lay_pins.addWidget(QLabel(_t("M64 P... (Index):")))
             self._le_probe_pins = QLineEdit(self._probe_warning_pins_str)
-            self._le_probe_pins.setPlaceholderText("z.B. 0, 2")
+            self._le_probe_pins.setPlaceholderText(_t("z.B. 0, 2"))
             self._le_probe_pins.textChanged.connect(self._on_probe_warning_pins_changed)
             lay_pins.addWidget(self._le_probe_pins)
             gl_safety.addLayout(lay_pins)
@@ -2547,7 +2564,7 @@ class ThorCNC(QObject):
             gl_abort.addWidget(lbl_abort_desc)
             
             self._te_abort_gcode = QTextEdit()
-            self._te_abort_gcode.setPlaceholderText("z.B. M5 M9\nG54\nG90\nG40")
+            self._te_abort_gcode.setPlaceholderText(_t("z.B. M5 M9\nG54\nG90\nG40"))
             self._te_abort_gcode.setMinimumHeight(200)
             
             # GUI hat Vorrang: Immer aus den Prefs laden
@@ -2556,7 +2573,7 @@ class ThorCNC(QObject):
             
             gl_abort.addWidget(self._te_abort_gcode)
             
-            btn_save_abort = QPushButton("SPEICHERN & ANWENDEN")
+            btn_save_abort = QPushButton(_t("SAVE & APPLY"))
             btn_save_abort.setMinimumHeight(45)
             btn_save_abort.clicked.connect(self._save_abort_handler)
             gl_abort.addWidget(btn_save_abort)
@@ -2566,14 +2583,14 @@ class ThorCNC(QObject):
             
             # --- Column 2: Diagnostics & Components (Right) ---
             col_diag = QVBoxLayout()
-            gb_diag = QGroupBox("Diagnose & Komponenten")
+            gb_diag = QGroupBox(_t("Diagnose & Komponenten"))
             gl_diag = QVBoxLayout(gb_diag)
             
             # List of diagnostics tools
             diag_tools = [
-                ("HAL Show (Pins & Signale)", self._run_halshow),
-                ("HAL Scope (Oszilloskop)", self._run_halscope),
-                ("LinuxCNC Status (Detail-Infos)", self._run_linuxcnc_status)
+                (_t("HAL Show (Pins & Signale)"), self._run_halshow),
+                (_t("HAL Scope (Oszilloskop)"), self._run_halscope),
+                (_t("LinuxCNC Status (Detail-Infos)"), self._run_linuxcnc_status)
             ]
             
             for text, func in diag_tools:
@@ -4620,6 +4637,10 @@ class ThorCNC(QObject):
             self._warn_missing_prefs = False
 
     def _apply_theme(self, name: str):
+        valid_themes = ["dark", "light", "dark_green", "dark_orange"]
+        if name not in valid_themes:
+            return
+            
         from PySide6.QtWidgets import QApplication
         from .main import load_theme
         load_theme(QApplication.instance(), name)

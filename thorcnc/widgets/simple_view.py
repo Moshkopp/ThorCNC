@@ -4,6 +4,7 @@ from PySide6.QtUiTools import QUiLoader
 
 from .backplot import BackplotWidget
 from .gcode_view import GCodeView
+from ..i18n import _t
 
 _DIR = os.path.dirname(__file__)
 
@@ -160,11 +161,11 @@ class SimpleView(QWidget):
         from PySide6.QtCore import Qt
 
         views = [
-            ("ISO",   self.backplot.set_view_iso),
-            ("TOP",   self.backplot.set_view_z),
-            ("FRONT", self.backplot.set_view_y),
-            ("SIDE",  self.backplot.set_view_x),
-            ("CLEAR TRAIL", self.backplot.clear_trail)
+            (_t("ISO"),   self.backplot.set_view_iso),
+            (_t("TOP"),   self.backplot.set_view_z),
+            (_t("FRONT"), self.backplot.set_view_y),
+            (_t("SIDE"),  self.backplot.set_view_x),
+            (_t("CLEAR TRAIL"), self.backplot.clear_trail)
         ]
 
         for label, fn in views:
@@ -204,9 +205,9 @@ class SimpleView(QWidget):
 
     def set_feed_rpm(self, feed, rpm):
         if self.lbl_feed and feed is not None:
-            self.lbl_feed.setText(f"FEED: {int(feed)}")
+            self.lbl_feed.setText(_t("FEED: {}").format(int(feed)))
         if self.lbl_rpm and rpm is not None:
-            self.lbl_rpm.setText(f"RPM: {int(rpm)}")
+            self.lbl_rpm.setText(_t("RPM: {}").format(int(rpm)))
 
     def load_gcode(self, path: str):
         if self.gcode_view:

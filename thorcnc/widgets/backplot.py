@@ -47,6 +47,7 @@ except Exception:
     _HAS_GL = False
 
 from ..gcode_parser import Segment, RAPID, FEED, ARC, bounding_box
+from ..i18n import _t
 
 
 # ── Farben ────────────────────────────────────────────────────────────────
@@ -449,11 +450,11 @@ class BackplotWidget(QFrame):
             outer.addWidget(self._impl)
         else:
             lbl = QLabel(
-                "pyqtgraph / OpenGL nicht verfügbar.\n\n"
+                _t("pyqtgraph / OpenGL nicht verfügbar.\n\n"
                 "Mögliche Lösungen:\n"
                 "1. In VM: '3D-Beschleunigung' aktivieren\n"
                 "2. Debian/Ubuntu: sudo apt install python3-pyqtgraph python3-opengl\n"
-                "3. Pip: pip install pyqtgraph PyOpenGL",
+                "3. Pip: pip install pyqtgraph PyOpenGL"),
                 self,
             )
             lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)

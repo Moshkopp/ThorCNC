@@ -1,6 +1,6 @@
 import os
 import json
-from PySide6.QtWidgets import QWidget, QLabel, QPushButton, QCheckBox, QGroupBox, QRadioButton, QTabWidget, QComboBox, QMainWindow
+from PySide6.QtWidgets import QWidget, QLabel, QPushButton, QCheckBox, QGroupBox, QRadioButton, QTabWidget, QComboBox, QMainWindow, QAbstractButton
 from PySide6.QtCore import Qt
 
 class TranslationManager:
@@ -42,13 +42,24 @@ class TranslationManager:
 
     def _translate_single_widget(self, widget: QWidget):
         """Helper to translate a single widget's properties."""
-        if isinstance(widget, (QLabel, QPushButton, QCheckBox, QRadioButton, QGroupBox)):
-            if hasattr(widget, "text") and widget.text():
+        # Standard text properties
+        if isinstance(widget, (QAbstractButton, QLabel)):
+            if widget.text():
                 widget.setText(self.translate(widget.text()))
-            if hasattr(widget, "toolTip") and widget.toolTip():
-                widget.setToolTip(self.translate(widget.toolTip()))
+        elif isinstance(widget, QGroupBox):
+            if widget.title():
+                widget.setTitle(self.translate(widget.title()))
         
-        elif isinstance(widget, QMainWindow):
+        # Placeholder text
+        if hasattr(widget, "placeholderText") and widget.placeholderText():
+            widget.setPlaceholderText(self.translate(widget.placeholderText()))
+            
+        # Tooltips (for all widgets)
+        if hasattr(widget, "toolTip") and widget.toolTip():
+            widget.setToolTip(self.translate(widget.toolTip()))
+        
+        # Special containers
+        if isinstance(widget, QMainWindow):
             if widget.windowTitle():
                 widget.setWindowTitle(self.translate(widget.windowTitle()))
         
@@ -56,6 +67,12 @@ class TranslationManager:
             for i in range(widget.count()):
                 widget.setTabText(i, self.translate(widget.tabText(i)))
                 widget.setTabToolTip(i, self.translate(widget.tabToolTip(i)))
+        
+        elif isinstance(widget, QComboBox):
+            widget.blockSignals(True)
+            for i in range(widget.count()):
+                widget.setItemText(i, self.translate(widget.itemText(i)))
+            widget.blockSignals(False)
 
     def apply_to_widget(self, widget: QWidget):
         """Translates a widget and all its children in one pass."""
