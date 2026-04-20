@@ -414,6 +414,8 @@ class ThorCNC(QObject):
             from PySide6.QtWidgets import QListView
             combo.setView(QListView()) # Force QListView to make QSS ::item styling work reliably
             combo.setMaxVisibleItems(10)
+            # Force dropdown behavior via property (more robust than QSS qproperty)
+            combo.setProperty("comboboxPopup", False)
             combo.setFocusPolicy(Qt.FocusPolicy.NoFocus)
             tb_lay.insertWidget(tb_lay.indexOf(self._btn_go_to_home), combo)
             self.combo_machine_mode = combo
