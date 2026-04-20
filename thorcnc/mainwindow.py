@@ -410,7 +410,7 @@ class ThorCNC(QObject):
             if combo.parent() and combo.parent().layout():
                 combo.parent().layout().removeWidget(combo)
             # Add to top toolbar
-            combo.setMinimumWidth(160)
+            combo.setMinimumWidth(180)
             from PySide6.QtWidgets import QListView
             combo.setView(QListView()) # Force QListView to make QSS ::item styling work reliably
             combo.setMaxVisibleItems(10)

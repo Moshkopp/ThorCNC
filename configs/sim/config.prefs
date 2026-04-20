@@ -76,7 +76,7 @@
         "M65",
         "T99 M6 G43"
     ],
-    "theme": "dark",
+    "theme": "light",
     "backplot_msaa_samples": 4,
     "backplot_antialiasing": true,
     "show_html_tab": false,
