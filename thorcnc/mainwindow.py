@@ -1550,8 +1550,9 @@ class ThorCNC(QObject):
             "corner_br": _t("Bottom-Right Corner"),
         }
 
-        def make_grid_page(subfolder, cells):
+        def make_grid_page(subfolder, cells, icon_subfolder=None):
             """cells: list of (row, col, ngc_name, svg_file)"""
+            if icon_subfolder is None: icon_subfolder = subfolder
             page = QWidget()
             gl = QGridLayout(page)
             gl.setSpacing(6)
@@ -1559,11 +1560,17 @@ class ThorCNC(QObject):
             grp = QButtonGroup(page)
             grp.setExclusive(True)
             for row, col, ngc, svgf in cells:
-                btn = make_btn(f"{subfolder}_{ngc}", grp)
-                btn.setIcon(svg(subfolder, svgf))
+                # Intelligently construct NGC name: don't double-prefix
+                if subfolder and ngc.startswith(f"{subfolder}_"):
+                    full_ngc = ngc
+                else:
+                    full_ngc = f"{subfolder}_{ngc}" if subfolder else ngc
+                
+                btn = make_btn(full_ngc, grp)
+                btn.setIcon(svg(icon_subfolder, svgf))
                 
                 # Set Tooltip
-                prefix = subfolder.capitalize() if "angle" not in subfolder else "Measure Angle at"
+                prefix = subfolder.capitalize() if "angle" not in subfolder else _t("Measure Angle at")
                 if subfolder == "outside": prefix = _t("OUTSIDE")
                 if subfolder == "inside":  prefix = _t("INSIDE")
                 
@@ -1683,12 +1690,12 @@ class ThorCNC(QObject):
 
         # ANGLE FINDER page
         ANGLE_CELLS = [
-            (0, 1, "angle_edge_top",    "edge_top.svg"),
-            (1, 0, "angle_edge_left",   "edge_left.svg"),
-            (1, 2, "angle_edge_right",  "edge_right.svg"),
-            (2, 1, "angle_edge_bottom", "edge_bottom.svg"),
+            (0, 1, "edge_top",    "edge_top.svg"),
+            (1, 0, "edge_left",   "edge_left.svg"),
+            (1, 2, "edge_right",  "edge_right.svg"),
+            (2, 1, "edge_bottom", "edge_bottom.svg"),
         ]
-        p_angle = make_grid_page("outside", ANGLE_CELLS)
+        p_angle = make_grid_page("angle", ANGLE_CELLS, icon_subfolder="outside")
         
         # Reparent Edge Width to this page
         lay_angle = p_angle.layout()

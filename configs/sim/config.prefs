@@ -25,6 +25,7 @@
     "ts_search_vel": 300.0,
     "ts_probe_vel": 10.0,
     "mdi_history": [
+        "T99 M6 G43",
         "T14 M6 G43",
         "T1 M6 G43",
         "T99 M6 G43",
@@ -73,8 +74,7 @@
         "M65 P2",
         "M65 P0",
         "M65",
-        "T99 M6 G43",
-        "T14 M6 G43"
+        "T99 M6 G43"
     ],
     "theme": "dark",
     "backplot_msaa_samples": 4,

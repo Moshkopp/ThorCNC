@@ -1,4 +1,4 @@
-( ThorCNC - Edge Angle Top (Probe Y-) )
+( ThorCNC - Edge Angle Top - Probe Y- )
 ( #1: Meas Dist, #3: Max XY, #4: Max Z, #5: Search Vel, #6: Probe Vel, #7: Z Cl, #8: Depth, #9: Auto Zero, #10: Probe Dia, #11: Probe Rapid, #12: XY Cl, #13: Step Off )
 
 O<angle_edge_top> sub
