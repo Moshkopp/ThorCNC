@@ -1798,6 +1798,7 @@ class ThorCNC(QObject):
         # ── Load and Connect Prefs ───────────────────────────────────────────
         self._probe_prefs_load()
         self._probe_prefs_connect()
+        self._write_probe_before_after() # Synchronize NGC files at startup
 
         # ── Setup Probe DRO ────────────────────────────────────────────────
         self._setup_probe_dro()
@@ -2091,6 +2092,40 @@ class ThorCNC(QObject):
     def _probe_pref_save(self, key: str, value):
         self.settings.set(key, value)
         self.settings.save()
+        if key in ("probe_before", "probe_after"):
+            self._write_probe_before_after()
+
+    def _write_probe_before_after(self):
+        """Schreibt before_probe.ngc und after_probe.ngc ins Probing-Verzeichnis."""
+        from PySide6.QtWidgets import QTextEdit
+        ngc_dir = self._probe_ngc_dir()
+        before_code = ""
+        after_code = ""
+        if te := self._w(QTextEdit, "te_probe_before"):
+            before_code = te.toPlainText().strip()
+        if te := self._w(QTextEdit, "te_probe_after"):
+            after_code = te.toPlainText().strip()
+        
+        try:
+            # before_probe.ngc schreiben
+            before_path = os.path.join(ngc_dir, "before_probe.ngc")
+            with open(before_path, "w", encoding="utf-8") as f:
+                f.write("O<before_probe> sub\n")
+                if before_code:
+                    f.write(f"  {before_code}\n")
+                f.write("O<before_probe> endsub\n")
+                f.write("M2\n")
+
+            # after_probe.ngc schreiben
+            after_path = os.path.join(ngc_dir, "after_probe.ngc")
+            with open(after_path, "w", encoding="utf-8") as f:
+                f.write("O<after_probe> sub\n")
+                if after_code:
+                    f.write(f"  {after_code}\n")
+                f.write("O<after_probe> endsub\n")
+                f.write("M2\n")
+        except Exception as e:
+            self._status(f"Could not write probe NGC files: {e}", error=True)
 
     def _probe_clear_fields(self, field_names: list):
         from PySide6.QtWidgets import QLineEdit
@@ -2614,6 +2649,8 @@ class ThorCNC(QObject):
             col_diag.addWidget(gb_diag)
             main_layout.addLayout(col_diag, 1) # Stretch 1
 
+        # ── Abort Handler & Toolsetter Initialization (RESTORED) ──────────────
+        self._write_on_abort_ngc()
         # ── Toolsetter Settings Initialization (RESTORED) ─────────────────────
         # Spinboxen laden & verbinden
         for widget_name, prefs_key, default in self._TOOLSENSOR_FIELDS:
@@ -2656,11 +2693,18 @@ class ThorCNC(QObject):
             
     def _save_abort_handler(self):
         """Speichert den G-Code für den Abort-Handler und aktualisiert die .ngc Datei."""
-        import os
         gcode = self._te_abort_gcode.toPlainText()
         self.settings.set("abort_gcode", gcode)
         self.settings.save()
-        
+        self._write_on_abort_ngc()
+
+    def _write_on_abort_ngc(self):
+        """Aktualisiert die on_abort.ngc Datei basierend auf dem aktuellen UI-Inhalt."""
+        import os
+        if not hasattr(self, "_te_abort_gcode"):
+            return
+            
+        gcode = self._te_abort_gcode.toPlainText()
         # Pfad zur on_abort.ngc finden
         ini_dir = os.path.dirname(self.ini_path) if self.ini_path else os.getcwd()
         ngc_filename = "on_abort.ngc"
@@ -2706,9 +2750,9 @@ class ThorCNC(QObject):
                 f.write("o<on_abort> endsub\n")
                 f.write("M2\n")
             
-            self._status(f"Abort-Handler aktualisiert: {target_path}")
+            self._status(f"Abort-Handler synchronisiert: {target_path}")
         except Exception as e:
-            self._status(f"Fehler beim Speichern des Abort-Handlers: {e}", error=True)
+            self._status(f"Fehler beim Schreiben des Abort-Handlers: {e}", error=True)
 
 
     def _parse_probe_warning_pins(self, text: str):
