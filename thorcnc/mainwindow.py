@@ -6,11 +6,11 @@ directly to LinuxCNC via custom implementations (no qtpyvcp).
 import os
 import re
 import linuxcnc
+from PySide6.QtCore import Qt, QObject, Slot, QTimer, QPropertyAnimation, QEasingCurve, QByteArray, QPoint, QEvent
 from PySide6.QtWidgets import (QMainWindow, QHBoxLayout, QLabel, QFrame, QPushButton, 
                                QTableWidgetItem, QWidget, QVBoxLayout, QSplitter, 
                                QStackedWidget, QLineEdit, QListWidget, QSizePolicy, 
-                               QComboBox, QListView, QSpinBox)
-from PySide6.QtCore import Qt, QObject, Slot, QTimer, QPropertyAnimation, QEasingCurve, QByteArray, QPoint
+                               QComboBox, QListView, QSpinBox, QApplication)
 from PySide6.QtUiTools import QUiLoader
 
 from .status_poller import StatusPoller
@@ -75,6 +75,9 @@ class ThorCNC(QObject):
         self._load_ui()
         
         self._replace_custom_widgets()
+        
+        # Install global event filter for "light-dismiss" flyouts
+        QApplication.instance().installEventFilter(self)
         self._restore_window_state()
         self._setup_dro()
         self._hal_comp = None
@@ -3259,6 +3262,30 @@ class ThorCNC(QObject):
             self._opt_anim.setEndValue(175) # Höhe für 3 Buttons + Spacing + Margins
             
         self._opt_anim.start()
+
+    def eventFilter(self, obj, event):
+        """Detects clicks outside of flyouts to close them automatically."""
+        if event.type() == QEvent.MouseButtonPress:
+            if self._current_flyout:
+                panel = self._flyout_panels.get(self._current_flyout)
+                if panel and panel.isVisible():
+                    # Check if the click is outside the flyout panel
+                    global_pt = event.globalPosition().toPoint()
+                    if not panel.geometry().contains(global_pt):
+                        # Check if the click is on the toggle button itself
+                        btn = self.ui.findChild(QPushButton, f"btn_flyout_toggle_{self._current_flyout.lower()}")
+                        if btn and btn.rect().contains(btn.mapFromGlobal(global_pt)):
+                            return super().eventFilter(obj, event)
+                            
+                        # Also check the Start-At-Line mini flyout
+                        if hasattr(self, "_line_queue_panel") and self._line_queue_panel.isVisible():
+                            if self._line_queue_panel.geometry().contains(global_pt):
+                                return super().eventFilter(obj, event)
+
+                        # Click is truly outside -> close flyout
+                        self._close_flyout(self._current_flyout)
+                        
+        return super().eventFilter(obj, event)
 
     def _toggle_flyout(self, name, button):
         panel = self._flyout_panels.get(name)
