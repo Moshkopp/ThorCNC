@@ -140,10 +140,10 @@ class StatusPoller(QObject):
             self.interp_changed.emit(s.interp_state)
 
         # -- Position update --
-        # Always use Cartesian 'actual_position'. In modern LinuxCNC (2.8+),
-        # this updates correctly even during TRAJ_MODE_FREE (Homing), avoiding
-        # joint-to-axis mapping issues on gantry machines.
-        pos = list(s.actual_position[:3])
+        # We use Cartesian 'position' (commanded) instead of 'actual_position' (feedback).
+        # This ensures the DRO matches the G-code target exactly when the segment ends,
+        # making DTG behavior intuitive and eliminating servo-lag flicker in the UI.
+        pos = list(s.position[:3])
             
         if pos != self._position:
             self._position = pos

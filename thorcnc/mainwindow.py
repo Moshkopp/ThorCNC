@@ -3555,6 +3555,12 @@ class ThorCNC(QObject):
             return
         g5x   = getattr(self.poller, "_g5x_offset", None) or [0.0, 0.0, 0.0]
         try:
+            # G92 and G52 offsets are stored in g92_offset in modern LinuxCNC
+            g92 = self.poller.stat.g92_offset[:3]
+        except (AttributeError, TypeError):
+            g92 = [0.0, 0.0, 0.0]
+
+        try:
             t_off = self.poller.stat.tool_offset or [0.0, 0.0, 0.0]
         except AttributeError:
             t_off = [0.0, 0.0, 0.0]
@@ -3566,16 +3572,22 @@ class ThorCNC(QObject):
             is_homed = i < len(homed) and homed[i]
             if not is_homed:
                 all_homed = False
-            work = pos[i] - g5x[i] - t_off[i]
+            # Work = Machine - WCS - G92 - Tool
+            work = pos[i] - g5x[i] - g92[i] - t_off[i]
             mach = pos[i]
-            dtg  = self.poller.stat.dtg[i] if hasattr(self.poller.stat, 'dtg') else 0.0
+            
+            # DTG is a tuple in LinuxCNC 2.9 (Axis-specific remaining distance)
+            try:
+                dtg_val = self.poller.stat.dtg[i]
+            except (AttributeError, TypeError, IndexError):
+                dtg_val = 0.0
 
             if axis in self._dro_work:
                 self._dro_work[axis].setText(f"{work:+.3f}")
             if axis in self._dro_machine:
                 self._dro_machine[axis].setText(f"{mach:+.3f}")
             if axis in getattr(self, "_dro_dtg", {}):
-                self._dro_dtg[axis].setText(f"{dtg:+.3f}")
+                self._dro_dtg[axis].setText(f"{dtg_val:+.3f}")
 
             # probe-DRO mitsyncen
             probe_dro_work = getattr(self, "_probe_dro_work", {})
@@ -3597,12 +3609,13 @@ class ThorCNC(QObject):
 
         # Simple View overlay DRO sync (only when visible to save work)
         if hasattr(self, "simple_view") and self.simple_view.isVisible():
-            w_coords = [pos[i] - g5x[i] - t_off[i] for i in range(3)]
+            w_coords = [pos[i] - g5x[i] - g92[i] - t_off[i] for i in range(3)]
             m_coords = [pos[i] for i in range(3)]
-            dtg_vals = [
-                self.poller.stat.dtg[i] if hasattr(self.poller.stat, "dtg") else 0.0
-                for i in range(3)
-            ]
+            try:
+                dtg_vals = list(self.poller.stat.dtg[:3])
+            except (AttributeError, TypeError):
+                dtg_vals = [0.0, 0.0, 0.0]
+
             self.simple_view.set_wcs(*w_coords)
             self.simple_view.set_machine(*m_coords)
             self.simple_view.set_dtg(*dtg_vals)
