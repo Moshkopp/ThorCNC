@@ -2173,24 +2173,30 @@ class ThorCNC(QObject):
         Gibt das NGC-Verzeichnis für Probing zurück.
         Priorität:
         1. 'subroutines/probing' relativ zur INI
-        2. PROGRAM_PREFIX aus der INI
+        2. 'subroutines/probing' im PROGRAM_PREFIX
+        3. PROGRAM_PREFIX aus der INI
         """
+        search_dirs = []
         if self.ini_path:
-            ini_dir = os.path.dirname(os.path.abspath(self.ini_path))
-            sub_probing = os.path.join(ini_dir, "subroutines", "probing")
-            if os.path.isdir(sub_probing):
-                return sub_probing
-
-        d = os.path.expanduser("~/linuxcnc/nc_files")
+            search_dirs.append(os.path.dirname(os.path.abspath(self.ini_path)))
+            
         if self.ini:
-            cfg = self.ini.find("DISPLAY", "PROGRAM_PREFIX")
-            if cfg:
-                cfg = os.path.expanduser(cfg)
-                if not os.path.isabs(cfg):
-                    cfg = os.path.abspath(
-                        os.path.join(os.path.dirname(self.ini_path), cfg))
-                d = cfg
-        return d
+            prefix = self.ini.find("DISPLAY", "PROGRAM_PREFIX")
+            if prefix:
+                prefix = os.path.expanduser(prefix)
+                if not os.path.isabs(prefix) and self.ini_path:
+                    prefix = os.path.abspath(os.path.join(os.path.dirname(self.ini_path), prefix))
+                search_dirs.append(prefix)
+        
+        search_dirs.append(os.path.expanduser("~/linuxcnc/nc_files"))
+        
+        for base in search_dirs:
+            sub = os.path.join(base, "subroutines", "probing")
+            if os.path.isdir(sub):
+                return sub
+                
+        # Fallback: Erster gefundener Basis-Ordner oder Default
+        return search_dirs[1] if len(search_dirs) > 1 else search_dirs[0]
 
     def _probe_run_sequence(self, ngc_name: str):
         """
@@ -2858,22 +2864,34 @@ class ThorCNC(QObject):
         self._status(f"Toolsetter  BEFORE: [{before_str}]  |  AFTER: [{after_str}]")
 
     def _ts_ngc_dir(self) -> str:
-        """Gibt das NGC-Verzeichnis für Toolsetter-Subroutinen zurück."""
+        """
+        Gibt das NGC-Verzeichnis für Toolsetter-Subroutinen zurück.
+        Priorität:
+        1. 'subroutines/tools' relativ zur INI
+        2. 'subroutines/tools' im PROGRAM_PREFIX
+        3. PROGRAM_PREFIX aus der INI
+        """
+        search_dirs = []
         if self.ini_path:
-            ini_dir = os.path.dirname(os.path.abspath(self.ini_path))
-            sub_tools = os.path.join(ini_dir, "subroutines", "tools")
-            if os.path.isdir(sub_tools):
-                return sub_tools
-        d = os.path.expanduser("~/linuxcnc/nc_files")
+            search_dirs.append(os.path.dirname(os.path.abspath(self.ini_path)))
+            
         if self.ini:
-            cfg = self.ini.find("DISPLAY", "PROGRAM_PREFIX")
-            if cfg:
-                cfg = os.path.expanduser(cfg)
-                if not os.path.isabs(cfg):
-                    cfg = os.path.abspath(
-                        os.path.join(os.path.dirname(self.ini_path), cfg))
-                d = cfg
-        return d
+            prefix = self.ini.find("DISPLAY", "PROGRAM_PREFIX")
+            if prefix:
+                prefix = os.path.expanduser(prefix)
+                if not os.path.isabs(prefix) and self.ini_path:
+                    prefix = os.path.abspath(os.path.join(os.path.dirname(self.ini_path), prefix))
+                search_dirs.append(prefix)
+        
+        search_dirs.append(os.path.expanduser("~/linuxcnc/nc_files"))
+        
+        for base in search_dirs:
+            sub = os.path.join(base, "subroutines", "tools")
+            if os.path.isdir(sub):
+                return sub
+                
+        # Fallback: Erster gefundener Basis-Ordner oder Default
+        return search_dirs[1] if len(search_dirs) > 1 else search_dirs[0]
 
     def _write_ts_before_after(self):
         """Schreibt before_toolsetter.ngc und after_toolsetter.ngc ins Tools-Verzeichnis."""
