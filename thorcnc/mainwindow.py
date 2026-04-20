@@ -411,6 +411,8 @@ class ThorCNC(QObject):
                 combo.parent().layout().removeWidget(combo)
             # Add to top toolbar
             combo.setMinimumWidth(120)
+            from PySide6.QtWidgets import QListView
+            combo.setView(QListView()) # Force QListView to make QSS ::item styling work reliably
             combo.setFocusPolicy(Qt.FocusPolicy.NoFocus)
             tb_lay.insertWidget(tb_lay.indexOf(self._btn_go_to_home), combo)
             self.combo_machine_mode = combo
