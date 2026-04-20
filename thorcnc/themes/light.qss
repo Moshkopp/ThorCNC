@@ -225,12 +225,26 @@ QPushButton#btn_opt:hover {
 #combo_machine_mode {
     background-color: #ffffff;
     border: 1px solid #b8c4d0;
-    border-radius: 4px;
-    padding: 4px 8px;
+    border-radius: 6px;
+    padding: 0px 10px;
     min-width: 140px;
+    min-height: 40px;
+    max-height: 40px;
     font-weight: bold;
-    font-size: 10pt;
+    font-size: 11pt;
     color: #16a34a;
+}
+#combo_machine_mode::drop-down {
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    width: 30px;
+    border-left: 1px solid #b8c4d0;
+    border-top-right-radius: 6px;
+    border-bottom-right-radius: 6px;
+}
+#combo_machine_mode::down-arrow {
+    width: 12px;
+    height: 12px;
 }
 #combo_machine_mode:hover {
     border-color: #94a3b8;
@@ -238,9 +252,27 @@ QPushButton#btn_opt:hover {
 }
 #combo_machine_mode QAbstractItemView {
     background-color: #ffffff;
-    border: 1px solid #b8c4d0;
-    selection-background-color: #2563eb;
-    selection-color: white;
+    border: 1px solid #2563eb;
+    border-radius: 6px;
+    outline: none;
+}
+#combo_machine_mode QAbstractItemView::item {
+    min-height: 60px;
+    padding: 0px 20px;
+    color: #1e293b;
+    border-bottom: 1px solid #e2e8f0;
+}
+#combo_machine_mode QAbstractItemView::item:selected {
+    background-color: #2563eb;
+    color: white;
+}
+
+QPushButton#btn_go_to_home {
+    min-height: 40px;
+    max-height: 40px;
+    padding: 0px 15px;
+    font-size: 11pt;
+    border-radius: 6px;
 }
 
 /* ── Simple View Overlay Buttons ── */

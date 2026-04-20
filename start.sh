@@ -5,7 +5,7 @@
 #
 # Verwendung:
 #   ./start.sh                        # Sim-Config (Standard)
-#   ./start.sh --theme dark_green     # anderes Theme
+#   ./start.sh --theme light          # anderes Theme
 #   ./start.sh /pfad/zur/maschine.ini # eigene INI
 # ─────────────────────────────────────────────────────────────────────────────
 set -euo pipefail

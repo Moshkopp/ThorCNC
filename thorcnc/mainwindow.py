@@ -2423,7 +2423,7 @@ class ThorCNC(QObject):
             for i in range(cb_theme.count()):
                 cb_theme.setItemData(i, cb_theme.itemText(i))
             
-            valid_themes = ["dark", "light", "dark_green", "dark_orange"]
+            valid_themes = ["dark", "light"]
             saved = self.settings.get("theme", "dark")
             if saved not in valid_themes:
                 saved = "dark"
@@ -4725,7 +4725,7 @@ class ThorCNC(QObject):
             self._warn_missing_prefs = False
 
     def _apply_theme(self, name: str):
-        valid_themes = ["dark", "light", "dark_green", "dark_orange"]
+        valid_themes = ["dark", "light"]
         if name not in valid_themes:
             return
             

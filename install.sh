@@ -208,5 +208,5 @@ else
     echo "  thorcnc --ini /pfad/zur/maschine.ini"
 fi
 echo ""
-echo "Themes: dark (Standard), light, dark_green, dark_orange"
-echo "  thorcnc --theme dark_green --ini ..."
+echo "Themes: dark (Standard), light"
+echo "  thorcnc --theme light --ini ..."
