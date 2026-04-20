@@ -119,6 +119,25 @@ else
     ok "thorcnc aktualisiert."
 fi
 
+# --- Subroutines synchronisieren ---------------------------------------------
+install_subroutines() {
+    SRC="$SCRIPT_DIR/configs/sim/subroutines"
+    DEST="$HOME/linuxcnc/nc_files"
+    
+    if [ -d "$SRC" ]; then
+        info "Synchronisiere Subroutines nach $DEST..."
+        mkdir -p "$DEST"
+        # Kopiert nur neue Dateien (-n), damit Benutzeranpassungen in nc_files erhalten bleiben
+        # (Wichtig: Die before/after G-Codes werden ja jetzt von der App beim Start geschrieben)
+        cp -rn "$SRC/"* "$DEST/" || true
+        ok "Subroutines synchronisiert."
+    else
+        warn "Subroutines-Quellordner nicht gefunden: $SRC"
+    fi
+}
+
+install_subroutines
+
 echo ""
 echo -e "${BOLD}Update abgeschlossen.${NC}"
 echo ""

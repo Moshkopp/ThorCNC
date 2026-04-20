@@ -142,6 +142,22 @@ EOF
     fi
 }
 
+# ── Subroutines kopieren ──────────────────────────────────────────────────────
+install_subroutines() {
+    SRC="$SCRIPT_DIR/configs/sim/subroutines"
+    DEST="$HOME/linuxcnc/nc_files"
+    
+    if [ -d "$SRC" ]; then
+        info "Kopiere Subroutines von SIM nach $DEST..."
+        mkdir -p "$DEST"
+        # Kopiert den Inhalt von subroutines/ (probing, tools, etc) nach nc_files/
+        cp -rn "$SRC/"* "$DEST/" || true
+        ok "Subroutines synchronisiert (bestehende Dateien wurden nicht überschrieben)."
+    else
+        warn "Subroutines-Quellordner nicht gefunden: $SRC"
+    fi
+}
+
 # ── Deinstallation ────────────────────────────────────────────────────────────
 uninstall_thorcnc() {
     info "Deinstalliere thorcnc..."
@@ -178,6 +194,7 @@ fi
 
 install_deps
 install_thorcnc
+install_subroutines
 install_desktop_entry
 install_update_shortcut
 
