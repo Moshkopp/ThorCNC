@@ -145,12 +145,12 @@ EOF
 # ── Subroutines kopieren ──────────────────────────────────────────────────────
 install_subroutines() {
     SRC="$SCRIPT_DIR/configs/sim/subroutines"
-    DEST="$HOME/linuxcnc/nc_files"
+    DEST="$HOME/linuxcnc/nc_files/subroutines"
     
     if [ -d "$SRC" ]; then
         info "Kopiere Subroutines von SIM nach $DEST..."
         mkdir -p "$DEST"
-        # Kopiert den Inhalt von subroutines/ (probing, tools, etc) nach nc_files/
+        # Kopiert den Inhalt von subroutines/ nach ~/linuxcnc/nc_files/subroutines/
         cp -rn "$SRC/"* "$DEST/" || true
         ok "Subroutines synchronisiert (bestehende Dateien wurden nicht überschrieben)."
     else
