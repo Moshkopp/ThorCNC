@@ -71,7 +71,7 @@ class M6Dialog(QDialog):
         content_layout.addStretch()
 
         # Confirm Button
-        self.btn_confirm = QPushButton(_t("LOADED & SECURED"))
+        self.btn_confirm = QPushButton(_t("LOADED && SECURED"))
         self.btn_confirm.setObjectName("m6ConfirmBtn")
         self.btn_confirm.setFixedHeight(120)
         self.btn_confirm.clicked.connect(self.accept)

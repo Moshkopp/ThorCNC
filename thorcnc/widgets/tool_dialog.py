@@ -60,6 +60,7 @@ class ToolSelectionDialog(QDialog):
         self.table.setSelectionMode(QAbstractItemView.SingleSelection)
         self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.table.setAlternatingRowColors(True)
+        self.table.setObjectName("toolSelectionTable")
         self.table.verticalHeader().setVisible(False)
         self.table.itemDoubleClicked.connect(self.accept)
         layout.addWidget(self.table)
@@ -67,12 +68,12 @@ class ToolSelectionDialog(QDialog):
         # Action Buttons
         btn_layout = QHBoxLayout()
         self.btn_cancel = QPushButton(_t("CANCEL"))
-        self.btn_cancel.setObjectName("toolDialogCancel")
+        self.btn_cancel.setObjectName("btnToolCancel")
         self.btn_cancel.setFixedHeight(50)
         self.btn_cancel.clicked.connect(self.reject)
         
         self.btn_confirm = QPushButton(_t("SELECT TOOL"))
-        self.btn_confirm.setObjectName("toolDialogConfirm")
+        self.btn_confirm.setObjectName("btnToolConfirm")
         self.btn_confirm.setFixedHeight(50)
         self.btn_confirm.clicked.connect(self.accept)
         
