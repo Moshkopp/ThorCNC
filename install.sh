@@ -118,6 +118,30 @@ EOF
     ok "Desktop-Eintrag erstellt: $DESKTOP_DIR/thorcnc.desktop"
 }
 
+# ── Update-Shortcut auf Schreibtisch ──────────────────────────────────────────
+install_update_shortcut() {
+    DESKTOP_PATH="$HOME/Desktop"
+    if [ ! -d "$DESKTOP_PATH" ] && [ -d "$HOME/Schreibtisch" ]; then
+        DESKTOP_PATH="$HOME/Schreibtisch"
+    fi
+
+    if [ -d "$DESKTOP_PATH" ]; then
+        SHORTCUT="$DESKTOP_PATH/ThorCNC-Update.desktop"
+        cat > "$SHORTCUT" <<EOF
+[Desktop Entry]
+Type=Application
+Name=ThorCNC Update
+Comment=Zieht neueste Version und installiert thorcnc neu
+Exec=bash -c "cd '$SCRIPT_DIR' && ./update.sh; echo; echo 'Fertig.'; read -p 'Drücke Enter zum Schließen...' -n 1 -s"
+Icon=system-software-update
+Terminal=true
+Categories=Utility;
+EOF
+        chmod +x "$SHORTCUT"
+        ok "Update-Verknüpfung auf Schreibtisch erstellt."
+    fi
+}
+
 # ── Deinstallation ────────────────────────────────────────────────────────────
 uninstall_thorcnc() {
     info "Deinstalliere thorcnc..."
@@ -155,6 +179,7 @@ fi
 install_deps
 install_thorcnc
 install_desktop_entry
+install_update_shortcut
 
 echo ""
 echo -e "${BOLD}Installation abgeschlossen.${NC}"

@@ -122,3 +122,30 @@ fi
 echo ""
 echo -e "${BOLD}Update abgeschlossen.${NC}"
 echo ""
+
+# --- Desktop Shortcut --------------------------------------------------------
+DESKTOP_PATH="$HOME/Desktop"
+if [ ! -d "$DESKTOP_PATH" ] && [ -d "$HOME/Schreibtisch" ]; then
+    DESKTOP_PATH="$HOME/Schreibtisch"
+fi
+
+if [ -d "$DESKTOP_PATH" ]; then
+    info "Erstelle/Aktualisiere Desktop-Verknüpfung in $DESKTOP_PATH..."
+    SHORTCUT="$DESKTOP_PATH/ThorCNC-Update.desktop"
+    
+    cat > "$SHORTCUT" <<EOD
+[Desktop Entry]
+Type=Application
+Name=ThorCNC Update
+Comment=Zieht neueste Version und installiert thorcnc neu
+Exec=bash -c "cd '$SCRIPT_DIR' && ./update.sh; echo; echo 'Fertig.'; read -p 'Drücke Enter zum Schließen...' -n 1 -s"
+Icon=system-software-update
+Terminal=true
+Categories=Utility;
+EOD
+    
+    chmod +x "$SHORTCUT"
+    ok "Verknüpfung erstellt: ThorCNC-Update.desktop"
+fi
+
+echo ""
