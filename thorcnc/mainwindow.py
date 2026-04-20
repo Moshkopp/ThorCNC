@@ -3483,6 +3483,20 @@ class ThorCNC(QObject):
         if b := self._w(QPushButton, "btn_pause_mdi"):
             b.setEnabled(running)
             
+        # G-Code Edit Safety: Disable editing while not IDLE
+        idle = state == linuxcnc.INTERP_IDLE
+        if hasattr(self, "_btn_edit_gcode") and self._btn_edit_gcode:
+            self._btn_edit_gcode.setEnabled(idle)
+            if self.gcode_view:
+                # Force read-only if not idle, otherwise follow button state
+                self.gcode_view.setReadOnly(not idle or not self._btn_edit_gcode.isChecked())
+        
+        if hasattr(self, "_btn_save_gcode") and self._btn_save_gcode:
+            # Save is only enabled if idle AND we were in edit mode AND file is modified
+            is_edit = self._btn_edit_gcode.isChecked() if hasattr(self, "_btn_edit_gcode") else False
+            is_modified = self.gcode_view.document().isModified() if self.gcode_view else False
+            self._btn_save_gcode.setEnabled(idle and is_edit and is_modified)
+
         self._update_run_buttons()
 
     def _update_run_buttons(self):
