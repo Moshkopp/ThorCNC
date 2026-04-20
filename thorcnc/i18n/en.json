@@ -121,7 +121,7 @@
     "MSAA auf {}x gesetzt. Ein Neustart ist nötig.": "MSAA set to {}x. A restart is required.",
     "Sprache geändert. Ein Neustart ist erforderlich.": "Language changed. A restart is required.",
     "Backplot Antialiasing (Glättung)": "Backplot Antialiasing (Smoothing)",
-    "Verbessert die Linienqualität (MSAA). Erfordert Neustart for volle Wirkung.": "Improves line quality (MSAA). Requires restart for full effect.",
+    "Verbessert die Linienqualität (MSAA). Erfordert Neustart für volle Wirkung.": "Improves line quality (MSAA). Requires restart for full effect.",
     "Navigation": "Navigation",
     "HTML-Tab anzeigen": "Show HTML Tab",
     "Blendet den HTML/PDF-Dokumenten-Tab in der Navigation ein oder aus.": "Shows or hides the HTML/PDF document tab in the navigation.",
