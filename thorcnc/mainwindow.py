@@ -2633,6 +2633,19 @@ class ThorCNC(QObject):
             b.clicked.connect(self._set_wechsel_pos_from_machine)
         if b := self._w(QPushButton, "btn_set_taster_pos"):
             b.clicked.connect(self._set_taster_pos_from_machine)
+
+        # Before / After Toolsetter TextEdits (RESTORED TO INIT)
+        from PySide6.QtWidgets import QTextEdit
+        for key, wname in (("ts_before", "te_ts_before"), ("ts_after", "te_ts_after")):
+            if te := self._w(QTextEdit, wname):
+                val = self.settings.get(key, "")
+                te.blockSignals(True)
+                te.setPlainText(str(val) if val else "")
+                te.blockSignals(False)
+                te.textChanged.connect(
+                    lambda k=key, widget=te: self._on_ts_text_save(k, widget)
+                )
+        self._write_ts_before_after()
             
     def _save_abort_handler(self):
         """Speichert den G-Code für den Abort-Handler und aktualisiert die .ngc Datei."""
@@ -2690,18 +2703,6 @@ class ThorCNC(QObject):
         except Exception as e:
             self._status(f"Fehler beim Speichern des Abort-Handlers: {e}", error=True)
 
-        # Before / After Toolsetter TextEdits
-        from PySide6.QtWidgets import QTextEdit
-        for key, wname in (("ts_before", "te_ts_before"), ("ts_after", "te_ts_after")):
-            if te := self._w(QTextEdit, wname):
-                val = self.settings.get(key, "")
-                te.blockSignals(True)
-                te.setPlainText(str(val) if val else "")
-                te.blockSignals(False)
-                te.textChanged.connect(
-                    lambda k=key, widget=te: self._on_ts_text_save(k, widget)
-                )
-        self._write_ts_before_after()
 
     def _parse_probe_warning_pins(self, text: str):
         """Parses comma-separated string of pins into self._probe_warning_pins list."""
