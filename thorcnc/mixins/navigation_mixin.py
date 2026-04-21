@@ -1,6 +1,6 @@
 import os
 import linuxcnc
-from PySide6.QtCore import Qt, QPoint, QPropertyAnimation, QEvent
+from PySide6.QtCore import Qt, QPoint, QPropertyAnimation, QEvent, QEasingCurve
 from PySide6.QtWidgets import QPushButton, QFrame, QVBoxLayout, QWidget, QLabel, QApplication
 
 from ..i18n import _t
@@ -14,6 +14,7 @@ class NavigationMixin:
         self._flyout_item_buttons = {}
         self._current_flyout = None
         self._flyout_anim = None
+        self._close_shorts_on_idle = False
 
     def _handle_navigation_event(self, event):
         """Processes events for light-dismiss and sidebar logic."""
@@ -53,34 +54,41 @@ class NavigationMixin:
     def _toggle_flyout(self, name, button):
         panel = self._flyout_panels.get(name)
         if not panel: 
-            print(f"[ThorCNC] Navigation Error: Flyout panel '{name}' not found! (Keys: {list(self._flyout_panels.keys())})")
+            print(f"[ThorCNC] Navigation Error: Flyout panel '{name}' not found!")
             return
         
-        # 1. Close current if another one is open (IMMEDIATE)
+        # 1. Close current if another one is open
         if self._current_flyout and self._current_flyout != name:
-            print(f"[ThorCNC] Switching flyout: {self._current_flyout} -> {name}")
             self._close_flyout(self._current_flyout, immediate=True)
             
-        is_opening = not panel.isVisible() or panel.width() == 0
-        print(f"[ThorCNC] Toggle Flyout: {name} (Opening: {is_opening})")
+        target_width = 250
+        panel.setFixedWidth(target_width)
+        
+        # Sidebar edge in centralwidget coordinates
+        sidebar_edge = self.ui.leftPanel.width()
+        # Get button position relative to centralwidget
+        btn_local = self.ui.centralwidget.mapFromGlobal(button.mapToGlobal(QPoint(0, 0)))
+        target_y = btn_local.y()
+        
+        is_opening = not panel.isVisible() or panel.x() < sidebar_edge
         
         if is_opening:
             self._update_flyout_highlights()
             
-            global_pos = button.mapToGlobal(QPoint(button.width(), 0))
-            panel.move(global_pos.x(), global_pos.y())
-            
             num_items = panel.layout().count()
+            # Calculate height based on items
             panel_height = (num_items * 60) + ((num_items - 1) * 5) + 10
             panel.setFixedHeight(panel_height)
             
             panel.show()
-            panel.raise_()
+            panel.raise_() # Put on top of everything
+            self.ui.leftPanel.raise_() # Pull the sidebar back to the very top
             
-            self._flyout_anim = QPropertyAnimation(panel, b"maximumWidth")
-            self._flyout_anim.setDuration(300)
-            self._flyout_anim.setStartValue(0)
-            self._flyout_anim.setEndValue(250)
+            self._flyout_anim = QPropertyAnimation(panel, b"pos")
+            self._flyout_anim.setDuration(350)
+            self._flyout_anim.setEasingCurve(QEasingCurve.OutQuart) # Smooth, organic slide
+            self._flyout_anim.setStartValue(QPoint(sidebar_edge - target_width, target_y))
+            self._flyout_anim.setEndValue(QPoint(sidebar_edge, target_y))
             self._flyout_anim.start()
             self._current_flyout = name
         else:
@@ -90,19 +98,40 @@ class NavigationMixin:
         panel = self._flyout_panels.get(name)
         if not panel: return
         
+        sidebar_edge = self.ui.leftPanel.width()
+        target_width = panel.width()
+        
         if immediate:
-            panel.setMaximumWidth(0)
+            if self._flyout_anim: self._flyout_anim.stop()
+            panel.move(sidebar_edge - target_width, panel.y())
             panel.hide()
             self._current_flyout = None
             return
 
-        self._flyout_anim = QPropertyAnimation(panel, b"maximumWidth")
+        self._flyout_anim = QPropertyAnimation(panel, b"pos")
         self._flyout_anim.setDuration(250)
-        self._flyout_anim.setStartValue(panel.width())
-        self._flyout_anim.setEndValue(0)
+        self._flyout_anim.setEasingCurve(QEasingCurve.InQuart)
+        self._flyout_anim.setStartValue(panel.pos())
+        self._flyout_anim.setEndValue(QPoint(sidebar_edge - target_width, panel.y()))
         self._flyout_anim.finished.connect(lambda p=panel: p.hide())
         self._flyout_anim.start()
         self._current_flyout = None
+
+    def _connect_navigation_signals(self):
+        """Connects navigation logic to the status poller."""
+        if hasattr(self, "poller") and self.poller:
+            self.poller.periodic.connect(self._periodic_nav_update)
+
+    def _periodic_nav_update(self):
+        """Periodic check for flyout highlights and auto-close logic."""
+        if self._current_flyout:
+            self._update_flyout_highlights()
+            
+            # SHORTS auto-close logic: wait for MDI to finish
+            if self._current_flyout == "SHORTS" and self._close_shorts_on_idle:
+                if self.poller.stat.interp_state == linuxcnc.INTERP_IDLE:
+                    self._close_flyout("SHORTS")
+                    self._close_shorts_on_idle = False
 
     def _handle_flyout_action(self, flyout_name, action_text):
         """Routes actions from flyout buttons to machine commands."""
@@ -155,7 +184,16 @@ class NavigationMixin:
                 curr = getattr(self.poller.stat, "block_delete", False)
                 self.cmd.set_block_delete(not curr)
         
-        self._close_flyout(flyout_name)
+        # Conditional closing logic
+        if flyout_name == "MODE":
+            self._close_flyout(flyout_name)
+        elif flyout_name == "SHORTS":
+            # For SHORTS, we wait until machine is idle if we started a move
+            self._close_shorts_on_idle = True
+        elif flyout_name == "OPT":
+            # OPTIONAL stays open until user clicks away or toggles manually
+            pass
+            
         self._update_flyout_highlights()
 
     def _toggle_line_queue_flyout(self):

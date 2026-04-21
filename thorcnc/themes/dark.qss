@@ -258,9 +258,7 @@ QPushButton[is_flyout_toggle="true"]:hover {
 QFrame#flyout_panel_mode, QFrame#flyout_panel_shorts, QFrame#flyout_panel_opt {
     background-color: #151515;
     border: 2px solid #3a7abf;
-    border-top-right-radius: 12px;
-    border-bottom-right-radius: 12px;
-    border-left: none;
+    border-radius: 12px;
 }
 
 QPushButton#btn_flyout_item {
@@ -402,7 +400,7 @@ QPushButton[objectName^="nav_"]:hover {
 QPushButton[objectName^="nav_"]:checked {
     background-color: #3a7abf; /* Full active color */
     color: #ffffff;
-    border-left: 4px solid #5599dd;
+    border: 2px solid #5599dd;
 }
 
 /* ── OPT Jalousie Panel ── */

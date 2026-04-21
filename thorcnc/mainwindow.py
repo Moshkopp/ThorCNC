@@ -487,11 +487,12 @@ class ThorCNC(QObject, NavigationMixin):
             btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
             group_lay.addWidget(btn)
             
-            # Create the Overlay Panel (Floating Top-Level for absolute rendering)
-            panel = QFrame(self.ui, Qt.WindowType.FramelessWindowHint | Qt.WindowType.ToolTip)
+            # Create the Overlay Panel (Child of centralwidget for stacking)
+            panel = QFrame(self.ui.centralwidget)
+            panel.setWindowFlags(Qt.WindowType.FramelessWindowHint)
             panel.setObjectName(f"flyout_panel_{name.lower()}")
-            panel.setMaximumWidth(0) # Initially closed
             panel.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+            panel.stackUnder(self.ui.leftPanel) # Slide out from behind the sidebar
             panel.hide()
             
             p_lay = QVBoxLayout(panel) # Vertical layout now
@@ -3440,6 +3441,9 @@ class ThorCNC(QObject, NavigationMixin):
         p.error_message.connect(self._on_error)
         p.info_message.connect(self._on_info)
         p.digital_outputs_changed.connect(self._on_digital_out_changed)
+        
+        # Navigation Flyout updates
+        self._connect_navigation_signals()
 
         # ── Machine Buttons (probe_basic widget names) ──────────────────────
         from PySide6.QtWidgets import QPushButton, QSlider
