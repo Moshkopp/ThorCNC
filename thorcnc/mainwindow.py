@@ -55,6 +55,8 @@ class ThorCNC(QObject, NavigationMixin):
         self._has_file = False
         self._last_toolpath = None
         self._last_wcs_origin = (0.0, 0.0, 0.0)
+        self._wcs_initialized = False
+        self._view_restored = False
         self._interp_state = linuxcnc.INTERP_IDLE
         self._is_spindle_running = False
         self._user_program = ""   # User loaded main program
@@ -83,7 +85,6 @@ class ThorCNC(QObject, NavigationMixin):
         self._restore_window_state()
         self._setup_dro()
         self._setup_hal()
-        print(f"[ThorCNC] Registered Flyouts: {list(self._flyout_panels.keys())}")
         self._setup_poller()
         self._setup_file_manager()
         self._setup_tool_table()
@@ -527,7 +528,6 @@ class ThorCNC(QObject, NavigationMixin):
         
         # Save references for direct access
         self.btn_mode_toggle = self.ui.findChild(QPushButton, "btn_flyout_toggle_mode")
-        self.is_single_block = False # Initialize Single Block state
         self._queued_start_line = None # For "Run from Line"
 
         if parent_vtk:
@@ -544,6 +544,10 @@ class ThorCNC(QObject, NavigationMixin):
         bpm = self.settings.get("backplot_view")
         if bpm:
             self.backplot.set_view_opts(bpm)
+            self._view_restored = True
+            # The flag prevents auto-fitting during startup signals (WCS, first file load)
+            # We clear it after a short delay to allow normal auto-fitting later.
+            QTimer.singleShot(1500, self._clear_view_restored_flag)
 
     def _switch_gcode_panel(self, idx: int):
         self._gcode_mdi_stack.setCurrentIndex(idx)
@@ -729,12 +733,20 @@ class ThorCNC(QObject, NavigationMixin):
         verwendet und soll den Backplot des Hauptprogramms nicht verschieben."""
         self._refresh_dro()
         if self.poller.stat.g5x_index != 9:
-            self.backplot.set_wcs_origin(g5x[0], g5x[1], g5x[2])
-            self._last_wcs_origin = (g5x[0], g5x[1], g5x[2])
+            new_origin = (g5x[0], g5x[1], g5x[2])
+            is_initial = not self._wcs_initialized
+            changed = not is_initial and new_origin != self._last_wcs_origin
+            
+            self.backplot.set_wcs_origin(*new_origin)
+            self._last_wcs_origin = new_origin
+            self._wcs_initialized = True
             
             # Wenn noch kein Programm geladen ist, zentriere auf den neuen Nullpunkt
-            if not getattr(self, "_has_file", False):
-                self.backplot.fit_view(None)
+            # Aber nur wenn wir nicht gerade die Ansicht aus den Settings wiederhergestellt haben
+            # UND nur wenn es eine echte Änderung war (nicht beim allerersten Poller-Update)
+            if not getattr(self, "_has_file", False) and changed:
+                if not self._view_restored:
+                    self.backplot.fit_view(None)
 
             if hasattr(self, "simple_view") and self.simple_view.backplot:
                 self.simple_view.backplot.set_wcs_origin(g5x[0], g5x[1], g5x[2])
@@ -4391,7 +4403,8 @@ class ThorCNC(QObject, NavigationMixin):
         tp = parse_file(path)
         self._last_toolpath = tp
         self.backplot.load_toolpath(tp)
-        self.backplot.fit_view(tp)
+        if not self._view_restored:
+            self.backplot.fit_view(tp)
         
         if hasattr(self, "simple_view"):
             if self.simple_view.backplot:
@@ -5011,3 +5024,7 @@ class ThorCNC(QObject, NavigationMixin):
                               [hw.item(i).text() for i in range(hw.count())])
 
         self.settings.save()
+
+    def _clear_view_restored_flag(self):
+        self._view_restored = False
+
