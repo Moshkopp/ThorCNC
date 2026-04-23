@@ -35,21 +35,17 @@ MainWindow.py (5000+ Zeilen) in ein modulares System umwandeln, wo jede Funktion
     - Fokus direkt auf Diameter-Feld
     - Saubere Sortierung (disabled während Edit, enabled beim Save)
 
-**Aktueller Stand:** MainWindow 4298 Zeilen (von 5027 → **729 Zeilen gespart!**)
+**Aktueller Stand:** MainWindow 4136 Zeilen (von 5027 → **891 Zeilen gespart!**)
 
 ---
 
 ## 🚀 Nächste Schritte (Roadmap)
 
-### Schritt 3: OffsetsModule (NÄCHST)
-**Geschätzter Aufwand:** ~165 Zeilen  
-**Priorität:** 🟢 HIGH (kleine Sache, dann großen Brocken zum Schluss)
-
-Umfasst:
-- `_setup_offsets_tab` - UI-Aufbau
-- `_refresh_offsets_table` - Tabelle aktualisieren
-- `_on_offset_wcs_changed` - WCS-Wechsel
-- `_clear_wcs` - WCS zurücksetzen
+### Schritt 3: OffsetsModule ✅
+- [x] `thorcnc/modules/offsets.py` - Offsets/WCS Management
+  - ~172 Zeilen
+  - 6 Methoden extrahiert + `_WCS_LIST` Klassenattribut
+  - ~163 Zeilen aus MainWindow gespart
 
 **Strategie:** Kleine Module zuerst → MainWindow schrumpft kontinuierlich → große Brocken (Probing, Settings) am Ende
 
@@ -121,7 +117,7 @@ Upgrade der bestehenden Manager auf neues ThorModule Interface:
 |---|---|---|---|---|
 | FileManagerModule | ✅ | ~270 | 13 | thorcnc/modules/file_manager.py |
 | ToolTableModule | ✅ | ~362 | 10 | thorcnc/modules/tool_table.py |
-| OffsetsModule | 📋 | ~165 | 4 | todo |
+| OffsetsModule | ✅ | ~172 | 6 | thorcnc/modules/offsets.py |
 | MotionModule | 📋 | ~250 | 8-10 | todo |
 | ProbingTabModule | 📋 | ~850 | 20+ | todo |
 | SettingsTabModule | 📋 | ~450 | 10+ | todo |
@@ -205,15 +201,15 @@ QApplication.instance().installEventFilter(self)
 ## 🔍 Nächste konkrete Aktion
 
 **Wer:** Moshy  
-**Was:** Schritt 3 - OffsetsModule extrahieren  
+**Was:** Schritt 4 - MotionModule extrahieren  
 **Wie:** 
-1. Plan-Mode für OffsetsModule
-2. `thorcnc/modules/offsets.py` erstellen
-3. 4 Methoden extrahieren
+1. Plan-Mode für MotionModule
+2. `thorcnc/modules/motion.py` erstellen
+3. ~8-10 Methoden extrahieren (Jogging, Home, Limits, Override-Slider)
 4. MainWindow aktualisieren
-5. ~165 Zeilen Einsparung = MainWindow auf ~4133 Zeilen
+5. ~250 Zeilen Einsparung = MainWindow auf ~3886 Zeilen
 
-**Begründung:** Kleine, klare Aufgabe → großen Brocken (Probing ~850 Zeilen) zum Schluss für Momentum
+**Begründung:** Mittlere Größe, dann großen Brocken (Probing ~850 Zeilen) zum Schluss für Momentum
 
 ---
 
@@ -226,5 +222,6 @@ QApplication.instance().installEventFilter(self)
 
 ---
 
-*Letztes Update: 23.04.2026 nach ToolTableModule + UX Features*  
-*Nächster Start: OffsetsModule (Schritt 3)*
+*Letztes Update: 23.04.2026 nach OffsetsModule Extraktion*  
+*Status: Schritt 3 ✅ abgeschlossen (MainWindow 4136 Zeilen, -891 Zeilen gesamt)*  
+*Nächster Start: MotionModule (Schritt 4)*
