@@ -280,8 +280,7 @@ class NavigationModule(ThorModule):
             "btn_nav_file": "file.svg",
             "btn_nav_probing": "probe.svg",
             "btn_nav_tools": "tool.svg",
-            "btn_nav_settings": "settings.svg",
-            "btn_nav_html": "web.svg"
+            "btn_nav_settings": "settings.svg"
         }
 
         from PySide6.QtGui import QIcon
@@ -290,6 +289,10 @@ class NavigationModule(ThorModule):
                 full_path = os.path.join(icon_path, icon_file)
                 if os.path.exists(full_path):
                     btn.setIcon(QIcon(full_path))
+                
+                # Hide the HTML button explicitly
+                if btn_name == "btn_nav_html":
+                    btn.hide()
 
     def update_highlights(self):
         """Update flyout button highlights."""

@@ -4,8 +4,8 @@
     "window_state": "000000ff00000000fd00000000000007800000041c00000004000000040000000800000008fc00000000",
     "backplot_view": {
         "distance": 488.75,
-        "elevation": 35,
-        "azimuth": -45,
+        "elevation": 47.0,
+        "azimuth": -70.0,
         "center": [
             283.1000061035156,
             155.97500610351562,
@@ -111,6 +111,6 @@
     "hlight_gc_imp_color": "#00ff2b",
     "abort_gcode": "G90\nG80\nM5 \nM9\nG4 P0.1\nG54\nG4 P0.1\nM65 P2\n",
     "homing_g53_conversion": true,
-    "show_pocket_column": true,
+    "show_pocket_column": false,
     "language": "English"
 }

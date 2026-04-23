@@ -81,7 +81,6 @@ class ThorCNC(QObject):
         self.dro.setup()
         self.spindle.setup()
         self.simple_view_mod.setup()
-        self._setup_html_tab()
         self._connect_signals()
         self._setup_opt_jalousie()
         
@@ -709,107 +708,6 @@ class ThorCNC(QObject):
                     return True
 
         return super().eventFilter(watched, event)
-
-    def _setup_html_tab(self):
-        """Baut den HTML-Tab auf: links Dateiliste, rechts Viewer."""
-        from PySide6.QtWidgets import QWidget, QSplitter, QListWidget, QVBoxLayout, QLabel
-        from PySide6.QtCore import Qt
-
-        tab = self._w(QWidget, "tab_html")
-        if not tab:
-            return
-
-        lay = QVBoxLayout(tab)
-        lay.setContentsMargins(4, 4, 4, 4)
-
-        splitter = QSplitter(Qt.Orientation.Horizontal)
-        lay.addWidget(splitter)
-
-        # ── Links: Dateiliste ────────────────────────────────────────────
-        left = QWidget()
-        left_lay = QVBoxLayout(left)
-        left_lay.setContentsMargins(0, 0, 0, 0)
-        left_lay.setSpacing(2)
-        left_lay.addWidget(QLabel("HTML / PDF im NGC-Ordner:"))
-        self._html_list = QListWidget()
-        self._html_list.setObjectName("html_doc_list")
-        left_lay.addWidget(self._html_list)
-        left.setMinimumWidth(160)
-        splitter.addWidget(left)
-
-        # ── Rechts: HTML-Viewer ──────────────────────────────────────────
-        self._html_viewer = None
-        right = QWidget()
-        right_lay = QVBoxLayout(right)
-        right_lay.setContentsMargins(0, 0, 0, 0)
-
-        try:
-            from PySide6.QtWebEngineWidgets import QWebEngineView
-            from PySide6.QtWebEngineCore import QWebEngineSettings
-            viewer = QWebEngineView()
-            s = viewer.settings()
-            s.setAttribute(QWebEngineSettings.WebAttribute.PluginsEnabled, True)
-            s.setAttribute(QWebEngineSettings.WebAttribute.PdfViewerEnabled, True)
-            self._html_viewer = viewer
-            self._html_viewer_type = "web"
-        except ImportError:
-            from PySide6.QtWidgets import QTextBrowser
-            viewer = QTextBrowser()
-            viewer.setOpenExternalLinks(False)
-            self._html_viewer = viewer
-            self._html_viewer_type = "text"
-
-        right_lay.addWidget(self._html_viewer)
-        splitter.addWidget(right)
-
-        splitter.setSizes([200, 700])
-        self._html_splitter = splitter
-
-        self._html_list.currentItemChanged.connect(self._on_html_item_changed)
-
-    def _refresh_html_list(self, ngc_path: str):
-        """Sucht HTML- und PDF-Dateien im Ordner der geladenen NGC-Datei."""
-        import os
-        self._html_list.clear()
-        if not ngc_path:
-            return
-        folder = os.path.dirname(ngc_path)
-        try:
-            files = sorted(
-                f for f in os.listdir(folder)
-                if f.lower().endswith((".html", ".htm", ".pdf"))
-            )
-        except OSError:
-            return
-        for name in files:
-            from PySide6.QtWidgets import QListWidgetItem
-            item = QListWidgetItem(name)
-            item.setData(256, os.path.join(folder, name))  # Qt.UserRole = 256
-            self._html_list.addItem(item)
-
-    def _on_html_item_changed(self, current, _previous):
-        if not current or not self._html_viewer:
-            return
-        path = current.data(256)
-        if not path:
-            return
-        if self._html_viewer_type == "web":
-            from PySide6.QtCore import QUrl
-            self._html_viewer.setUrl(QUrl.fromLocalFile(path))
-        else:
-            # QTextBrowser-Fallback: PDFs können nicht angezeigt werden
-            if path.lower().endswith(".pdf"):
-                self._html_viewer.setHtml(
-                    "<p style='color:#aaa;padding:16px'>"
-                    "PDF-Ansicht erfordert PySide6-WebEngine.<br>"
-                    f"Datei: {path}</p>")
-            else:
-                try:
-                    with open(path, "r", encoding="utf-8", errors="replace") as f:
-                        self._html_viewer.setHtml(f.read())
-                except OSError:
-                    pass
-
 
 
     def _setup_opt_jalousie(self):

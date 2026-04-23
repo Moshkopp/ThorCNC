@@ -324,12 +324,12 @@ class FileManagerModule(ThorModule):
         if not self._t._view_restored:
             self._t.backplot.fit_view(tp)
 
-        if hasattr(self._t, "simple_view"):
-            if self._t.simple_view.backplot:
-                self._t.simple_view.backplot.load_toolpath(tp)
-                self._t.simple_view.backplot.fit_view(tp)
-            self._t.simple_view.load_gcode(path)
+        sv = self._t.simple_view_mod.simple_view
+        if sv:
+            if sv.backplot:
+                sv.backplot.load_toolpath(tp)
+                sv.backplot.fit_view(tp)
+            sv.load_gcode(path)
 
         self._t._update_run_buttons()
-        if hasattr(self._t, "_html_list"):
-            self._t._refresh_html_list(path)
+

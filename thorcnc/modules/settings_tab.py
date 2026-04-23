@@ -106,15 +106,7 @@ class SettingsTabModule(ThorModule):
             layout.insertWidget(layout.count() - 1, gb_gfx)
 
             # ── Navigation / Tabs ──
-            gb_nav = QGroupBox(_t("Navigation"))
-            gl_nav = QVBoxLayout(gb_nav)
-            self._cb_html_tab = QCheckBox(_t("HTML-Tab anzeigen"))
-            self._cb_html_tab.setToolTip(
-                _t("Blendet den HTML/PDF-Dokumenten-Tab in der Navigation ein oder aus."))
-            self._cb_html_tab.setChecked(self._t.settings.get("show_html_tab", True))
-            self._cb_html_tab.toggled.connect(self._on_html_tab_visibility)
-            gl_nav.addWidget(self._cb_html_tab)
-            layout.insertWidget(layout.count() - 1, gb_nav)
+            # (HTML tab removed)
 
             # ── Werkzeugliste ──
             gb_tools = QGroupBox(_t("Werkzeugliste"))
@@ -130,9 +122,7 @@ class SettingsTabModule(ThorModule):
             # Initiale Sichtbarkeit anwenden
             self._on_show_pocket_column_changed(show_pocket)
 
-        # Initiale Sichtbarkeit anwenden (nach dem UI-Aufbau)
-        QTimer.singleShot(0, lambda: self._on_html_tab_visibility(
-            self._t.settings.get("show_html_tab", True)))
+
 
         # ── Machine Tab Cleanup & Probe Warning Settings ──────────────────────
         if mach_tab := self._t._w(QWidget, "settings_tab_machine"):
@@ -428,16 +418,6 @@ class SettingsTabModule(ThorModule):
         self._t.settings.set("backplot_msaa_samples", val)
         self._t.settings.save()
         self._t._status(_t("MSAA auf {}x gesetzt. Ein Neustart ist nötig.").format(val))
-
-    def _on_html_tab_visibility(self, visible: bool):
-        self._t.settings.set("show_html_tab", visible)
-        self._t.settings.save()
-        if btn := self._t._w(QPushButton, "nav_html"):
-            btn.setVisible(visible)
-        if not visible:
-            if tab := self._t._w(QTabWidget, "tabWidget"):
-                if tab.currentIndex() == self._html_tab_index():
-                    tab.setCurrentIndex(0)
 
     def _on_show_pocket_column_changed(self, visible: bool):
         from PySide6.QtWidgets import QTableWidget
