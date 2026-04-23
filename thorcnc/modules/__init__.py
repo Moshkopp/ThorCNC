@@ -12,6 +12,8 @@ from .motion import MotionModule
 from .probing_tab import ProbingTabModule
 from .navigation import NavigationModule
 from .settings_tab import SettingsTabModule
+from .dro import DROModule
+from .spindle import SpindleModule
 
 __all__ = [
     "ThorModule",
@@ -21,5 +23,7 @@ __all__ = [
     "MotionModule",
     "ProbingTabModule",
     "NavigationModule",
-    "SettingsTabModule"
+    "SettingsTabModule",
+    "DROModule",
+    "SpindleModule"
 ]

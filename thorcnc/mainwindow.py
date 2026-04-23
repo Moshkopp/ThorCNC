@@ -15,7 +15,7 @@ from .widgets.backplot import BackplotWidget
 from .widgets.simple_view import SimpleView
 from .i18n import TranslationManager, _t
 from .modules import (FileManagerModule, ToolTableModule, OffsetsModule,
-                        MotionModule, ProbingTabModule, NavigationModule, SettingsTabModule)
+                        MotionModule, ProbingTabModule, NavigationModule, SettingsTabModule, DROModule, SpindleModule)
 # from .widgets.opt_options import OptOptionsDialog
 
 _DIR = os.path.dirname(__file__)
@@ -58,6 +58,8 @@ class ThorCNC(QObject):
         self.motion = MotionModule(self)
         self.probing_tab = ProbingTabModule(self)
         self.settings_tab = SettingsTabModule(self)
+        self.dro = DROModule(self)
+        self.spindle = SpindleModule(self)
         
         # i18n
         self.i18n = TranslationManager(self.settings.get("language", "Deutsch"))
@@ -67,7 +69,6 @@ class ThorCNC(QObject):
         self._replace_custom_widgets()
 
         self._restore_window_state()
-        self._setup_dro()
         self._setup_hal()
         self._setup_poller()
         self.file_manager.setup()
@@ -76,6 +77,8 @@ class ThorCNC(QObject):
         self.motion.setup()
         self.probing_tab.setup()
         self.settings_tab.setup()
+        self.dro.setup()
+        self.spindle.setup()
         self._setup_html_tab()
         self._connect_signals()
         self._setup_opt_jalousie()
@@ -543,223 +546,9 @@ class ThorCNC(QObject):
                 continue
             b.setChecked(idx == active_idx)
 
-    def _setup_dro(self):
-        """DRO panel in probe_basic style: Axis | WORK | MACHINE | REF button."""
-        from PySide6.QtWidgets import (QHBoxLayout, QVBoxLayout, QWidget, QGridLayout,
-                                       QFrame, QPushButton, QSizePolicy, QComboBox)
 
-        container = self.ui.findChild(QHBoxLayout, "dro_display_layout")
-        if not container:
-            return
 
-        self._dro_work    = {}   # axis → QLabel (relative/work)
-        self._dro_machine = {}   # axis → QLabel (absolute/machine)
-        self._dro_ref_btn = {}   # axis → QPushButton
 
-        # Rahmen-Widget, füllt den ganzen DRO-Frame
-        wrapper = QWidget()
-        wrapper.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        glay = QGridLayout(wrapper)
-        glay.setContentsMargins(8, 6, 8, 6)
-        glay.setSpacing(6)
-        
-        # Define consistent widths
-        btn_width = 85
-        axis_width = 50
-        val_width = 120 # Slightly slimmer to fit 3 columns
-
-        # ── Row 0: Header ───────────────────────────────────────────────────
-        
-        # ZERO ALL button
-        btn_zero_all = QPushButton(_t("ZERO\nALL"))
-        btn_zero_all.setFixedSize(btn_width, 44)
-        btn_zero_all.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        self._add_class(btn_zero_all, "btn-blue")
-        btn_zero_all.clicked.connect(lambda: self._zero_axis("ALL"))
-        glay.addWidget(btn_zero_all, 0, 0)
-
-        # AXIS header
-        lbl_axis_hdr = QLabel(_t("AXIS"))
-        self._add_class(lbl_axis_hdr, "dro-header")
-        lbl_axis_hdr.setFixedWidth(axis_width)
-        lbl_axis_hdr.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        glay.addWidget(lbl_axis_hdr, 0, 1)
-
-        # WCS ComboBox
-        self._wcs_combo = QComboBox()
-        self._wcs_combo.setFixedWidth(val_width)
-        self._wcs_combo.setFixedHeight(40)
-        self._wcs_combo.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        for label, index in [("G54", 1), ("G55", 2), ("G56", 3), ("G57", 4),
-                              ("G58", 5), ("G59", 6), ("G59.1", 7), ("G59.2", 8), ("G59.3", 9)]:
-            self._wcs_combo.addItem(label, userData=index)
-        self._wcs_combo.setObjectName("wcsCombo")
-        self._wcs_combo.currentIndexChanged.connect(self._on_wcs_combo_changed)
-        glay.addWidget(self._wcs_combo, 0, 2)
-
-        # MACHINE header
-        lbl_mach_hdr = QLabel(_t("MACHINE"))
-        self._add_class(lbl_mach_hdr, "dro-header")
-        lbl_mach_hdr.setFixedWidth(val_width)
-        lbl_mach_hdr.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        glay.addWidget(lbl_mach_hdr, 0, 3)
-
-        # DTG header (Distance to Go)
-        lbl_dtg_hdr = QLabel(_t("DTG"))
-        self._add_class(lbl_dtg_hdr, "dro-header")
-        lbl_dtg_hdr.setFixedWidth(val_width)
-        lbl_dtg_hdr.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        glay.addWidget(lbl_dtg_hdr, 0, 4)
-
-        # REF ALL button
-        self._btn_ref_all = QPushButton(_t("REF ALL"))
-        self._btn_ref_all.setFixedSize(btn_width, 44)
-        self._btn_ref_all.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        self._add_class(self._btn_ref_all, "btn-green")
-        self._btn_ref_all.clicked.connect(self.motion._home_all)
-        glay.addWidget(self._btn_ref_all, 0, 5)
-
-        # ── Row 1: Separator ─────────────────────────────────────────────────
-        sep = QFrame()
-        sep.setFrameShape(QFrame.Shape.HLine)
-        sep.setFixedHeight(2)
-        glay.addWidget(sep, 1, 0, 1, 6)
-
-        # ── Rows 2-4: Axis Rows ──────────────────────────────────────────────
-        self._dro_dtg = {}   # axis → QLabel (DTG)
-
-        for i, (axis, joint) in enumerate([("X", 0), ("Y", 1), ("Z", 2)], start=2):
-            # ZERO button
-            btn_zero = QPushButton(_t("ZERO\n{}").format(axis))
-            btn_zero.setObjectName("dro_zero_btn")
-            btn_zero.setFixedSize(btn_width, 52)
-            btn_zero.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-            self._add_class(btn_zero, "btn-blue")
-            btn_zero.clicked.connect(lambda _=False, a=axis: self._zero_axis(a))
-            glay.addWidget(btn_zero, i, 0)
-
-            # Axis label
-            lbl_axis = QLabel(axis)
-            self._add_class(lbl_axis, "dro-axis-label")
-            lbl_axis.setFixedWidth(axis_width)
-            lbl_axis.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            glay.addWidget(lbl_axis, i, 1)
-
-            # WORK position
-            lbl_work = QLabel("+0.000")
-            self._add_class(lbl_work, "dro-value")
-            lbl_work.setFixedWidth(val_width)
-            lbl_work.setFixedHeight(52)
-            lbl_work.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-            glay.addWidget(lbl_work, i, 2)
-
-            # MACHINE position
-            lbl_mach = QLabel("+0.000")
-            self._add_class(lbl_mach, "dro-value")
-            self._add_class(lbl_mach, "dro-machine") # Multiple classes are supported by space separated string if handled by QSS, but property "class" usually takes one. Actually QSS can match parts.
-            # Wait, Qt property "class" usually is a single string. To match multiple, we use space.
-            lbl_mach.setProperty("class", "dro-value dro-machine")
-            lbl_mach.setFixedWidth(val_width)
-            lbl_mach.setFixedHeight(52)
-            lbl_mach.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-            glay.addWidget(lbl_mach, i, 3)
-
-            # DTG position
-            lbl_dtg = QLabel("+0.000")
-            self._add_class(lbl_dtg, "dro-value")
-            self._add_class(lbl_dtg, "dro-dtg")
-            lbl_dtg.setProperty("class", "dro-value dro-dtg")
-            lbl_dtg.setFixedWidth(val_width)
-            lbl_dtg.setFixedHeight(52)
-            lbl_dtg.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-            glay.addWidget(lbl_dtg, i, 4)
-
-            # REF button
-            btn_ref = QPushButton(_t("REF {}").format(axis))
-            btn_ref.setObjectName("dro_ref_btn")
-            btn_ref.setFixedSize(btn_width, 52)
-            btn_ref.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-            self._add_class(btn_ref, "btn-green")
-            glay.addWidget(btn_ref, i, 5)
-            btn_ref.clicked.connect(lambda _=False, j=joint: self.motion._home_joint(j))
-
-            self._dro_work[axis]    = lbl_work
-            self._dro_machine[axis] = lbl_mach
-            self._dro_dtg[axis]     = lbl_dtg
-            self._dro_ref_btn[axis] = btn_ref
-
-        glay.setColumnStretch(2, 1)
-        glay.setColumnStretch(3, 1)
-        
-        container.addWidget(wrapper)
-
-    @Slot(list)
-    def _on_g5x_offset(self, g5x: list):
-        """WCS-Offset geändert → DRO neu berechnen + Backplot-Kreuz verschieben.
-        G59.3 (Index 9) wird im Backplot ignoriert – wird nur für Messroutinen
-        verwendet und soll den Backplot des Hauptprogramms nicht verschieben."""
-        self._refresh_dro()
-        if self.poller.stat.g5x_index != 9:
-            new_origin = (g5x[0], g5x[1], g5x[2])
-            is_initial = not self._wcs_initialized
-            changed = not is_initial and new_origin != self._last_wcs_origin
-            
-            self.backplot.set_wcs_origin(*new_origin)
-            self._last_wcs_origin = new_origin
-            self._wcs_initialized = True
-            
-            # Wenn noch kein Programm geladen ist, zentriere auf den neuen Nullpunkt
-            # Aber nur wenn wir nicht gerade die Ansicht aus den Settings wiederhergestellt haben
-            # UND nur wenn es eine echte Änderung war (nicht beim allerersten Poller-Update)
-            if not getattr(self, "_has_file", False) and changed:
-                if not self._view_restored:
-                    self.backplot.fit_view(None)
-
-            if hasattr(self, "simple_view") and self.simple_view.backplot:
-                self.simple_view.backplot.set_wcs_origin(g5x[0], g5x[1], g5x[2])
-                if not getattr(self, "_has_file", False):
-                    self.simple_view.backplot.fit_view(None)
-
-    @Slot(int)
-    def _on_g5x_index(self, g5x_index: int):
-        """LinuxCNC WCS geändert → Combo synchronisieren (ohne Signal-Loop)."""
-        combo = getattr(self, "_wcs_combo", None)
-        if combo is None:
-            return
-        for i in range(combo.count()):
-            if combo.itemData(i) == g5x_index:
-                combo.blockSignals(True)
-                combo.setCurrentIndex(i)
-                combo.blockSignals(False)
-                break
-
-    def _zero_axis(self, axis: str):
-        """Sets the WCS zero for the axis/axes based on the ComboBox selection."""
-        g5x_index = self._wcs_combo.currentData()  # 1=G54, 2=G55, …
-        axis_map = {"X": "X0", "Y": "Y0", "Z": "Z0", "ALL": "X0 Y0 Z0"}
-        coords = axis_map.get(axis, "X0 Y0 Z0")
-        wcs_name = self._wcs_combo.currentText()
-        try:
-            self.cmd.mode(linuxcnc.MODE_MDI)
-            self.cmd.wait_complete()
-            self.cmd.mdi(f"G10 L20 P{g5x_index} {coords}")
-            self.cmd.wait_complete()
-            self.cmd.mode(linuxcnc.MODE_MANUAL)
-            self._status(_t("ZERO {} → {}").format(axis, wcs_name))
-        except Exception:
-            pass
-
-    def _on_wcs_combo_changed(self, index):
-        """WCS-Auswahl → G54..G59.3 per MDI senden."""
-        wcs = self._wcs_combo.itemText(index)
-        try:
-            self.cmd.mode(linuxcnc.MODE_MDI)
-            self.cmd.wait_complete()
-            self.cmd.mdi(wcs)
-            self.cmd.wait_complete()
-            self.cmd.mode(linuxcnc.MODE_MANUAL)
-        except Exception:
-            pass
 
     def _apply_ini_settings(self):
         name = "ThorCNC"
@@ -1050,7 +839,7 @@ class ThorCNC(QObject):
         
         btn_coolant = self.ui.findChild(QPushButton, "btn_opt_coolant")
         if btn_coolant:
-            btn_coolant.clicked.connect(self._toggle_coolant_internal)
+            btn_coolant.clicked.connect(self.spindle.toggle_coolant)
             
         # Status-Sync für die neuen Buttons
         self.poller.periodic.connect(self._sync_opt_buttons)
@@ -1070,17 +859,7 @@ class ThorCNC(QObject):
         is_on = not self.poller.stat.estop and self.poller.stat.enabled
         can_mdi = is_idle and is_on
         
-        btn_coolant = self.ui.findChild(QPushButton, "btn_opt_coolant")
-        if btn_coolant:
-            # Button Status NUR vom Poller setzen
-            flood_active = (self.poller.stat.flood > 0)
-            if btn_coolant.isChecked() != flood_active:
-                btn_coolant.blockSignals(True)
-                btn_coolant.setChecked(flood_active)
-                btn_coolant.blockSignals(False)
-                # Display ebenfalls aktualisieren
-                self._update_active_codes_display()
-            btn_coolant.setEnabled(is_on)
+        self.spindle.sync_buttons()
 
         # Z-Safety: G53 X/Y shortcuts only if Z is at machine zero
         homed = getattr(self.poller, "_homed", [])
@@ -1088,12 +867,12 @@ class ThorCNC(QObject):
         z_mach = getattr(self, "_last_pos", [0,0,-999])[2]
         z_safe = abs(z_mach) < 0.1 # 0.1mm Toleranz
 
-        if hasattr(self, "_btn_ref_all") and self._btn_ref_all:
-            self._btn_ref_all.setEnabled(can_mdi)
+        if self.dro._btn_ref_all:
+            self.dro._btn_ref_all.setEnabled(can_mdi)
             
         for i, axis in enumerate(("X", "Y", "Z")):
-            if axis in self._dro_ref_btn:
-                btn = self._dro_ref_btn[axis]
+            if axis in self.dro._dro_ref_btn:
+                btn = self.dro._dro_ref_btn[axis]
                 is_homed = i < len(homed) and homed[i]
                 
                 btn_enabled = can_mdi
@@ -1119,30 +898,7 @@ class ThorCNC(QObject):
         self.cmd.set_optional_stop(not curr)
         self._status(f"M1 Optional Stop: {'AN' if not curr else 'AUS'}")
 
-    def _toggle_coolant_internal(self):
-        """Toggles flood coolant (M8/M9)."""
-        curr_stat = self.poller.stat.flood
-        new_state = 1 if curr_stat == 0 else 0
-        
-        print(f"[ThorCNC] Coolant Toggle. Current: {curr_stat} -> Target: {new_state}")
-        
-        # Fresh command object often helps in sim/remote environments
-        c = linuxcnc.command()
-        
-        # If we are in AUTO and running, we MUST use flood()
-        # If we are IDLE, we can also try MDI as a fallback
-        if self.poller.stat.interp_state == linuxcnc.INTERP_IDLE:
-            c.mode(linuxcnc.MODE_MDI)
-            c.wait_complete()
-            c.mdi("M8" if new_state == 1 else "M9")
-        else:
-            c.flood(new_state)
-        
-        # Update UI immediately
-        self._update_active_codes_display()
-        
-        state_text = _t("AN") if new_state == 1 else _t("AUS")
-        self._status(_t("KÜHLUNG: ") + state_text)
+
 
     def _on_opt_clicked(self):
         """Toggle-Logik für das Jalousie-Panel."""
@@ -1296,12 +1052,9 @@ class ThorCNC(QObject):
         p.mode_changed.connect(self._on_mode)
         p.interp_changed.connect(self._on_interp)
         p.position_changed.connect(self._on_position)
-        p.spindle_at_speed.connect(self._on_spindle_at_speed)
-        p.spindle_speed_actual.connect(self._on_spindle_actual)
-        p.spindle_load.connect(self._on_spindle_load)
-        p.spindle_speed_cmd.connect(self._on_spindle_speed)
-        p.g5x_index_changed.connect(self._on_g5x_index)
-        p.g5x_offset_changed.connect(self._on_g5x_offset)
+
+        p.g5x_index_changed.connect(self.dro._on_g5x_index)
+        p.g5x_offset_changed.connect(self.dro._on_g5x_offset)
         p.gcodes_changed.connect(self._on_gcodes)
         p.mcodes_changed.connect(self._on_mcodes)
         p.file_loaded.connect(self.file_manager._on_file_loaded)
@@ -1337,31 +1090,14 @@ class ThorCNC(QObject):
             b.clicked.connect(self._toggle_estop)
 
         # Spindle Controls
-        def _start_spindle(direction):
-            # Get current programmed speed (S value)
-            speed = abs(self.poller.stat.spindle[0]['speed'])
-            # Fallback if no speed was ever set
-            if speed < 1:
-                # Versuche Standardwert aus INI zu lesen, sonst 1000
-                speed = 6000
-                if self.ini:
-                    try:
-                        val = self.ini.find("DISPLAY", "DEFAULT_SPINDLE_SPEED")
-                        if val:
-                            speed = float(val)
-                    except:
-                        pass
-            self.cmd.mode(linuxcnc.MODE_MANUAL)
-            self.cmd.spindle(direction, speed)
-
         if b := btn("btn_spindle_fwd"):
             b.setText("CCW")
-            b.clicked.connect(lambda: _start_spindle(linuxcnc.SPINDLE_REVERSE))
+            b.clicked.connect(lambda: self.spindle.start_spindle(linuxcnc.SPINDLE_REVERSE))
         if b := btn("btn_spindle_rev"):
             b.setText("CW")
-            b.clicked.connect(lambda: _start_spindle(linuxcnc.SPINDLE_FORWARD))
+            b.clicked.connect(lambda: self.spindle.start_spindle(linuxcnc.SPINDLE_FORWARD))
         if b := btn("btn_spindle_stop"):
-            b.clicked.connect(lambda: self.cmd.spindle(linuxcnc.SPINDLE_OFF))
+            b.clicked.connect(self.spindle.stop_spindle)
 
         # ── Compact Layout Spacing & Perfect Alignment ─────────────────────
         from PySide6.QtWidgets import QGroupBox, QVBoxLayout, QComboBox
@@ -1460,6 +1196,7 @@ class ThorCNC(QObject):
         self.offsets.connect_signals()
         self.motion.connect_signals()
         self.probing_tab.connect_signals()
+        self.spindle.connect_signals()
 
         # Simple View — fullscreen overlay, opened by clicking the status bar
         self._setup_simple_overlay()
@@ -1659,118 +1396,18 @@ class ThorCNC(QObject):
             
         self._last_gui_pos = list(pos[:3])
         self._last_pos = pos
-        self._refresh_dro()
+        self.dro.refresh()
 
-    def _refresh_dro(self, _=None):
-        pos = getattr(self, "_last_pos", None)
-        if pos is None:
-            return
-        g5x   = getattr(self.poller, "_g5x_offset", None) or [0.0, 0.0, 0.0]
-        try:
-            # G92 and G52 offsets are stored in g92_offset in modern LinuxCNC
-            g92 = self.poller.stat.g92_offset[:3]
-        except (AttributeError, TypeError):
-            g92 = [0.0, 0.0, 0.0]
 
-        try:
-            t_off = self.poller.stat.tool_offset or [0.0, 0.0, 0.0]
-        except AttributeError:
-            t_off = [0.0, 0.0, 0.0]
-            
-        homed = getattr(self.poller, "_homed", []) or []
 
-        all_homed = True
-        for i, axis in enumerate(("X", "Y", "Z")):
-            is_homed = i < len(homed) and homed[i]
-            if not is_homed:
-                all_homed = False
-            # Work = Machine - WCS - G92 - Tool
-            work = pos[i] - g5x[i] - g92[i] - t_off[i]
-            mach = pos[i]
-            
-            # DTG is a tuple in LinuxCNC 2.9 (Axis-specific remaining distance)
-            try:
-                dtg_val = self.poller.stat.dtg[i]
-            except (AttributeError, TypeError, IndexError):
-                dtg_val = 0.0
-
-            if axis in self._dro_work:
-                self._dro_work[axis].setText(f"{work:+.3f}")
-            if axis in self._dro_machine:
-                self._dro_machine[axis].setText(f"{mach:+.3f}")
-            if axis in getattr(self, "_dro_dtg", {}):
-                self._dro_dtg[axis].setText(f"{dtg_val:+.3f}")
-
-            # probe-DRO mitsyncen
-            probe_dro_work = getattr(self.probing_tab, "_probe_dro_work", {})
-            probe_dro_mach = getattr(self.probing_tab, "_probe_dro_machine", {})
-            if axis in probe_dro_work:
-                probe_dro_work[axis].setText(f"{work:+.3f}")
-            if axis in probe_dro_mach:
-                probe_dro_mach[axis].setText(f"{mach:+.3f}")
-
-        # Tool marker only visible if all axes are homed
-        if all_homed:
-            self.backplot.set_tool_position(pos[0] - t_off[0], pos[1] - t_off[1], pos[2] - t_off[2])
-            if hasattr(self, "simple_view") and self.simple_view.backplot:
-                self.simple_view.backplot.set_tool_position(pos[0] - t_off[0], pos[1] - t_off[1], pos[2] - t_off[2])
-        else:
-            self.backplot.set_tool_position(float('nan'), float('nan'), float('nan'))
-            if hasattr(self, "simple_view") and self.simple_view.backplot:
-                self.simple_view.backplot.set_tool_position(float('nan'), float('nan'), float('nan'))
-
-        # Simple View overlay DRO sync (only when visible to save work)
-        if hasattr(self, "simple_view") and self.simple_view.isVisible():
-            w_coords = [pos[i] - g5x[i] - g92[i] - t_off[i] for i in range(3)]
-            m_coords = [pos[i] for i in range(3)]
-            try:
-                dtg_vals = list(self.poller.stat.dtg[:3])
-            except (AttributeError, TypeError):
-                dtg_vals = [0.0, 0.0, 0.0]
-
-            self.simple_view.set_wcs(*w_coords)
-            self.simple_view.set_machine(*m_coords)
-            self.simple_view.set_dtg(*dtg_vals)
-            # Actual feed velocity (mm/min) instead of feedrate override factor
-            feed = self.poller.stat.current_vel * 60.0
-            # Prefer HAL actual RPM, fall back to commanded speed
-            rpm = getattr(self.poller, '_spindle_actual', 0.0)
-            if rpm is None or rpm <= 0:
-                rpm = abs(self.poller.stat.spindle[0]['speed'])
-            self.simple_view.set_feed_rpm(feed, rpm)
-
-    @Slot(int)
 
     @Slot(tuple)
     def _on_gcodes(self, gcodes: tuple):
         self._current_gcodes = gcodes
         self._update_active_codes_display()
-        self._sync_wcs_from_gcodes(gcodes)
+        self.dro._sync_wcs_from_gcodes(gcodes)
 
-    def _sync_wcs_from_gcodes(self, gcodes: tuple):
-        """Extrahiert das WCS aus den aktiven G-Codes und synchronisiert die Combo."""
-        # WCS ist in Modale Gruppe 6: G54=540, G55=550, ..., G59.3=593
-        for g in gcodes:
-            if 540 <= g <= 593:
-                # Berechne den Index (1-9)
-                idx = 0
-                if g <= 590: # G54..G59
-                    idx = (g - 540) // 10 + 1
-                else: # G59.1..G59.3
-                    idx = (g - 590) + 6
-                
-                # Jetzt die Combo synchronisieren
-                combo = getattr(self, "_wcs_combo", None)
-                if combo:
-                    for i in range(combo.count()):
-                        if int(combo.itemData(i) or 0) == idx:
-                            if combo.currentIndex() != i:
-                                # print(f"[ThorCNC] WCS-Sync via G-Code: G{g/10.0:g} -> Index {idx}")
-                                combo.blockSignals(True)
-                                combo.setCurrentIndex(i)
-                                combo.blockSignals(False)
-                            break
-                break
+
 
     @Slot(tuple)
     def _on_mcodes(self, mcodes: tuple):
@@ -1900,94 +1537,7 @@ class ThorCNC(QObject):
         brightness = (r * 0.299 + g * 0.587 + b * 0.114)
         return brightness > 128
 
-    @Slot(list)
-    @Slot(float)
-    def _on_spindle_speed(self, rpm: float):
-        """Called when the COMMANDED/TARGET spindle speed changes."""
-        from PySide6.QtWidgets import QLabel
-        self._is_spindle_running = (abs(rpm) > 0.1)
-        if lbl := self._w(QLabel, "lbl_spindle_soll"):
-            lbl.setText(f"CMD: {abs(rpm):.0f} RPM")
-        self._update_run_buttons()
-        self._update_spindle_buttons()
 
-    @Slot(float)
-    def _on_spindle_actual(self, rpm: float):
-        """Called when the ACTUAL (Feedback) spindle speed changes (from HAL)."""
-        # Throttled update to save CPU
-        if hasattr(self, "_last_gui_rpm"):
-            if abs(rpm - self._last_gui_rpm) < 5.0 and abs(rpm) > 0.1:
-                return
-        self._last_gui_rpm = rpm
-             
-        from PySide6.QtWidgets import QLabel
-        if lbl := self._w(QLabel, "lbl_spindle_ist"):
-            lbl.setText(f"{abs(rpm):.0f} RPM")
-            
-        # Real-time update for Simple View if visible
-        sv = getattr(self, "simple_view", None)
-        if sv and sv.isVisible():
-            sv.set_feed_rpm(None, rpm)
-
-    @Slot(float)
-    def _on_spindle_load(self, load: float):
-        # Throttled update
-        if hasattr(self, "_last_gui_load"):
-            if abs(load - self._last_gui_load) < 1.0:
-                return
-        self._last_gui_load = load
-            
-        from PySide6.QtWidgets import QProgressBar
-        if bar := self._w(QProgressBar, "spindle_load_bar"):
-            val = int(max(0, min(100, load)))
-            bar.setValue(val)
-            
-            # Dynamische Farbe basierend auf Auslastung ändern (via Style-Property)
-            if val >= 80:
-                state = "critical"
-            elif val >= 60:
-                state = "warning"
-            else:
-                state = "normal"
-                
-            if bar.property("loadState") != state:
-                bar.setProperty("loadState", state)
-                # Aktualisiert das Styling der ProgressBar zur Laufzeit!
-                bar.style().unpolish(bar)
-                bar.style().polish(bar)
-
-
-    @Slot(bool)
-    def _on_spindle_at_speed(self, at_speed: bool):
-        self._spindle_at_speed = at_speed
-        self._update_spindle_buttons()
-
-    def _update_spindle_buttons(self):
-        from PySide6.QtWidgets import QPushButton
-        direction = self.poller.stat.spindle[0]['direction']  # 1=fwd, -1=rev, 0=stop
-        at_speed  = getattr(self, '_spindle_at_speed', False)
-        running   = direction != 0
-
-        _base = "QPushButton { border-radius: 4px; font-weight: bold; padding: 4px 8px; "
-
-        if running and at_speed:
-            # Vollflächig grün: Solldrehzahl erreicht
-            fwd_style = _base + "background-color: #27ae60; color: white; }"
-            rev_style = _base + "background-color: #27ae60; color: white; }"
-        elif running:
-            # Grüner Rahmen: läuft, aber noch nicht auf Drehzahl
-            fwd_style = _base + "border: 2px solid #27ae60; color: #27ae60; }"
-            rev_style = _base + "border: 2px solid #27ae60; color: #27ae60; }"
-        else:
-            fwd_style = ""
-            rev_style = ""
-
-        if b := self._w(QPushButton, "btn_spindle_fwd"):
-            # fwd button is now on the left and labeled CCW (direction -1)
-            b.setStyleSheet(fwd_style if direction == -1 else "")
-        if b := self._w(QPushButton, "btn_spindle_rev"):
-            # rev button is now on the right and labeled CW (direction 1)
-            b.setStyleSheet(rev_style if direction == 1 else "")
 
     def _set_hal_pin(self, name: str, val):
         if self._hal_comp:

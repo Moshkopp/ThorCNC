@@ -115,9 +115,17 @@ Upgrade der bestehenden Manager auf neues ThorModule Interface:
 | ProbingTabModule | ✅ | ~801 | 26 | thorcnc/modules/probing_tab.py |
 | NavigationModule | ✅ | ~281 | 15+ | thorcnc/modules/navigation.py |
 | SettingsTabModule | ✅ | ~500 | 20+ | thorcnc/modules/settings_tab.py |
-| DROModule | 📋 | ~80 | 3-4 | todo |
-| SpindleModule | 📋 | ~70 | 3-4 | todo |
-| **Gesamt (geplant)** | - | **~2,800** | **~75+** | - |
+| DROModule | ✅ | ~310 | 10+ | thorcnc/modules/dro.py |
+| SpindleModule | ✅ | ~150 | 8+ | thorcnc/modules/spindle.py |
+| **Gesamt (Modularisiert)** | - | **~2,800+** | **~100+** | - |
+
+---
+
+## 🏗️ Struktur-Status (MainWindow)
+*   **Original:** ~3.050 Zeilen
+*   **Aktuell:** **2.009 Zeilen**
+*   **Status:** Alle funktionalen Sub-Systeme erfolgreich in Manager-Module (Composition) ausgelagert. Keine Mixins mehr!
+
 
 **Einsparung in MainWindow:** ~2,500 Zeilen
 **Zielgröße:** 500-600 Zeilen (nur Infrastruktur)

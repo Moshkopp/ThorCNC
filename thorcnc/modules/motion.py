@@ -234,25 +234,25 @@ class MotionModule(ThorModule):
         self._t._all_joints_homed = all(i < len(homed) and homed[i] for i in range(3))
         self._update_goto_home_style(self._t._is_machine_on and self._t._all_joints_homed)
 
-        if hasattr(self._t, "_btn_ref_all"):
-            self._t._btn_ref_all.setText("HOMED" if self._t._all_joints_homed else "REF ALL")
+        if self._t.dro._btn_ref_all:
+            self._t.dro._btn_ref_all.setText("HOMED" if self._t._all_joints_homed else "REF ALL")
             cls = "btn-green btn-homed" if self._t._all_joints_homed else "btn-green"
-            self._t._btn_ref_all.setProperty("class", cls)
-            self._t._btn_ref_all.style().unpolish(self._t._btn_ref_all)
-            self._t._btn_ref_all.style().polish(self._t._btn_ref_all)
+            self._t.dro._btn_ref_all.setProperty("class", cls)
+            self._t.dro._btn_ref_all.style().unpolish(self._t.dro._btn_ref_all)
+            self._t.dro._btn_ref_all.style().polish(self._t.dro._btn_ref_all)
 
         enable_g53 = self._t.settings.get("homing_g53_conversion", False)
 
         for i, axis in enumerate(("X", "Y", "Z")):
             is_homed = i < len(homed) and homed[i]
-            if axis in self._t._dro_work:
-                lbl = self._t._dro_work[axis]
-                lbl.setProperty("homed", str(is_homed).lower())
+            if axis in self._t.dro._dro_work:
+                lbl = self._t.dro._dro_work[axis]
+                lbl.setProperty("homed", is_homed)
                 lbl.style().unpolish(lbl)
                 lbl.style().polish(lbl)
-
-            if axis in self._t._dro_ref_btn:
-                btn = self._t._dro_ref_btn[axis]
+            
+            if axis in self._t.dro._dro_ref_btn:
+                btn = self._t.dro._dro_ref_btn[axis]
 
                 if enable_g53 and is_homed:
                     btn.setText(f"G53 {axis} 0")
