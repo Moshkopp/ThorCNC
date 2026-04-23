@@ -19,6 +19,7 @@ from .managers.probing_manager import ProbingManager
 from .modules.file_manager import FileManagerModule
 from .modules.tool_table import ToolTableModule
 from .modules.offsets import OffsetsModule
+from .modules.motion import MotionModule
 # from .widgets.opt_options import OptOptionsDialog
 
 _DIR = os.path.dirname(__file__)
@@ -36,10 +37,7 @@ class ThorCNC(QObject):
         self.stat = linuxcnc.stat()
         self.cmd = linuxcnc.command()
         self.is_single_block = False
-        
-        self._jog_velocity = 100.0  # mm/min or inch/min default
-        self._jog_increment = 0.0   # 0.0 means continuous
-        
+
         # State tracking for dynamic run buttons
         self._is_machine_on = False
         self._has_file = False
@@ -60,6 +58,7 @@ class ThorCNC(QObject):
         self.file_manager = FileManagerModule(self)
         self.tool_table = ToolTableModule(self)
         self.offsets = OffsetsModule(self)
+        self.motion = MotionModule(self)
         
         # i18n
         self.i18n = TranslationManager(self.settings.get("language", "Deutsch"))
@@ -75,6 +74,7 @@ class ThorCNC(QObject):
         self.file_manager.setup()
         self.tool_table.setup()
         self.offsets.setup()
+        self.motion.setup()
         self._setup_probing_tab()
         self._setup_html_tab()
         self._setup_settings_tab()
@@ -439,7 +439,7 @@ class ThorCNC(QObject):
             tb_lay.addWidget(b)
         tb_lay.addStretch()   # Stretch wieder einfügen (trennt links von rechts)
 
-        self._update_goto_home_style(all_homed=False)
+        self.motion._update_goto_home_style(all_homed=False)
         
         # --- Flyout System Implementation ---
         # 1. Cleanup old elements
@@ -544,24 +544,6 @@ class ThorCNC(QObject):
                 continue
             b.setChecked(idx == active_idx)
 
-    def _update_goto_home_style(self, all_homed: bool):
-        in_auto = getattr(self, "_current_mode", None) == linuxcnc.MODE_AUTO
-        
-        # Target the button in the Flyout
-        btn = self.navigation._flyout_item_buttons.get("SHORTS_GO TO HOME") if self.navigation else None
-        
-        if not btn: return
-        
-        if in_auto:
-            btn.setEnabled(False)
-            self._add_class(btn, "") # Clear specific color classes
-        elif all_homed:
-            btn.setEnabled(True)
-            self._add_class(btn, "btn-green")
-        else:
-            btn.setEnabled(True)
-            self._add_class(btn, "btn-red")
-
     def _setup_dro(self):
         """DRO panel in probe_basic style: Axis | WORK | MACHINE | REF button."""
         from PySide6.QtWidgets import (QHBoxLayout, QVBoxLayout, QWidget, QGridLayout,
@@ -635,7 +617,7 @@ class ThorCNC(QObject):
         self._btn_ref_all.setFixedSize(btn_width, 44)
         self._btn_ref_all.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self._add_class(self._btn_ref_all, "btn-green")
-        self._btn_ref_all.clicked.connect(self._home_all)
+        self._btn_ref_all.clicked.connect(self.motion._home_all)
         glay.addWidget(self._btn_ref_all, 0, 5)
 
         # ── Row 1: Separator ─────────────────────────────────────────────────
@@ -700,7 +682,7 @@ class ThorCNC(QObject):
             btn_ref.setFocusPolicy(Qt.FocusPolicy.NoFocus)
             self._add_class(btn_ref, "btn-green")
             glay.addWidget(btn_ref, i, 5)
-            btn_ref.clicked.connect(lambda _=False, j=joint: self._home_joint(j))
+            btn_ref.clicked.connect(lambda _=False, j=joint: self.motion._home_joint(j))
 
             self._dro_work[axis]    = lbl_work
             self._dro_machine[axis] = lbl_mach
@@ -785,7 +767,6 @@ class ThorCNC(QObject):
         if self.ini:
             name = self.ini.find("EMC", "MACHINE") or name
         self.ui.setWindowTitle(name)
-        self._setup_jog_display()
         self._apply_machine_envelope()
 
     def _apply_machine_envelope(self):
@@ -805,92 +786,6 @@ class ThorCNC(QObject):
         self.backplot.set_machine_envelope(**envelope)
         # SimpleView overlay backplot gets the same envelope (created later via singleShot)
         self._backplot_envelope = envelope
-
-    def _setup_jog_display(self):
-        """Jog-Display-Page aus INI setzen, Icons auf Buttons legen."""
-        from PySide6.QtWidgets import QStackedWidget, QPushButton
-
-        # ── Richtige Seite im jogDisplay ──────────────────────────────────────
-        coords = ""
-        if self.ini:
-            coords = (self.ini.find("TRAJ", "COORDINATES") or
-                      self.ini.find("DISPLAY", "GEOMETRY") or "XYZ").upper().replace(" ", "")
-
-        page_map = {"XYZ": 0, "XYZA": 1, "XYZAB": 2, "XYZAC": 3, "XYZBC": 4, "XYZABC": 5}
-        page = page_map.get(coords, 0)
-
-        jog_stack = self.ui.findChild(QStackedWidget, "jogDisplay")
-        if jog_stack:
-            jog_stack.setCurrentIndex(page)
-
-        # ── Icons auf XYZ-Buttons (_3 Suffix = jog_xyz Seite) ─────────────────
-        btn_icons = {
-            "z_plus_jogbutton_3":  ("Z", "up"),
-            "z_minus_jogbutton_3": ("Z", "down"),
-            "y_plus_jogbutton_3":  ("Y", "up"),
-            "y_minus_jogbutton_3": ("Y", "down"),
-            "x_plus_jogbutton_3":  ("X", "right"),
-            "x_minus_jogbutton_3": ("X", "left"),
-        }
-        for btn_name, (axis, direction) in btn_icons.items():
-            b = self.ui.findChild(QPushButton, btn_name)
-            if b:
-                b.setIcon(self._make_jog_icon(axis, direction))
-                b.setIconSize(b.minimumSize())
-                b.setText("")
-
-    @staticmethod
-    def _make_jog_icon(axis: str, direction: str, size: int = 42):
-        """Zeichnet ein Jog-Button-Icon: farbiger Ring + Chevron-Pfeil + Achsbeschriftung."""
-        from PySide6.QtGui import (QPixmap, QPainter, QColor,
-                                   QFont, QPen, QBrush, QRadialGradient)
-        from PySide6.QtCore import QPointF, QRectF
-
-        pix = QPixmap(size, size)
-        pix.fill(Qt.GlobalColor.transparent)
-        p = QPainter(pix)
-        p.setRenderHint(QPainter.RenderHint.Antialiasing)
-
-        cx, cy = size / 2.0, size / 2.0
-        r = size / 2.0 - 1.5
-
-        # Achsfarben (passend zum Backplot-Koordinatensystem)
-        axis_colors = {
-            "X": QColor(210, 55,  55),   # rot
-            "Y": QColor(45,  190, 75),   # grün
-            "Z": QColor(55,  120, 215),  # blau
-        }
-        ac = axis_colors.get(axis, QColor(160, 160, 160))
-
-        # ── Background: subtle radial gradient ─────────────────────────
-        bg = QRadialGradient(cx, cy, r)
-        bg.setColorAt(0.0, QColor(52, 57, 62))
-        bg.setColorAt(1.0, QColor(28, 31, 34))
-        p.setBrush(QBrush(bg))
-        p.setPen(Qt.PenStyle.NoPen)
-        p.drawEllipse(QPointF(cx, cy), r, r)
-
-        # ── Farbiger Ring (Achsfarbe, halb-transparent) ───────────────────
-        ring_pen = QPen(ac, 2.2)
-        ring_pen.setCapStyle(Qt.PenCapStyle.RoundCap)
-        p.setBrush(Qt.BrushStyle.NoBrush)
-        p.setPen(ring_pen)
-        p.drawEllipse(QPointF(cx, cy), r, r)
-
-        # ── Axis + Sign centered ──────────────────────────────────
-        sign = "+" if direction in ("up", "right") else "-"
-        font = QFont("Bebas Kai", max(8, size // 3))
-        font.setBold(True)
-        p.setFont(font)
-        label_color = ac.lighter(160)
-        label_color.setAlpha(230)
-        p.setPen(QPen(label_color))
-        p.drawText(QRectF(0, 0, size, size),
-                   Qt.AlignmentFlag.AlignCenter, f"{axis}{sign}")
-
-        p.end()
-        from PySide6.QtGui import QIcon
-        return QIcon(pix)
 
     # ── StatusPoller ──────────────────────────────────────────────────────────
 
@@ -2120,9 +2015,9 @@ class ThorCNC(QObject):
             self._cb_homing_g53.setToolTip(_t("Ersetzt den REF-Button durch G53 X0, sobald die Achse homed ist."))
             self._cb_homing_g53.setChecked(self.settings.get("homing_g53_conversion", False))
             self._cb_homing_g53.toggled.connect(
-                lambda checked: (self.settings.set("homing_g53_conversion", checked), 
-                                 self.settings.save(), 
-                                 self._on_homed(getattr(self.poller, "_homed", [])))
+                lambda checked: (self.settings.set("homing_g53_conversion", checked),
+                                 self.settings.save(),
+                                 self.motion._on_homed(getattr(self.poller, "_homed", [])))
             )
             gl_safety.addWidget(self._cb_homing_g53)
             
@@ -2761,12 +2656,7 @@ class ThorCNC(QObject):
         p.spindle_at_speed.connect(self._on_spindle_at_speed)
         p.spindle_speed_actual.connect(self._on_spindle_actual)
         p.spindle_load.connect(self._on_spindle_load)
-        p.feed_override.connect(self._on_feed_override)
-        p.spindle_override.connect(self._on_spindle_override)
-        if hasattr(p, 'rapid_override'):
-            p.rapid_override.connect(self._on_rapid_override)
         p.spindle_speed_cmd.connect(self._on_spindle_speed)
-        p.homed_changed.connect(self._on_homed)
         p.g5x_index_changed.connect(self._on_g5x_index)
         p.g5x_offset_changed.connect(self._on_g5x_offset)
         p.gcodes_changed.connect(self._on_gcodes)
@@ -2799,7 +2689,7 @@ class ThorCNC(QObject):
         if b := btn("auto_mode_button"):
             b.clicked.connect(lambda: self.cmd.mode(linuxcnc.MODE_AUTO))
         if b := btn("go_to_home_button"):
-            b.clicked.connect(self._home_all)
+            b.clicked.connect(self.motion._home_all)
         if b := btn("estop_button"):
             b.clicked.connect(self._toggle_estop)
 
@@ -2857,14 +2747,6 @@ class ThorCNC(QObject):
                 lay.setSpacing(4)
                 # Flush to right and bottom (0 margins)
                 lay.setContentsMargins(0, 0, 0, 0)
-        if b := btn("ref_all_button"):
-            b.clicked.connect(self._home_all)
-        if b := btn("ref_x_button"):
-            b.clicked.connect(lambda: self._home_joint(0))
-        if b := btn("ref_y_button"):
-            b.clicked.connect(lambda: self._home_joint(1))
-        if b := btn("ref_z_button"):
-            b.clicked.connect(lambda: self._home_joint(2))
         if b := btn("btn_pause_mdi"):
             b.clicked.connect(self._pause_program)
         if b := btn("feed_override_to_100_button"):
@@ -2873,25 +2755,10 @@ class ThorCNC(QObject):
             b.clicked.connect(lambda: self.cmd.spindleoverride(1.0))
         if b := btn("rapid_override_to_100_button"):
             b.clicked.connect(lambda: self.cmd.rapidrate(1.0))
-        if b := btn("v_override_to_100_button"):
-            b.clicked.connect(self._on_v_override_to_100)
-        
+
         # HAL Show
         if b := btn("btn_halshow"):
             b.clicked.connect(self._run_halshow)
-
-        # Go to Home
-        if b := btn("btn_go_to_home"):
-            b.clicked.connect(self._go_to_home)
-
-        # Jog buttons (Suffix _3 = jog_xyz page, 3-axis)
-        for axis, joint in (("x", 0), ("y", 1), ("z", 2)):
-            for dirn, sign in (("plus", 1), ("minus", -1)):
-                if b := btn(f"{axis}_{dirn}_jogbutton_3"):
-                    b.pressed.connect(
-                        lambda a=joint, s=sign: self._jog_start(a, s))
-                    b.released.connect(
-                        lambda a=joint: self._jog_stop(a))
 
         # Machine mode combobox (MANUAL / AUTO / MDI)
         _MODE_MAP = [linuxcnc.MODE_MANUAL, linuxcnc.MODE_AUTO, linuxcnc.MODE_MDI]
@@ -2912,20 +2779,6 @@ class ThorCNC(QObject):
             s.valueChanged.connect(lambda v: self.cmd.spindleoverride(v / 100.0))
         if s := sld("rapid_override_slider"):
             s.valueChanged.connect(lambda v: self.cmd.rapidrate(v / 100.0))
-        if s := sld("v_override_slider"):
-            s.valueChanged.connect(self._on_v_override_changed)
-        if s := sld("jog_vel_slider"):
-            s.valueChanged.connect(self._on_jog_vel_changed)
-
-        # Jog Increment Buttons (Exclusive)
-        if b := btn("btn_jog_cont"):
-            b.clicked.connect(lambda: self._set_jog_increment(0.0))
-        if b := btn("btn_jog_1_0"):
-            b.clicked.connect(lambda: self._set_jog_increment(1.0))
-        if b := btn("btn_jog_0_1"):
-            b.clicked.connect(lambda: self._set_jog_increment(0.1))
-        if b := btn("btn_jog_0_01"):
-            b.clicked.connect(lambda: self._set_jog_increment(0.01))
 
         # Nav-Buttons → tabWidget
         from PySide6.QtWidgets import QTabWidget, QButtonGroup
@@ -2962,6 +2815,7 @@ class ThorCNC(QObject):
         self.file_manager.connect_signals()
         self.tool_table.connect_signals()
         self.offsets.connect_signals()
+        self.motion.connect_signals()
 
         # Simple View — fullscreen overlay, opened by clicking the status bar
         self._setup_simple_overlay()
@@ -3003,7 +2857,7 @@ class ThorCNC(QObject):
                 b.setStyleSheet(f"QPushButton {{ border: 2px solid #27ae60; color: #27ae60; {_base} }}")
         self._update_run_buttons()
         # GO TO HOME: only green if machine is ON AND all joints are homed
-        self._update_goto_home_style(on and getattr(self, "_all_joints_homed", False))
+        self.motion._update_goto_home_style(on and getattr(self, "_all_joints_homed", False))
 
     @Slot(int)
     def _on_mode(self, mode: int):
@@ -3051,7 +2905,7 @@ class ThorCNC(QObject):
                 self._silent_mdi = False
                 self._switch_gcode_panel(0)
         # GO TO HOME im AUTO-Modus deaktivieren
-        self._update_goto_home_style(self._is_machine_on and getattr(self, "_all_joints_homed", False))
+        self.motion._update_goto_home_style(self._is_machine_on and getattr(self, "_all_joints_homed", False))
 
     @Slot(int)
     def _on_interp(self, state: int):
@@ -3403,102 +3257,6 @@ class ThorCNC(QObject):
         return brightness > 128
 
     @Slot(list)
-    def _on_homed(self, homed: list):
-        self._all_joints_homed = all(i < len(homed) and homed[i] for i in range(3))
-        self._update_goto_home_style(self._is_machine_on and self._all_joints_homed)
-        
-        # Update REF ALL button text
-        if hasattr(self, "_btn_ref_all"):
-            self._btn_ref_all.setText("HOMED" if self._all_joints_homed else "REF ALL")
-            cls = "btn-green btn-homed" if self._all_joints_homed else "btn-green"
-            self._btn_ref_all.setProperty("class", cls)
-            self._btn_ref_all.style().unpolish(self._btn_ref_all)
-            self._btn_ref_all.style().polish(self._btn_ref_all)
-
-        enable_g53 = self.settings.get("homing_g53_conversion", False)
-
-        for i, axis in enumerate(("X", "Y", "Z")):
-            is_homed = i < len(homed) and homed[i]
-            # DRO work label: Status via property
-            if axis in self._dro_work:
-                lbl = self._dro_work[axis]
-                lbl.setProperty("homed", str(is_homed).lower())
-                lbl.style().unpolish(lbl)
-                lbl.style().polish(lbl)
-            
-            # REF button: Status via property
-            if axis in self._dro_ref_btn:
-                btn = self._dro_ref_btn[axis]
-                
-                if enable_g53 and is_homed:
-                    btn.setText(f"G53 {axis} 0")
-                    btn.setProperty("class", "btn-blue btn-homed")
-                else:
-                    btn.setText(f"REF {axis}")
-                    btn.setProperty("class", "btn-green btn-homed" if is_homed else "btn-green")
-                
-                btn.style().unpolish(btn)
-                btn.style().polish(btn)
-                btn.update()
-
-    @Slot(float)
-    def _on_feed_override(self, val: float):
-        from PySide6.QtWidgets import QLabel, QSlider
-        pct = f"F {val*100:.0f}%"
-        ival = int(val * 100)
-        for lbl_name, sld_name in [
-            ("feed_override_status",       "feed_override_slider"),
-            ("probe_feed_override_status", "probe_feed_override_slider"),
-        ]:
-            if lbl := self._w(QLabel, lbl_name):
-                lbl.setText(pct)
-            if s := self._w(QSlider, sld_name):
-                s.blockSignals(True); s.setValue(ival); s.blockSignals(False)
-
-    @Slot(float)
-    def _on_spindle_override(self, val: float):
-        from PySide6.QtWidgets import QLabel, QSlider
-        pct = f"S {val*100:.0f}%"
-        ival = int(val * 100)
-        for lbl_name, sld_name in [
-            ("spindle_override_status",       "spindle_override_slider"),
-            ("probe_spindle_override_status", "probe_spindle_override_slider"),
-        ]:
-            if lbl := self._w(QLabel, lbl_name):
-                lbl.setText(pct)
-            if s := self._w(QSlider, sld_name):
-                s.blockSignals(True); s.setValue(ival); s.blockSignals(False)
-
-    @Slot(float)
-    def _on_rapid_override(self, val: float):
-        from PySide6.QtWidgets import QLabel, QSlider
-        pct = f"R {val*100:.0f}%"
-        ival = int(val * 100)
-        for lbl_name, sld_name in [
-            ("rapid_override_status",       "rapid_override_slider"),
-            ("probe_rapid_override_status", "probe_rapid_override_slider"),
-        ]:
-            if lbl := self._w(QLabel, lbl_name):
-                lbl.setText(pct)
-            if s := self._w(QSlider, sld_name):
-                s.blockSignals(True); s.setValue(ival); s.blockSignals(False)
-
-    def _on_v_override_changed(self, val: int):
-        from PySide6.QtWidgets import QLabel
-        if lbl := self._w(QLabel, "v_override_status"):
-            lbl.setText(f"V {val}%")
-        self.cmd.feedrate(val / 100.0)
-        self.cmd.spindleoverride(val / 100.0)
-        
-    def _on_v_override_to_100(self):
-        from PySide6.QtWidgets import QSlider, QLabel
-        if s := self._w(QSlider, "v_override_slider"):
-            s.setValue(100)
-        if lbl := self._w(QLabel, "v_override_status"):
-            lbl.setText(f"V 100%")
-        self.cmd.feedrate(1.0)
-        self.cmd.spindleoverride(1.0)
-
     @Slot(float)
     def _on_spindle_speed(self, rpm: float):
         """Called when the COMMANDED/TARGET spindle speed changes."""
@@ -3923,69 +3681,6 @@ class ThorCNC(QObject):
         except Exception as e:
             self._status(f"Konnte linuxcnctop nicht starten: {e}", error=True)
 
-    def _go_to_home(self):
-        """Move to machine zero via O<go_to_home> subroutine."""
-        try:
-            # Merken des alten Modus
-            old_mode = self.poller.stat.task_mode
-            self.cmd.mode(linuxcnc.MODE_MDI)
-            self.cmd.wait_complete()
-            
-            # Subroutine aufrufen
-            self.cmd.mdi("O<go_to_home> CALL")
-            self.cmd.wait_complete()
-            
-            # Warten bis die Fahrt wirklich beendet ist (Interpreter IDLE)
-            # Das verhindert das Ruckeln am Ende, wenn ThorCNC den Modus zu früh umschaltet
-            import time
-            from PySide6.QtWidgets import QApplication
-            start_t = time.time()
-            timeout = 60.0 # Sekunden
-            
-            self._status(_t("Fahrt auf Home-Position (G53) läuft..."))
-            
-            while time.time() - start_t < timeout:
-                # Wir geben der GUI Zeit zum Atmen und Aktualisieren
-                QApplication.processEvents()
-                
-                # Check ob Interpreter fertig ist
-                # Wir greifen direkt auf den Status zu
-                if self.poller.stat.interp_state == linuxcnc.INTERP_IDLE:
-                    break
-                time.sleep(0.05)
-            
-            self.cmd.mode(old_mode)
-            self.cmd.wait_complete()
-            self._status(_t("Home-Position erreicht."))
-        except Exception as e:
-            self._status(f"Homing error: {e}", error=True)
-
-    def _home_all(self):
-        self.cmd.mode(linuxcnc.MODE_MANUAL)
-        self.cmd.wait_complete()
-        self.cmd.home(-1)
-
-    def _home_joint(self, joint: int):
-        # Check if we should do G53 instead
-        is_homed = False
-        homed_status = getattr(self.poller, "_homed", [])
-        if 0 <= joint < len(homed_status):
-            is_homed = homed_status[joint]
-            
-        enable_g53 = self.settings.get("homing_g53_conversion", False)
-        
-        if enable_g53 and is_homed:
-            # G53 Move
-            axis_map = {0: "X", 1: "Y", 2: "Z"}
-            axis = axis_map.get(joint)
-            if axis:
-                self._send_mdi(f"G53 G0 {axis}0")
-            return
-
-        self.cmd.mode(linuxcnc.MODE_MANUAL)
-        self.cmd.wait_complete()
-        self.cmd.home(joint)
-
     def _pause_program(self):
         self.cmd.auto(linuxcnc.AUTO_PAUSE)
 
@@ -4018,34 +3713,6 @@ class ThorCNC(QObject):
         except Exception as e:
             self._status(f"MDI error: {e}")
         
-    def _set_jog_increment(self, inc: float):
-        self._jog_increment = inc
-        from PySide6.QtWidgets import QPushButton
-        # Radio-button like behavior
-        for name, val in [("btn_jog_cont", 0.0), ("btn_jog_1_0", 1.0), ("btn_jog_0_1", 0.1), ("btn_jog_0_01", 0.01)]:
-            if b := self._w(QPushButton, name):
-                b.setChecked(abs(inc - val) < 0.0001)
-
-    def _on_jog_vel_changed(self, val: int):
-        self._jog_velocity = float(val)
-        from PySide6.QtWidgets import QLabel
-        if lbl := self._w(QLabel, "jog_vel_label"):
-            lbl.setText(f"Velocity: {val}")
-
-    def _jog_start(self, joint: int, direction: int):
-        self.cmd.mode(linuxcnc.MODE_MANUAL)
-        self.cmd.wait_complete()
-        if self._jog_increment <= 0.0:
-            # Continuous
-            self.cmd.jog(linuxcnc.JOG_CONTINUOUS, False, joint, direction * self._jog_velocity)
-        else:
-            # Incremental
-            self.cmd.jog(linuxcnc.JOG_INCREMENT, False, joint, direction * self._jog_velocity, self._jog_increment)
-
-    def _jog_stop(self, joint: int):
-        if self._jog_increment <= 0.0:
-            self.cmd.jog(linuxcnc.JOG_STOP, False, joint)
-
     # ── Lifecycle ─────────────────────────────────────────────────────────────
 
     def show(self):
