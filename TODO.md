@@ -35,8 +35,6 @@ MainWindow.py (5000+ Zeilen) in ein modulares System umwandeln, wo jede Funktion
     - Fokus direkt auf Diameter-Feld
     - Saubere Sortierung (disabled während Edit, enabled beim Save)
 
-**Aktueller Stand:** MainWindow 4136 Zeilen (von 5027 → **891 Zeilen gespart!**)
-
 ---
 
 ## 🚀 Nächste Schritte (Roadmap)
@@ -47,34 +45,28 @@ MainWindow.py (5000+ Zeilen) in ein modulares System umwandeln, wo jede Funktion
   - 6 Methoden extrahiert + `_WCS_LIST` Klassenattribut
   - ~163 Zeilen aus MainWindow gespart
 
-**Strategie:** Kleine Module zuerst → MainWindow schrumpft kontinuierlich → große Brocken (Probing, Settings) am Ende
+### Schritt 4: MotionModule ✅
+- [x] `thorcnc/modules/motion.py` - Bewegungs-Management
+  - 21 Methoden extrahiert
+  - ~343 Zeilen
+  - ~333 Zeilen aus MainWindow gespart
+  - Jogging (alle Richtungen, Inkremente)
+  - Home / Limit-Handling
+  - Override-Slider (Feed, Spindle, Rapid)
+  - Soft-Limits Visualisierung
 
----
+### Schritt 5: ProbingTabModule ✅
+- [x] `thorcnc/modules/probing_tab.py` - Probing-Management
+  - 26 Methoden extrahiert
+  - ~801 Zeilen
+  - ~790 Zeilen aus MainWindow gespart
+  - Komplette UI-Initialisierung (SVG-Icons, StackedWidget)
+  - Alle Probe-Sequenzen (Edge, Hole, Pocket, etc.)
+  - Probe-Marker Positionierung
+  - Preference-Management (before/after probe NGCs)
+  - DRO-Synchronisierung (compact probe DRO)
 
-### Schritt 4: MotionModule (TODO)
-**Geschätzter Aufwand:** ~250 Zeilen
-
-Umfasst:
-- Jogging (alle Richtungen, Inkremente)
-- Home / Limit-Handling
-- Override-Slider (Feed, Spindle, Rapid)
-- Soft-Limits Visualisierung
-
-**Abhängigkeiten:** Base classes, Status Poller
-
----
-
-### Schritt 5: ProbingTabModule (TODO - der große)
-**Geschätzter Aufwand:** ~850 Zeilen (größter einzelner Modul)
-
-Umfasst:
-- `_setup_probing_tab` - komplexes UI mit vielen Widgets
-- Alle Probe-Sequenzen (Edge, Hole, Pocket, etc.)
-- Probe-Marker Positionierung
-- Tool-Sensor Integration
-
-**Notiz:** `ProbingManager` existiert bereits als Helper (Probe-Warning State). 
-`ProbingTabModule` würde den UI-Teil + Sequenzen enthalten.
+**Aktueller Stand:** MainWindow 3017 Zeilen (von 5027 → **2010 Zeilen gespart!**)
 
 ---
 
@@ -107,7 +99,7 @@ Umfasst:
 
 Upgrade der bestehenden Manager auf neues ThorModule Interface:
 - `NavigationManager` → `ThorModule` mit `connect_signals()`
-- `ProbingManager` → Aufteilen in ProbingManager (state) + ProbingTabModule (UI)
+- `ProbingManager` → Bereinigt, Fokus auf Probe-Warning State
 
 ---
 
@@ -118,8 +110,8 @@ Upgrade der bestehenden Manager auf neues ThorModule Interface:
 | FileManagerModule | ✅ | ~270 | 13 | thorcnc/modules/file_manager.py |
 | ToolTableModule | ✅ | ~362 | 10 | thorcnc/modules/tool_table.py |
 | OffsetsModule | ✅ | ~172 | 6 | thorcnc/modules/offsets.py |
-| MotionModule | 📋 | ~250 | 8-10 | todo |
-| ProbingTabModule | 📋 | ~850 | 20+ | todo |
+| MotionModule | ✅ | ~343 | 21 | thorcnc/modules/motion.py |
+| ProbingTabModule | ✅ | ~801 | 26 | thorcnc/modules/probing_tab.py |
 | SettingsTabModule | 📋 | ~450 | 10+ | todo |
 | DROModule | 📋 | ~80 | 3-4 | todo |
 | SpindleModule | 📋 | ~70 | 3-4 | todo |
@@ -201,15 +193,15 @@ QApplication.instance().installEventFilter(self)
 ## 🔍 Nächste konkrete Aktion
 
 **Wer:** Moshy  
-**Was:** Schritt 4 - MotionModule extrahieren  
+**Was:** Schritt 6 - SettingsTabModule extrahieren  
 **Wie:** 
-1. Plan-Mode für MotionModule
-2. `thorcnc/modules/motion.py` erstellen
-3. ~8-10 Methoden extrahieren (Jogging, Home, Limits, Override-Slider)
+1. Plan-Mode für SettingsTabModule
+2. `thorcnc/modules/settings_tab.py` erstellen
+3. ~10+ Methoden extrahieren (Preferences, Theme, Language)
 4. MainWindow aktualisieren
-5. ~250 Zeilen Einsparung = MainWindow auf ~3886 Zeilen
+5. ~450 Zeilen Einsparung = MainWindow auf ~2500 Zeilen
 
-**Begründung:** Mittlere Größe, dann großen Brocken (Probing ~850 Zeilen) zum Schluss für Momentum
+**Begründung:** Nächster logischer Schritt, um den UI-Setup-Teil von MainWindow zu entlasten.
 
 ---
 
@@ -222,6 +214,6 @@ QApplication.instance().installEventFilter(self)
 
 ---
 
-*Letztes Update: 23.04.2026 nach OffsetsModule Extraktion*  
-*Status: Schritt 3 ✅ abgeschlossen (MainWindow 4136 Zeilen, -891 Zeilen gesamt)*  
-*Nächster Start: MotionModule (Schritt 4)*
+*Letztes Update: 23.04.2026 nach ProbingTabModule Extraktion*  
+*Status: Schritt 5 ✅ abgeschlossen (MainWindow 3017 Zeilen, -2010 Zeilen gesamt)*  
+*Nächster Start: SettingsTabModule (Schritt 6)*
