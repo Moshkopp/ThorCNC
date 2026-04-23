@@ -200,17 +200,18 @@ class DROModule(ThorModule):
                 probe_dro_mach[axis].setText(f"{mach:+.3f}")
 
         # Tool marker only visible if all axes are homed
+        sv = self._t.simple_view_mod.simple_view
         if all_homed:
             self._t.backplot.set_tool_position(pos[0] - t_off[0], pos[1] - t_off[1], pos[2] - t_off[2])
-            if hasattr(self._t, "simple_view") and self._t.simple_view.backplot:
-                self._t.simple_view.backplot.set_tool_position(pos[0] - t_off[0], pos[1] - t_off[1], pos[2] - t_off[2])
+            if sv and sv.backplot:
+                sv.backplot.set_tool_position(pos[0] - t_off[0], pos[1] - t_off[1], pos[2] - t_off[2])
         else:
             self._t.backplot.set_tool_position(float('nan'), float('nan'), float('nan'))
-            if hasattr(self._t, "simple_view") and self._t.simple_view.backplot:
-                self._t.simple_view.backplot.set_tool_position(float('nan'), float('nan'), float('nan'))
+            if sv and sv.backplot:
+                sv.backplot.set_tool_position(float('nan'), float('nan'), float('nan'))
 
         # Simple View overlay DRO sync
-        if hasattr(self._t, "simple_view") and self._t.simple_view.isVisible():
+        if sv and sv.isVisible():
             w_coords = [pos[i] - g5x[i] - g92[i] - t_off[i] for i in range(3)]
             m_coords = [pos[i] for i in range(3)]
             try:
@@ -218,15 +219,15 @@ class DROModule(ThorModule):
             except (AttributeError, TypeError):
                 dtg_vals = [0.0, 0.0, 0.0]
 
-            self._t.simple_view.set_wcs(*w_coords)
-            self._t.simple_view.set_machine(*m_coords)
-            self._t.simple_view.set_dtg(*dtg_vals)
+            sv.set_wcs(*w_coords)
+            sv.set_machine(*m_coords)
+            sv.set_dtg(*dtg_vals)
             
             feed = self._t.poller.stat.current_vel * 60.0
             rpm = getattr(self._t.poller, '_spindle_actual', 0.0)
             if rpm is None or rpm <= 0:
                 rpm = abs(self._t.poller.stat.spindle[0]['speed'])
-            self._t.simple_view.set_feed_rpm(feed, rpm)
+            sv.set_feed_rpm(feed, rpm)
 
     @Slot(list)
     def _on_g5x_offset(self, g5x: list):
@@ -235,20 +236,21 @@ class DROModule(ThorModule):
         if self._t.poller.stat.g5x_index != 9:
             new_origin = (g5x[0], g5x[1], g5x[2])
             is_initial = not self._wcs_initialized
-            changed = not is_initial and new_origin != self._last_wcs_origin
+            changed = not is_initial and new_origin != self._t._last_wcs_origin
             
             self._t.backplot.set_wcs_origin(*new_origin)
-            self._last_wcs_origin = new_origin
+            self._t._last_wcs_origin = new_origin
             self._wcs_initialized = True
             
             if not getattr(self._t, "_has_file", False) and changed:
                 if not getattr(self._t, "_view_restored", False):
                     self._t.backplot.fit_view(None)
 
-            if hasattr(self._t, "simple_view") and self._t.simple_view.backplot:
-                self._t.simple_view.backplot.set_wcs_origin(g5x[0], g5x[1], g5x[2])
+            sv = self._t.simple_view_mod.simple_view
+            if sv and sv.backplot:
+                sv.backplot.set_wcs_origin(g5x[0], g5x[1], g5x[2])
                 if not getattr(self._t, "_has_file", False):
-                    self._t.simple_view.backplot.fit_view(None)
+                    sv.backplot.fit_view(None)
 
     @Slot(int)
     def _on_g5x_index(self, g5x_index: int):

@@ -47,7 +47,8 @@ class SpindleModule(ThorModule):
             lbl.setText(f"{abs(rpm):.0f} RPM")
             
         # Real-time update for Simple View if visible
-        sv = getattr(self._t, "simple_view", None)
+        # Real-time update for Simple View if visible
+        sv = self._t.simple_view_mod.simple_view
         if sv and sv.isVisible():
             sv.set_feed_rpm(None, rpm)
 
@@ -92,13 +93,17 @@ class SpindleModule(ThorModule):
         if running and at_speed:
             # Vollflächig grün: Solldrehzahl erreicht
             style = _base + "background-color: #27ae60; color: white; }"
-            if direction > 0: fwd_style = style
-            else: rev_style = style
+            if direction > 0: # CW
+                rev_style = style
+            else: # CCW
+                fwd_style = style
         elif running:
             # Grüner Rahmen: läuft, aber noch nicht auf Drehzahl
             style = _base + "border: 2px solid #27ae60; color: #27ae60; }"
-            if direction > 0: fwd_style = style
-            else: rev_style = style
+            if direction > 0: # CW
+                rev_style = style
+            else: # CCW
+                fwd_style = style
         else:
             stop_style = _base + "background-color: #c0392b; color: white; }"
 

@@ -226,23 +226,37 @@ class NavigationModule(ThorModule):
 
     def _update_flyout_highlights(self):
         s = self._t.poller.stat
+        is_idle = s.interp_state == linuxcnc.INTERP_IDLE
+        is_on = not s.estop and s.enabled
+        can_mdi = is_idle and is_on
 
-        def set_btn_active(key, active):
+        def set_btn_state(key, active=None, enabled=None):
             if b := self._flyout_item_buttons.get(key):
-                if b.property("active") != active:
+                updated = False
+                if active is not None and b.property("active") != active:
                     b.setProperty("active", active)
+                    updated = True
+                if enabled is not None and b.isEnabled() != enabled:
+                    b.setEnabled(enabled)
+                    updated = True
+                
+                if updated:
                     b.style().unpolish(b); b.style().polish(b)
                     b.update()
 
-        set_btn_active("OPT_COOLANT", getattr(s, "flood", 0) > 0)
-        set_btn_active("OPT_M1 STOP", getattr(s, "optional_stop", False))
-        set_btn_active("OPT_BLOCK DELETE", getattr(s, "block_delete", False))
-        set_btn_active("OPT_SINGLE BLOCK", getattr(self._t, "is_single_block", False))
+        set_btn_state("OPT_COOLANT", active=(getattr(s, "flood", 0) > 0))
+        set_btn_state("OPT_M1 STOP", active=getattr(s, "optional_stop", False))
+        set_btn_state("OPT_BLOCK DELETE", active=getattr(s, "block_delete", False))
+        set_btn_state("OPT_SINGLE BLOCK", active=getattr(self._t, "is_single_block", False))
+
+        # Disable SHORTS buttons if not idle
+        set_btn_state("SHORTS_GO TO HOME", enabled=can_mdi)
+        set_btn_state("SHORTS_GOTO ZERO XY", enabled=can_mdi)
 
         _MODES = {linuxcnc.MODE_MANUAL: "MANUAL", linuxcnc.MODE_AUTO: "AUTO", linuxcnc.MODE_MDI: "MDI"}
         current_txt = _MODES.get(self._t._current_mode, "")
         for m_txt in ("MANUAL", "AUTO", "MDI"):
-            set_btn_active(f"MODE_{m_txt}", m_txt == current_txt)
+            set_btn_state(f"MODE_{m_txt}", active=(m_txt == current_txt))
 
     def apply_theme(self, name: str):
         """Switches the UI theme and updates icons."""

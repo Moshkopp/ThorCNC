@@ -15,7 +15,7 @@ from .widgets.backplot import BackplotWidget
 from .widgets.simple_view import SimpleView
 from .i18n import TranslationManager, _t
 from .modules import (FileManagerModule, ToolTableModule, OffsetsModule,
-                        MotionModule, ProbingTabModule, NavigationModule, SettingsTabModule, DROModule, SpindleModule)
+                        MotionModule, ProbingTabModule, NavigationModule, SettingsTabModule, DROModule, SpindleModule, SimpleViewModule)
 # from .widgets.opt_options import OptOptionsDialog
 
 _DIR = os.path.dirname(__file__)
@@ -60,6 +60,7 @@ class ThorCNC(QObject):
         self.settings_tab = SettingsTabModule(self)
         self.dro = DROModule(self)
         self.spindle = SpindleModule(self)
+        self.simple_view_mod = SimpleViewModule(self)
         
         # i18n
         self.i18n = TranslationManager(self.settings.get("language", "Deutsch"))
@@ -79,6 +80,7 @@ class ThorCNC(QObject):
         self.settings_tab.setup()
         self.dro.setup()
         self.spindle.setup()
+        self.simple_view_mod.setup()
         self._setup_html_tab()
         self._connect_signals()
         self._setup_opt_jalousie()
@@ -671,18 +673,11 @@ class ThorCNC(QObject):
         if watched == getattr(self.probing_tab, "_probe_grid_frm", None):
             if event.type() == QEvent.Resize:
                 self.probing_tab.update_marker_pos()
-        # Status bar click or Simple View label click → open simple overlay
-        if watched in (getattr(self, "_sb_for_filter", None), getattr(self, "_lbl_simple_view_indicator", None)):
-            if event.type() == QEvent.Type.MouseButtonPress:
-                self._show_simple_overlay()
-        # Main window resize → keep overlay covering the full window
+        # Delegate to SimpleViewModule
+        if self.simple_view_mod.handle_event(watched, event):
+            return True
         if watched is self.ui:
-            if event.type() == QEvent.Type.Resize:
-                if hasattr(self, "simple_view"):
-                    cw = self.ui.centralWidget()
-                    self.simple_view.setGeometry(cw.rect() if cw else self.ui.rect())
-            
-            elif watched is self.ui and event.type() == QEvent.Type.Close:
+            if event.type() == QEvent.Type.Close:
                 # Safe-Exit: Confirm always to prevent accidental shutdowns
                 from PySide6.QtWidgets import QMessageBox
                 res = QMessageBox.question(
@@ -1199,7 +1194,7 @@ class ThorCNC(QObject):
         self.spindle.connect_signals()
 
         # Simple View — fullscreen overlay, opened by clicking the status bar
-        self._setup_simple_overlay()
+
 
     # ── Slots ─────────────────────────────────────────────────────────────────
 
@@ -1219,7 +1214,7 @@ class ThorCNC(QObject):
                 b.setStyleSheet(f"QPushButton {{ background-color: #cc0000; color: white; {_base} }}")
         
         # Simple View
-        sv = getattr(self, "simple_view", None)
+        sv = self.simple_view_mod.simple_view
         if sv and (b_s := getattr(sv, "btn_estop", None)):
              if active:
                  b_s.setStyleSheet(f"QPushButton {{ border: 2px solid #ff4444; color: #cc0000; {_base} }}")
@@ -1322,7 +1317,7 @@ class ThorCNC(QObject):
         btn_stop = self._w(QPushButton, "stop_button")
         
         # Simple View buttons
-        sv = getattr(self, "simple_view", None)
+        sv = self.simple_view_mod.simple_view
         s_run   = getattr(sv, "btn_start", None) if sv else None
         s_pause = getattr(sv, "btn_pause", None) if sv else None
         s_stop  = getattr(sv, "btn_stop", None) if sv else None
@@ -1559,8 +1554,7 @@ class ThorCNC(QObject):
     @Slot(int)
     def _on_program_line(self, line: int):
         self.gcode_view.set_current_line(line)
-        if hasattr(self, "simple_view") and self.simple_view.isVisible():
-            self.simple_view.set_gcode_line(line)
+        self.simple_view_mod.set_gcode_line(line)
             
         # GUI-side Single Block: Pause immediately after line change
         if getattr(self, "is_single_block", False):
@@ -1619,120 +1613,7 @@ class ThorCNC(QObject):
 
     # ── Simple View Overlay ───────────────────────────────────────────────────
 
-    def _setup_simple_overlay(self):
-        """Create SimpleView as a child overlay of the central widget."""
-        cw = self.ui.centralWidget() or self.ui
-        self.simple_view = SimpleView(parent=cw)
-        self.simple_view.setGeometry(cw.rect())
-        self.simple_view.hide()
 
-        # ESC shortcut scoped to the overlay
-        from PySide6.QtGui import QShortcut, QKeySequence
-        esc = QShortcut(QKeySequence(Qt.Key.Key_Escape), self.simple_view)
-        esc.activated.connect(self._hide_simple_overlay)
-
-        # Zurück button
-        if self.simple_view.btn_back:
-            self.simple_view.btn_back.clicked.connect(self._hide_simple_overlay)
-
-        # Machine control buttons
-        if self.simple_view.btn_start:
-            self.simple_view.btn_start.clicked.connect(self._run_program)
-        if self.simple_view.btn_pause:
-            self.simple_view.btn_pause.clicked.connect(self._pause_program)
-        if self.simple_view.btn_stop:
-            self.simple_view.btn_stop.clicked.connect(self._stop_program)
-        if self.simple_view.btn_estop:
-            self.simple_view.btn_estop.clicked.connect(self._toggle_estop)
-
-        # Sync backplot state from main backplot
-        if self.simple_view.backplot:
-            if hasattr(self, "_backplot_envelope"):
-                self.simple_view.backplot.set_machine_envelope(**self._backplot_envelope)
-            if hasattr(self, "_last_wcs_origin"):
-                self.simple_view.backplot.set_wcs_origin(*self._last_wcs_origin)
-            if hasattr(self, "_last_toolpath") and self._last_toolpath is not None:
-                self.simple_view.backplot.load_toolpath(self._last_toolpath)
-            self.simple_view.backplot.set_view_iso()
-
-        # Make status bar clickable & add persistent Simple View indicator
-        if sb := self.ui.statusBar():
-            from PySide6.QtCore import Qt as _Qt
-            from PySide6.QtWidgets import QLabel, QWidget, QHBoxLayout
-            
-            # 1. Custom Status Message Label (Left)
-            self._lbl_status_msg = QLabel("")
-            self._lbl_status_msg.setObjectName("persistent_status_msg")
-            self._lbl_status_msg.setMinimumWidth(300)
-            
-            # 2. Centered Simple View Indicator
-            self._lbl_simple_view_indicator = QLabel(" SIMPLE VIEW ")
-            self._lbl_simple_view_indicator.setObjectName("simple_view_indicator")
-            self._lbl_simple_view_indicator.setAlignment(_Qt.AlignmentFlag.AlignCenter)
-            # Subtle styling: Blue border instead of solid background
-            # Styling via QSS: QLabel#simple_view_indicator
-            
-            # Create a container to hold and center everything
-            container = QWidget()
-            layout = QHBoxLayout(container)
-            layout.setContentsMargins(0, 0, 0, 0)
-            layout.setSpacing(0)
-            
-            layout.addWidget(self._lbl_status_msg)
-            layout.addStretch()
-            layout.addWidget(self._lbl_simple_view_indicator)
-            layout.addStretch()
-            # Placeholder for right-side alignment symmetry if needed
-            right_spacer = QLabel("")
-            right_spacer.setMinimumWidth(300)
-            layout.addWidget(right_spacer)
-            
-            # Configure status bar
-            sb.setVisible(True)
-            sb.setMinimumHeight(28)
-            # Styling via QSS: QStatusBar
-            sb.clearMessage()
-            sb.addWidget(container, 1)
-            
-            sb.setCursor(_Qt.CursorShape.PointingHandCursor)
-            sb.installEventFilter(self)
-            self._lbl_simple_view_indicator.installEventFilter(self)
-            self._sb_for_filter = sb
-
-        # Track main window resize
-        self.ui.installEventFilter(self)
-
-    def _show_simple_overlay(self):
-        if not hasattr(self, "simple_view"):
-            return
-        cw = self.ui.centralWidget() or self.ui
-        self.simple_view.setGeometry(cw.rect())
-        self.simple_view.show()
-        
-        # Save current state (maximized/normal) to restore it later
-        self._pre_simple_window_state = self.ui.windowState()
-        # Go fullscreen to prevent accidental GUI closure (clicking the X)
-        self.ui.showFullScreen()
-        if self.simple_view.backplot:
-            if hasattr(self, "_backplot_envelope"):
-                self.simple_view.backplot.set_machine_envelope(**self._backplot_envelope)
-            if hasattr(self, "_last_wcs_origin"):
-                self.simple_view.backplot.set_wcs_origin(*self._last_wcs_origin)
-            if self._last_toolpath is not None:
-                self.simple_view.backplot.load_toolpath(self._last_toolpath)
-            if self._user_program:
-                self.simple_view.load_gcode(self._user_program)
-                s = self.poller.stat
-                line = s.motion_line if s.motion_line > 0 else s.current_line
-                self.simple_view.set_gcode_line(line)
-
-        self.simple_view.show()
-        self.simple_view.raise_()
-        self.simple_view.setFocus()
-
-    def _hide_simple_overlay(self):
-        if hasattr(self, "simple_view"):
-            self.simple_view.hide()
 
     def _sync_nav_buttons(self, index: int):
         """Nav-Buttons an den Tab-Zustand anpassen und LinuxCNC-Modus umschalten."""
