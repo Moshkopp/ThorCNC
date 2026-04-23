@@ -15,7 +15,7 @@ from .widgets.backplot import BackplotWidget
 from .widgets.simple_view import SimpleView
 from .i18n import TranslationManager, _t
 from .modules import (FileManagerModule, ToolTableModule, OffsetsModule,
-                        MotionModule, ProbingTabModule, NavigationModule)
+                        MotionModule, ProbingTabModule, NavigationModule, SettingsTabModule)
 # from .widgets.opt_options import OptOptionsDialog
 
 _DIR = os.path.dirname(__file__)
@@ -57,6 +57,7 @@ class ThorCNC(QObject):
         self.offsets = OffsetsModule(self)
         self.motion = MotionModule(self)
         self.probing_tab = ProbingTabModule(self)
+        self.settings_tab = SettingsTabModule(self)
         
         # i18n
         self.i18n = TranslationManager(self.settings.get("language", "Deutsch"))
@@ -74,8 +75,8 @@ class ThorCNC(QObject):
         self.offsets.setup()
         self.motion.setup()
         self.probing_tab.setup()
+        self.settings_tab.setup()
         self._setup_html_tab()
-        self._setup_settings_tab()
         self._connect_signals()
         self._setup_opt_jalousie()
         
@@ -791,25 +792,6 @@ class ThorCNC(QObject):
         # Wir übergeben die HAL-Komponente, damit der Poller direkt auf die Pins zugreifen kann
         self.poller = StatusPoller(interval_ms=100, hal_comp=self._hal_comp, parent=self)
 
-
-
-    # ── Settings Tab ──────────────────────────────────────────────────────────
-
-    # Mapping: (spinbox_name, prefs_key, default_value)
-    _TOOLSENSOR_FIELDS = [
-        ("dsb_ts_wechsel_x",    "ts_wechsel_x",    0.0),
-        ("dsb_ts_wechsel_y",    "ts_wechsel_y",    0.0),
-        ("dsb_ts_wechsel_z",    "ts_wechsel_z",    0.0),
-        ("dsb_ts_x",            "ts_x",            0.0),
-        ("dsb_ts_y",            "ts_y",            0.0),
-        ("dsb_ts_z",            "ts_z",            0.0),
-        ("dsb_ts_spindle_zero", "ts_spindle_zero", 0.0),
-        ("dsb_ts_max_probe",    "ts_max_probe",   50.0),
-        ("dsb_ts_retract",      "ts_retract",      2.0),
-        ("dsb_ts_search_vel",   "ts_search_vel", 100.0),
-        ("dsb_ts_probe_vel",    "ts_probe_vel",   10.0),
-    ]
-
     def _setup_hal(self):
         """Initialisiert die HAL-Komponente so früh wie möglich (Timing-Fix)."""
         try:
@@ -818,7 +800,7 @@ class ThorCNC(QObject):
             self._hal_comp = hal.component("thorcnc")
             
             # Pins für Tool-Sensor (aus Settings/VCP-Style)
-            for _, key, _ in self._TOOLSENSOR_FIELDS:
+            for _, key, _ in self.settings_tab._TOOLSENSOR_FIELDS:
                 pin_name = key.replace("_", "-")
                 self._hal_comp.newpin(pin_name, hal.HAL_FLOAT, hal.HAL_OUT)
             
@@ -885,13 +867,6 @@ class ThorCNC(QObject):
             else:
                 print(f"[HAL] FEHLER: Post-GUI Datei nicht gefunden: {hal_path}")
 
-
-
-
-
-
-
-
     def eventFilter(self, watched, event):
         import shiboken6
         if not shiboken6.isValid(self) or not shiboken6.isValid(watched):
@@ -950,8 +925,6 @@ class ThorCNC(QObject):
                     return True
 
         return super().eventFilter(watched, event)
-
-
 
     def _setup_html_tab(self):
         """Baut den HTML-Tab auf: links Dateiliste, rechts Viewer."""
@@ -1053,546 +1026,7 @@ class ThorCNC(QObject):
                 except OSError:
                     pass
 
-    def _setup_settings_tab(self):
-        """Verbindet alle Settings-Sub-Tabs."""
-        from PySide6.QtWidgets import (QDoubleSpinBox, QPushButton, QComboBox, QCheckBox, 
-                                       QGroupBox, QVBoxLayout, QWidget, QLineEdit, QHBoxLayout, QLabel, QTextEdit)
 
-        # ── UI Tab: Theme & Language ───────────────────────────────────────────
-        if cb_theme := self._w(QComboBox, "combo_theme"):
-            # Set internal keys as userData before translation
-            for i in range(cb_theme.count()):
-                cb_theme.setItemData(i, cb_theme.itemText(i))
-            
-            valid_themes = ["dark", "light"]
-            saved = self.settings.get("theme", "dark")
-            if saved not in valid_themes:
-                saved = "dark"
-                
-            idx = cb_theme.findData(saved)
-            if idx >= 0:
-                cb_theme.setCurrentIndex(idx)
-            
-            # Use blockSignals to avoid triggering apply_theme during translation later
-            cb_theme.currentTextChanged.connect(
-                lambda t, c=cb_theme: self.navigation.apply_theme(c.currentData() or t)
-            )
-            self.navigation.apply_theme(saved)
-
-        if cb_lang := self._w(QComboBox, "combo_language"):
-            # Set internal keys as userData before translation
-            for i in range(cb_lang.count()):
-                cb_lang.setItemData(i, cb_lang.itemText(i))
-                
-            saved_lang = self.settings.get("language", "Deutsch")
-            idx = cb_lang.findData(saved_lang)
-            if idx >= 0:
-                cb_lang.setCurrentIndex(idx)
-            cb_lang.currentIndexChanged.connect(lambda i, c=cb_lang: self._on_language_changed(c.itemData(i)))
-
-        # ── UI Settings (Antialiasing, Tabs, etc) ──
-        # ── Backplot Antialiasing ──
-        if ui_tab := self._w(QWidget, "settings_tab_ui"):
-            layout = ui_tab.layout()
-            gb_gfx = QGroupBox(_t("Grafik / Performance"))
-            # Wir suchen uns einen Platz vor dem vertikalen Spacer
-            gl_gfx = QVBoxLayout(gb_gfx)
-            self._cb_aa = QCheckBox(_t("Backplot Antialiasing (Glättung)"))
-            self._cb_aa.setToolTip(_t("Verbessert die Linienqualität (MSAA). Erfordert Neustart für volle Wirkung."))
-            
-            active = self.settings.get("backplot_antialiasing", True)
-            self._cb_aa.setChecked(active)
-            self._cb_aa.toggled.connect(self._on_aa_toggled)
-
-            gl_gfx.addWidget(self._cb_aa)
-            lay_msaa = QHBoxLayout()
-            lay_msaa.addWidget(QLabel(_t("MSAA Samples:")))
-            self._cb_msaa = QComboBox()
-            for x in [2, 4, 8, 16]:
-                self._cb_msaa.addItem(f"{x}x", userData=x)
-            
-            saved_msaa = self.settings.get("backplot_msaa_samples", 4)
-            idx = self._cb_msaa.findData(saved_msaa)
-            if idx >= 0: self._cb_msaa.setCurrentIndex(idx)
-            
-            self._cb_msaa.setEnabled(active)
-            self._cb_msaa.currentIndexChanged.connect(self._on_msaa_changed)
-            
-            lay_msaa.addWidget(self._cb_msaa)
-            gl_gfx.addLayout(lay_msaa)
-
-            gl_gfx.addWidget(self._cb_aa)
-            layout.insertWidget(layout.count() - 1, gb_gfx)
-
-            # ── Navigation / Tabs ──
-            gb_nav = QGroupBox(_t("Navigation"))
-            gl_nav = QVBoxLayout(gb_nav)
-            self._cb_html_tab = QCheckBox(_t("HTML-Tab anzeigen"))
-            self._cb_html_tab.setToolTip(
-                _t("Blendet den HTML/PDF-Dokumenten-Tab in der Navigation ein oder aus."))
-            self._cb_html_tab.setChecked(self.settings.get("show_html_tab", True))
-            self._cb_html_tab.toggled.connect(self._on_html_tab_visibility)
-            gl_nav.addWidget(self._cb_html_tab)
-            layout.insertWidget(layout.count() - 1, gb_nav)
-
-            # ── Werkzeugliste ──
-            gb_tools = QGroupBox(_t("Werkzeugliste"))
-            gl_tools = QVBoxLayout(gb_tools)
-            self._cb_show_pocket = QCheckBox(_t("Pocket-Spalte anzeigen"))
-            self._cb_show_pocket.setToolTip(_t("Zeigt oder verbirgt die Pocket-Spalte (P) in der Werkzeugliste."))
-            show_pocket = self.settings.get("show_pocket_column", True)
-            self._cb_show_pocket.setChecked(show_pocket)
-            self._cb_show_pocket.toggled.connect(self._on_show_pocket_column_changed)
-            gl_tools.addWidget(self._cb_show_pocket)
-            layout.insertWidget(layout.count() - 1, gb_tools)
-            
-            # Initiale Sichtbarkeit anwenden
-            self._on_show_pocket_column_changed(show_pocket)
-
-        # Initiale Sichtbarkeit anwenden (nach dem UI-Aufbau)
-        from PySide6.QtCore import QTimer
-        QTimer.singleShot(0, lambda: self._on_html_tab_visibility(
-            self.settings.get("show_html_tab", True)))
-
-        # ── Machine Tab Cleanup & Probe Warning Settings ──────────────────────
-        if mach_tab := self._w(QWidget, "settings_tab_machine"):
-            # Robustly clear existing layout and its widgets
-            if old_layout := mach_tab.layout():
-                while old_layout.count():
-                    item = old_layout.takeAt(0)
-                    if w := item.widget():
-                        w.setParent(None)
-                        w.deleteLater()
-                # Detach layout from widget by parenting it to a dummy
-                QWidget().setLayout(old_layout)
-            
-            # Set a horizontal layout for the machine tab
-            main_layout = QHBoxLayout(mach_tab)
-            main_layout.setContentsMargins(10, 10, 10, 10)
-            main_layout.setSpacing(15)
-            
-            # --- Column 1: Machine Safety / Warnings (Left) ---
-            col_safety = QVBoxLayout()
-            
-            # Wrap Safety in a styled Frame
-            f_safety = QFrame()
-            f_safety.setFrameShape(QFrame.Shape.StyledPanel)
-            f_safety.setObjectName("safetyFrame")
-            
-            fl_safety = QVBoxLayout(f_safety)
-            gb_safety = QGroupBox(_t("Maschinensicherheit / Warnungen"))
-            gl_safety = QVBoxLayout(gb_safety)
-            
-            # Description
-            lbl_desc = QLabel(_t("<b>Visuelle Taster-Warnung:</b><br>"
-                              "Färbt die Statuszeile auffällig ein, wenn digitale "
-                              "Ausgänge (M64) aktiv sind (z.B. für 3D-Taster)."))
-            lbl_desc.setWordWrap(True)
-            lbl_desc.setObjectName("settings_desc_label")
-            gl_safety.addWidget(lbl_desc)
-            
-            # Enable Checkbox
-            self._cb_probe_warn = QCheckBox(_t("Visuelle Warnung aktivieren"))
-            gl_safety.addWidget(self._cb_probe_warn)
-
-            # Pins Input
-            lay_pins = QHBoxLayout()
-            lay_pins.addWidget(QLabel(_t("M64 P... (Index):")))
-            self._le_probe_pins = QLineEdit()
-            self._le_probe_pins.setPlaceholderText(_t("z.B. 0, 2"))
-            lay_pins.addWidget(self._le_probe_pins)
-            gl_safety.addLayout(lay_pins)
-
-            # Color Selector
-            lay_color = QHBoxLayout()
-            lay_color.addWidget(QLabel(_t("Warnfarbe:")))
-            self._btn_probe_color = QPushButton(_t("WÄHLEN"))
-            self._btn_probe_color.setFixedWidth(120)
-            lay_color.addWidget(self._btn_probe_color)
-            lay_color.addStretch()
-            gl_safety.addLayout(lay_color)
-
-            # Connect to ProbingManager
-            self.probing_tab.connect_settings_widgets(
-                self._cb_probe_warn,
-                self._le_probe_pins,
-                self._btn_probe_color
-            )
-            
-            gl_safety.addSpacing(10)
-            sep2 = QFrame()
-            sep2.setFrameShape(QFrame.Shape.HLine)
-            sep2.setObjectName("settings_separator")
-            gl_safety.addWidget(sep2)
-            gl_safety.addSpacing(5)
-
-            # Homing conversion
-            self._cb_homing_g53 = QCheckBox(_t("Homing-Buttons umfunktionieren (Ref -> G53 X0)"))
-            self._cb_homing_g53.setToolTip(_t("Ersetzt den REF-Button durch G53 X0, sobald die Achse homed ist."))
-            self._cb_homing_g53.setChecked(self.settings.get("homing_g53_conversion", False))
-            self._cb_homing_g53.toggled.connect(
-                lambda checked: (self.settings.set("homing_g53_conversion", checked),
-                                 self.settings.save(),
-                                 self.motion._on_homed(getattr(self.poller, "_homed", [])))
-            )
-            gl_safety.addWidget(self._cb_homing_g53)
-            
-            fl_safety.addWidget(gb_safety)
-            fl_safety.addStretch() # Push safety up
-            
-            col_safety.addWidget(f_safety)
-            main_layout.addLayout(col_safety, 1) # Stretch 1
-            
-            # --- Column 2: Abort Handler (Middle) ---
-            col_abort = QVBoxLayout()
-            gb_abort = QGroupBox(_t("Abort Handler (STOP/Fehler)"))
-            gl_abort = QVBoxLayout(gb_abort)
-            
-            lbl_abort_desc = QLabel(_t("<b>G-Code bei Abbruch:</b><br>"
-                                     "Dieser Code wird ausgeführt, wenn das Programm gestoppt wird.<br>"
-                                     "<font color='#aaa'>INI [RS274NGC] ON_ABORT_COMMAND = O&lt;on_abort&gt; call</font>"))
-            lbl_abort_desc.setWordWrap(True)
-            gl_abort.addWidget(lbl_abort_desc)
-            
-            self._te_abort_gcode = QTextEdit()
-            self._te_abort_gcode.setPlaceholderText(_t("z.B. M5 M9\nG54\nG90\nG40"))
-            self._te_abort_gcode.setMinimumHeight(200)
-            
-            # GUI hat Vorrang: Immer aus den Prefs laden
-            saved_abort = self.settings.get("abort_gcode", "M5 M9\nG54\nG90\nG40")
-            self._te_abort_gcode.setPlainText(saved_abort)
-            
-            gl_abort.addWidget(self._te_abort_gcode)
-            
-            btn_save_abort = QPushButton(_t("SAVE & APPLY"))
-            btn_save_abort.setMinimumHeight(45)
-            btn_save_abort.clicked.connect(self._save_abort_handler)
-            gl_abort.addWidget(btn_save_abort)
-            
-            col_abort.addWidget(gb_abort)
-            main_layout.addLayout(col_abort, 2) # Give it more space
-            
-            # --- Column 2: Diagnostics & Components (Right) ---
-            col_diag = QVBoxLayout()
-            gb_diag = QGroupBox(_t("Diagnose & Komponenten"))
-            gl_diag = QVBoxLayout(gb_diag)
-            
-            # List of diagnostics tools
-            diag_tools = [
-                (_t("HAL Show (Pins & Signale)"), self._run_halshow),
-                (_t("HAL Scope (Oszilloskop)"), self._run_halscope),
-                (_t("LinuxCNC Status (Detail-Infos)"), self._run_linuxcnc_status)
-            ]
-            
-            for text, func in diag_tools:
-                b = QPushButton(text)
-                b.setMinimumHeight(45)
-                b.clicked.connect(func)
-                gl_diag.addWidget(b)
-            
-            # Probe Sim Button (Sim only) - move here if present
-            if b_sim := self._w(QPushButton, "btn_probe_sim"):
-                gl_diag.addWidget(b_sim)
-            
-            gl_diag.addStretch()
-            col_diag.addWidget(gb_diag)
-            main_layout.addLayout(col_diag, 1) # Stretch 1
-
-        # ── Abort Handler & Toolsetter Initialization (RESTORED) ──────────────
-        self._write_on_abort_ngc()
-        # ── Toolsetter Settings Initialization (RESTORED) ─────────────────────
-        # Spinboxen laden & verbinden
-        for widget_name, prefs_key, default in self._TOOLSENSOR_FIELDS:
-            dsb = self._w(QDoubleSpinBox, widget_name)
-            if not dsb:
-                continue
-
-            # Wert aus Prefs laden (oder Default)
-            val = self.settings.get(prefs_key, default)
-            dsb.blockSignals(True)
-            dsb.setValue(float(val))
-            dsb.blockSignals(False)
-
-            # HAL-Pin initial setzen
-            self._hal_set(prefs_key, float(val))
-
-            # Jede Änderung → Prefs speichern + HAL aktualisieren
-            dsb.valueChanged.connect(
-                lambda v, k=prefs_key: self._on_toolsensor_changed(k, v)
-            )
-
-        # "Aktuelle Position" Buttons
-        if b := self._w(QPushButton, "btn_set_wechsel_pos"):
-            b.clicked.connect(self._set_wechsel_pos_from_machine)
-        if b := self._w(QPushButton, "btn_set_taster_pos"):
-            b.clicked.connect(self._set_taster_pos_from_machine)
-
-        # Before / After Toolsetter TextEdits (RESTORED TO INIT)
-        from PySide6.QtWidgets import QTextEdit
-        for key, wname in (("ts_before", "te_ts_before"), ("ts_after", "te_ts_after")):
-            if te := self._w(QTextEdit, wname):
-                val = self.settings.get(key, "")
-                te.blockSignals(True)
-                te.setPlainText(str(val) if val else "")
-                te.blockSignals(False)
-                te.textChanged.connect(
-                    lambda k=key, widget=te: self._on_ts_text_save(k, widget)
-                )
-        self._write_ts_before_after()
-            
-    def _save_abort_handler(self):
-        """Speichert den G-Code für den Abort-Handler und aktualisiert die .ngc Datei."""
-        gcode = self._te_abort_gcode.toPlainText()
-        self.settings.set("abort_gcode", gcode)
-        self.settings.save()
-        self._write_on_abort_ngc()
-
-    def _write_on_abort_ngc(self):
-        """Aktualisiert die on_abort.ngc Datei basierend auf dem aktuellen UI-Inhalt."""
-        import os
-        if not hasattr(self, "_te_abort_gcode"):
-            return
-            
-        gcode = self._te_abort_gcode.toPlainText()
-        # Pfad zur on_abort.ngc finden
-        ini_dir = os.path.dirname(self.ini_path) if self.ini_path else os.getcwd()
-        ngc_filename = "on_abort.ngc"
-        target_path = None
-        
-        # 1. Priorität: Lokaler subroutines Ordner im INI-Verzeichnis
-        local_sub = os.path.join(ini_dir, "subroutines", ngc_filename)
-        if os.path.exists(local_sub):
-            target_path = local_sub
-        
-        # 2. Suche in SUBROUTINE_PATH aus INI falls lokal nicht gefunden
-        if not target_path and self.ini:
-            sub_paths = self.ini.find("RS274NGC", "SUBROUTINE_PATH")
-            if sub_paths:
-                for p in sub_paths.split(":"):
-                    p = p.strip()
-                    if not p: continue
-                    full_p = os.path.expanduser(p)
-                    if not os.path.isabs(full_p):
-                        full_p = os.path.join(ini_dir, full_p)
-                    
-                    test_path = os.path.join(full_p, ngc_filename)
-                    if os.path.exists(test_path):
-                        target_path = test_path
-                        break
-        
-        # 3. Fallback: Erstelle sie lokal
-        if not target_path:
-            target_path = local_sub
-            
-        # Datei schreiben
-        try:
-            # Ordner sicherstellen
-            os.makedirs(os.path.dirname(target_path), exist_ok=True)
-            
-            with open(target_path, "w", encoding="utf-8") as f:
-                f.write("(--- Dynamically generated by ThorCNC ---)\n")
-                f.write("(--- Settings -> Machine -> Abort Handler ---)\n\n")
-                f.write("o<on_abort> sub\n")
-                # User Code einrücken
-                for line in gcode.splitlines():
-                    f.write(f"  {line}\n")
-                f.write("o<on_abort> endsub\n")
-                f.write("M2\n")
-            
-            self._status(f"Abort-Handler synchronisiert: {target_path}")
-        except Exception as e:
-            self._status(f"Fehler beim Schreiben des Abort-Handlers: {e}", error=True)
-
-
-
-
-    def _hal_set(self, prefs_key: str, value: float):
-        """Setzt einen HAL-Pin, wenn der HAL-Comp verfügbar ist."""
-        if not self._hal_comp:
-            return
-        try:
-            pin_name = prefs_key.replace("_", "-")
-            self._hal_comp[pin_name] = value
-        except Exception:
-            pass
-
-    def _on_toolsensor_changed(self, key: str, value: float):
-        """Callback: Spinbox geändert → Prefs speichern + HAL-Pin setzen."""
-        self.settings.set(key, value)
-        self.settings.save()
-        self._hal_set(key, value)
-
-    def _on_ts_text_save(self, key: str, widget):
-        """Callback: Before/After-Toolsetter TextEdit geändert → Prefs speichern + NGC schreiben."""
-        self.settings.set(key, widget.toPlainText())
-        self.settings.save()
-        self._write_ts_before_after()
-        from PySide6.QtWidgets import QTextEdit
-        before = self.settings.get("ts_before", "") or ""
-        after  = self.settings.get("ts_after",  "") or ""
-        before_str = before.strip() or "—"
-        after_str  = after.strip()  or "—"
-        self._status(f"Toolsetter  BEFORE: [{before_str}]  |  AFTER: [{after_str}]")
-
-    def _ts_ngc_dir(self) -> str:
-        """
-        Gibt das NGC-Verzeichnis für Toolsetter-Subroutinen zurück.
-        Priorität:
-        1. 'subroutines/tools' relativ zur INI
-        2. 'subroutines/tools' im PROGRAM_PREFIX
-        3. PROGRAM_PREFIX aus der INI
-        """
-        search_dirs = []
-        if self.ini_path:
-            search_dirs.append(os.path.dirname(os.path.abspath(self.ini_path)))
-            
-        if self.ini:
-            prefix = self.ini.find("DISPLAY", "PROGRAM_PREFIX")
-            if prefix:
-                prefix = os.path.expanduser(prefix)
-                if not os.path.isabs(prefix) and self.ini_path:
-                    prefix = os.path.abspath(os.path.join(os.path.dirname(self.ini_path), prefix))
-                search_dirs.append(prefix)
-        
-        search_dirs.append(os.path.expanduser("~/linuxcnc/nc_files"))
-        
-        for base in search_dirs:
-            sub = os.path.join(base, "subroutines", "tools")
-            if os.path.isdir(sub):
-                return sub
-                
-        # Fallback: Erster gefundener Basis-Ordner oder Default
-        return search_dirs[1] if len(search_dirs) > 1 else search_dirs[0]
-
-    def _write_ts_before_after(self):
-        """Schreibt before_toolsetter.ngc und after_toolsetter.ngc ins Tools-Verzeichnis."""
-        from PySide6.QtWidgets import QTextEdit
-        ngc_dir = self._ts_ngc_dir()
-        before_code = ""
-        after_code = ""
-        if te := self._w(QTextEdit, "te_ts_before"):
-            before_code = te.toPlainText().strip()
-        if te := self._w(QTextEdit, "te_ts_after"):
-            after_code = te.toPlainText().strip()
-        try:
-            before_path = os.path.join(ngc_dir, "before_toolsetter.ngc")
-            with open(before_path, "w") as f:
-                f.write("O<before_toolsetter> sub\n")
-                if before_code:
-                    f.write(f"  {before_code}\n")
-                f.write("O<before_toolsetter> endsub\n")
-                f.write("M2\n")
-            after_path = os.path.join(ngc_dir, "after_toolsetter.ngc")
-            with open(after_path, "w") as f:
-                f.write("O<after_toolsetter> sub\n")
-                if after_code:
-                    f.write(f"  {after_code}\n")
-                f.write("O<after_toolsetter> endsub\n")
-                f.write("M2\n")
-        except Exception as e:
-            self._status(f"Could not write toolsetter NGC files: {e}", error=True)
-
-    def _on_aa_toggled(self, enabled: bool):
-        """Callback: Antialiasing Checkbox geändert."""
-        self.settings.set("backplot_antialiasing", enabled)
-        self.settings.save()
-        self.backplot.set_antialiasing(enabled)
-        if hasattr(self, "_cb_msaa"):
-            self._cb_msaa.setEnabled(enabled)
-        self._status(_t("Antialiasing-Master-Schalter geändert. (MSAA-Level braucht Neustart)"))
-
-    def _on_msaa_changed(self, index: int):
-        """MSAA Samples (2x, 4x, etc) geändert."""
-        val = self._cb_msaa.itemData(index)
-        self.settings.set("backplot_msaa_samples", val)
-        self.settings.save()
-        self._status(_t("MSAA auf {}x gesetzt. Ein Neustart ist nötig.").format(val))
-
-    def _on_html_tab_visibility(self, visible: bool):
-        """Blendet den HTML-Tab-Button ein/aus."""
-        self.settings.set("show_html_tab", visible)
-        self.settings.save()
-        from PySide6.QtWidgets import QPushButton, QTabWidget
-        if btn := self._w(QPushButton, "nav_html"):
-            btn.setVisible(visible)
-        # If HTML tab is currently active, switch back to Main
-        if not visible:
-            if tab := self._w(QTabWidget, "tabWidget"):
-                html_idx = self._html_tab_index()
-                if tab.currentIndex() == html_idx:
-                    tab.setCurrentIndex(0)
-
-    def _on_show_pocket_column_changed(self, visible: bool):
-        """Blendet die Pocket-Spalte in der Werkzeugliste ein/aus."""
-        from PySide6.QtWidgets import QTableWidget
-        w = self._w(QTableWidget, "toolTable")
-        if w:
-            w.setColumnHidden(1, not visible)
-        self.settings.set("show_pocket_column", visible)
-        self.settings.save()
-
-    def _html_tab_index(self) -> int:
-        """Gibt den tabWidget-Index von tab_html zurück."""
-        from PySide6.QtWidgets import QTabWidget, QWidget
-        tab = self._w(QTabWidget, "tabWidget")
-        if not tab:
-            return 5
-        for i in range(tab.count()):
-            if tab.widget(i) and tab.widget(i).objectName() == "tab_html":
-                return i
-        return 5
-
-    def _set_wechsel_pos_from_machine(self):
-        """Sets the current machine position as Change Position X/Y/Z."""
-        from PySide6.QtWidgets import QDoubleSpinBox, QMessageBox
-        
-        # Sicherheitsabfrage
-        res = QMessageBox.question(self.ui, _t("Position übernehmen"), 
-                                  _t("Möchtest du die aktuelle Maschinenposition wirklich als neue WECHSELPOSITION übernehmen?"),
-                                  QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
-        if res != QMessageBox.StandardButton.Yes:
-            return
-
-        pos = getattr(self, "_last_pos", None)
-        if pos is None:
-            self._status(_t("Keine Positionsdaten verfügbar!"), error=True)
-            return
-        mapping = [
-            ("dsb_ts_wechsel_x", "ts_wechsel_x", 0),
-            ("dsb_ts_wechsel_y", "ts_wechsel_y", 1),
-            ("dsb_ts_wechsel_z", "ts_wechsel_z", 2),
-        ]
-        for widget_name, prefs_key, axis_idx in mapping:
-            dsb = self._w(QDoubleSpinBox, widget_name)
-            if dsb:
-                dsb.setValue(pos[axis_idx])
-        self._status(_t("Change position set from current machine position."))
-
-    def _set_taster_pos_from_machine(self):
-        """Sets the current machine position as Probe Position X/Y/Z."""
-        from PySide6.QtWidgets import QDoubleSpinBox, QMessageBox
-        
-        # Sicherheitsabfrage
-        res = QMessageBox.question(self.ui, _t("Position übernehmen"), 
-                                  _t("Möchtest du die aktuelle Maschinenposition wirklich als neue MESSPOSITION übernehmen?"),
-                                  QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
-        if res != QMessageBox.StandardButton.Yes:
-            return
-
-        pos = getattr(self, "_last_pos", None)
-        if pos is None:
-            self._status(_t("Keine Positionsdaten verfügbar!"), error=True)
-            return
-        mapping = [
-            ("dsb_ts_x", "ts_x", 0),
-            ("dsb_ts_y", "ts_y", 1),
-            ("dsb_ts_z", "ts_z", 2),
-        ]
-        for widget_name, prefs_key, axis_idx in mapping:
-            dsb = self._w(QDoubleSpinBox, widget_name)
-            if dsb:
-                dsb.setValue(pos[axis_idx])
-        self._status(_t("Probe position set from current machine position."))
 
     def _setup_opt_jalousie(self):
         """Initialisiert die Animation für das OPT-Panel."""
@@ -1967,7 +1401,7 @@ class ThorCNC(QObject):
 
         # HAL Show
         if b := btn("btn_halshow"):
-            b.clicked.connect(self._run_halshow)
+            b.clicked.connect(self.settings_tab.run_halshow)
 
         # Machine mode combobox (MANUAL / AUTO / MDI)
         _MODE_MAP = [linuxcnc.MODE_MANUAL, linuxcnc.MODE_AUTO, linuxcnc.MODE_MDI]
