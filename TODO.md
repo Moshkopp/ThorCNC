@@ -65,8 +65,9 @@ MainWindow.py (5000+ Zeilen) in ein modulares System umwandeln, wo jede Funktion
   - Probe-Marker Positionierung
   - Preference-Management (before/after probe NGCs)
   - DRO-Synchronisierung (compact probe DRO)
+  - **Konsolidierung:** ProbingManager integriert (Probe-Warning State)
 
-**Aktueller Stand:** MainWindow 3017 Zeilen (von 5027 → **2010 Zeilen gespart!**)
+**Aktueller Stand:** MainWindow 3004 Zeilen (von 5027 → **2023 Zeilen gespart!**)
 
 ---
 
@@ -99,7 +100,7 @@ Umfasst:
 
 Upgrade der bestehenden Manager auf neues ThorModule Interface:
 - `NavigationManager` → `ThorModule` mit `connect_signals()`
-- `ProbingManager` → Bereinigt, Fokus auf Probe-Warning State
+- `ProbingManager` → **Gelöscht** (Integriert in ProbingTabModule)
 
 ---
 

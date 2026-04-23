@@ -15,7 +15,7 @@ from .widgets.backplot import BackplotWidget
 from .widgets.simple_view import SimpleView
 from .i18n import TranslationManager, _t
 from .managers.navigation_manager import NavigationManager
-from .managers.probing_manager import ProbingManager
+
 from .modules.file_manager import FileManagerModule
 from .modules.tool_table import ToolTableModule
 from .modules.offsets import OffsetsModule
@@ -55,7 +55,7 @@ class ThorCNC(QObject):
         self._load_settings()
 
         # Initialize managers (after settings loaded)
-        self.probing = ProbingManager(self)
+
         self.file_manager = FileManagerModule(self)
         self.tool_table = ToolTableModule(self)
         self.offsets = OffsetsModule(self)
@@ -137,8 +137,8 @@ class ThorCNC(QObject):
         """Handle window resizing to update floating UI elements."""
         super().resizeEvent(event)
         # Update probing marker position as it depends on absolute tab coordinates
-        if hasattr(self, 'probing') and self.probing:
-            self.probing.reposition_marker()
+        if hasattr(self, 'probing_tab') and self.probing_tab:
+            self.probing_tab.update_marker_pos()
 
     def _restore_window_state(self):
         from PySide6.QtCore import QByteArray
@@ -1217,7 +1217,7 @@ class ThorCNC(QObject):
             gl_safety.addLayout(lay_color)
 
             # Connect to ProbingManager
-            self.probing.connect_settings_widgets(
+            self.probing_tab.connect_settings_widgets(
                 self._cb_probe_warn,
                 self._le_probe_pins,
                 self._btn_probe_color
@@ -2573,8 +2573,8 @@ class ThorCNC(QObject):
         self._last_dout = dout # Store for settings refresh
 
         # Delegate probe warning update to ProbingManager
-        if hasattr(self, 'probing') and self.probing:
-            self.probing.update_probe_warning(dout)
+        if hasattr(self, 'probing_tab') and self.probing_tab:
+            self.probing_tab.update_probe_warning(dout)
 
     @Slot(int)
     def _on_program_line(self, line: int):
