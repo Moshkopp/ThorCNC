@@ -1,16 +1,19 @@
+"""Navigation module for ThorCNC — manages flyouts, sidebar, themes, and global navigation events."""
+
 import os
 import linuxcnc
 from PySide6.QtCore import Qt, QPoint, QPropertyAnimation, QEvent, QEasingCurve
 from PySide6.QtWidgets import QPushButton, QFrame, QVBoxLayout, QWidget, QLabel, QApplication
 
+from .base import ThorModule
 from ..i18n import _t
 
-class NavigationManager:
+class NavigationModule(ThorModule):
     """Manages ThorCNC Flyout Navigation and Sidebar logic."""
 
     def __init__(self, thorc):
-        """Initialize NavigationManager with reference to ThorCNC."""
-        self._t = thorc  # Backref to ThorCNC
+        """Initialize NavigationModule with reference to ThorCNC."""
+        super().__init__(thorc)
         self._flyout_panels = {}
         self._flyout_item_buttons = {}
         self._current_flyout = None
@@ -222,7 +225,6 @@ class NavigationManager:
         self.toggle_line_queue_flyout()
 
     def _update_flyout_highlights(self):
-        if not hasattr(self._t, "_flyout_item_buttons"): return
         s = self._t.poller.stat
 
         def set_btn_active(key, active):
@@ -257,7 +259,7 @@ class NavigationManager:
     def update_nav_icons(self):
         """Updates navigation icons for the sidebar based on theme."""
         theme = self._t.settings.get("theme", "dark")
-        icon_path = os.path.join(os.path.dirname(__file__), "..", "images", f"icons_{theme}")
+        icon_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "images", f"icons_{theme}")
 
         mapping = {
             "btn_nav_main": "home.svg",

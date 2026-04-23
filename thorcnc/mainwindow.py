@@ -14,13 +14,8 @@ from .widgets.gcode_view import GCodeView
 from .widgets.backplot import BackplotWidget
 from .widgets.simple_view import SimpleView
 from .i18n import TranslationManager, _t
-from .managers.navigation_manager import NavigationManager
-
-from .modules.file_manager import FileManagerModule
-from .modules.tool_table import ToolTableModule
-from .modules.offsets import OffsetsModule
-from .modules.motion import MotionModule
-from .modules.probing_tab import ProbingTabModule
+from .modules import (FileManagerModule, ToolTableModule, OffsetsModule,
+                        MotionModule, ProbingTabModule, NavigationModule)
 # from .widgets.opt_options import OptOptionsDialog
 
 _DIR = os.path.dirname(__file__)
@@ -30,7 +25,7 @@ class ThorCNC(QObject):
 
     def __init__(self, ini_path: str = "", parent=None):
         super().__init__(parent)
-        self.navigation = NavigationManager(self)
+
         # Managers will be initialized after settings are loaded
 
         self.ini_path = ini_path or os.environ.get("INI_FILE_NAME", "")
@@ -56,6 +51,7 @@ class ThorCNC(QObject):
 
         # Initialize managers (after settings loaded)
 
+        self.navigation = NavigationModule(self)
         self.file_manager = FileManagerModule(self)
         self.tool_table = ToolTableModule(self)
         self.offsets = OffsetsModule(self)

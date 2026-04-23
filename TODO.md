@@ -99,7 +99,7 @@ Umfasst:
 **Nach allen Module-Extraktion**
 
 Upgrade der bestehenden Manager auf neues ThorModule Interface:
-- `NavigationManager` → `ThorModule` mit `connect_signals()`
+- `NavigationManager` → **Gelöscht** (Integriert in NavigationModule)
 - `ProbingManager` → **Gelöscht** (Integriert in ProbingTabModule)
 
 ---
@@ -113,10 +113,11 @@ Upgrade der bestehenden Manager auf neues ThorModule Interface:
 | OffsetsModule | ✅ | ~172 | 6 | thorcnc/modules/offsets.py |
 | MotionModule | ✅ | ~343 | 21 | thorcnc/modules/motion.py |
 | ProbingTabModule | ✅ | ~801 | 26 | thorcnc/modules/probing_tab.py |
+| NavigationModule | ✅ | ~281 | 15+ | thorcnc/modules/navigation.py |
 | SettingsTabModule | 📋 | ~450 | 10+ | todo |
 | DROModule | 📋 | ~80 | 3-4 | todo |
 | SpindleModule | 📋 | ~70 | 3-4 | todo |
-| **Gesamt (geplant)** | - | **~2,500** | **~60+** | - |
+| **Gesamt (geplant)** | - | **~2,800** | **~75+** | - |
 
 **Einsparung in MainWindow:** ~2,500 Zeilen
 **Zielgröße:** 500-600 Zeilen (nur Infrastruktur)
