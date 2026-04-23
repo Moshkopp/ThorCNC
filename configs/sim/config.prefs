@@ -108,7 +108,7 @@
     "hlight_mc_list": "M1, M0,  M3,M5,",
     "hlight_mc_color": "#ff00ff",
     "hlight_gc_imp_list": "G43, G54, G21",
-    "hlight_gc_imp_color": "#ffaa00",
+    "hlight_gc_imp_color": "#00ff2b",
     "abort_gcode": "G90\nG80\nM5 \nM9\nG4 P0.1\nG54\nG4 P0.1\nM65 P2\n",
     "homing_g53_conversion": true,
     "show_pocket_column": false,

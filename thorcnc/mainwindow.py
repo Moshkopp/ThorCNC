@@ -20,7 +20,7 @@ from .widgets.backplot import BackplotWidget
 from .widgets.tool_dialog import ToolSelectionDialog
 from .widgets.simple_view import SimpleView
 from .i18n import TranslationManager, _t
-from .mixins.navigation_mixin import NavigationMixin
+from .managers.navigation_manager import NavigationManager
 # from .widgets.opt_options import OptOptionsDialog
 
 _DIR = os.path.dirname(__file__)
@@ -32,14 +32,14 @@ class NumericTableWidgetItem(QTableWidgetItem):
         except (ValueError, TypeError):
             return super().__lt__(other)
 
-class ThorCNC(QObject, NavigationMixin):
+class ThorCNC(QObject):
     """
     Controller class. The loaded QMainWindow from probe_basic.ui IS the window.
     """
 
     def __init__(self, ini_path: str = "", parent=None):
         super().__init__(parent)
-        self._init_navigation() # Initialize NavigationMixin state
+        self.navigation = NavigationManager(self)
 
         self.ini_path = ini_path or os.environ.get("INI_FILE_NAME", "")
         self.ini = linuxcnc.ini(self.ini_path) if self.ini_path else None
@@ -79,9 +79,7 @@ class ThorCNC(QObject, NavigationMixin):
         self._load_ui()
         
         self._replace_custom_widgets()
-        
-        # Install global event filter for "light-dismiss" flyouts
-        QApplication.instance().installEventFilter(self)
+
         self._restore_window_state()
         self._setup_dro()
         self._setup_hal()
@@ -112,6 +110,10 @@ class ThorCNC(QObject, NavigationMixin):
 
         # Apply translations to ALL widgets (including dynamic ones)
         self.i18n.apply_to_widget(self.ui)
+
+        # Setup navigation and install event filter (must be after all initialization)
+        self.navigation.setup()
+        QApplication.instance().installEventFilter(self)
 
     def _add_class(self, widget, class_name: str):
         """Helper to add a QSS class and ensure it's applied."""
@@ -297,7 +299,7 @@ class ThorCNC(QObject, NavigationMixin):
         self._btn_run_from_line = QPushButton(_t("START AT LINE"))
         self._btn_run_from_line.setObjectName("btn_run_from_line")
         self._btn_run_from_line.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        self._btn_run_from_line.clicked.connect(self._toggle_line_queue_flyout)
+        self._btn_run_from_line.clicked.connect(self.navigation.toggle_line_queue_flyout)
         h_lay.addWidget(self._btn_run_from_line)
 
         # Create the mini-flyout for line selection
@@ -324,13 +326,13 @@ class ThorCNC(QObject, NavigationMixin):
         lq_ok_btn = QPushButton(_t("SET QUEUE"))
         lq_ok_btn.setFixedHeight(40)
         lq_ok_btn.setObjectName("btn_flyout_item")
-        lq_ok_btn.clicked.connect(self._confirm_line_queue)
+        lq_ok_btn.clicked.connect(self.navigation.confirm_line_queue)
         lq_lay.addWidget(lq_ok_btn)
 
         lq_clear_btn = QPushButton(_t("CLEAR QUEUE"))
         lq_clear_btn.setFixedHeight(35)
         lq_clear_btn.setObjectName("btn_flyout_item_clear") # New style
-        lq_clear_btn.clicked.connect(self._clear_line_queue)
+        lq_clear_btn.clicked.connect(self.navigation.clear_line_queue)
         lq_lay.addWidget(lq_clear_btn)
 
         h_lay.addStretch()
@@ -509,14 +511,14 @@ class ThorCNC(QObject, NavigationMixin):
                 i_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
                 p_lay.addWidget(i_btn)
                 # Store for highlighting (e.g. MODE)
-                self._flyout_item_buttons[f"{name}_{item_text}"] = i_btn
+                self.navigation._flyout_item_buttons[f"{name}_{item_text}"] = i_btn
                 # Logic connection
-                i_btn.clicked.connect(lambda checked=False, t=item_text, n=name: self._handle_flyout_action(n, t))
-            
+                i_btn.clicked.connect(lambda checked=False, t=item_text, n=name: self.navigation.handle_flyout_action(n, t))
+
             p_lay.addStretch() # Keep items to the left
-            
-            self._flyout_panels[name] = panel
-            btn.clicked.connect(lambda checked=False, n=name, b=btn: self._toggle_flyout(n, b))
+
+            self.navigation._flyout_panels[name] = panel
+            btn.clicked.connect(lambda checked=False, n=name, b=btn: self.navigation.toggle_flyout(n, b))
             
         # Add the group to the sidebar
         sidebar_lay = self.ui.leftPanel.layout()
@@ -524,7 +526,7 @@ class ThorCNC(QObject, NavigationMixin):
             # Insert right below the navigation (after QUIT button)
             sidebar_lay.insertWidget(9, self.flyout_btn_group)
         
-        print(f"[ThorCNC] Registered Flyouts: {list(self._flyout_panels.keys())}")
+        print(f"[ThorCNC] Registered Flyouts: {list(self.navigation._flyout_panels.keys())}")
         
         # Save references for direct access
         self.btn_mode_toggle = self.ui.findChild(QPushButton, "btn_flyout_toggle_mode")
@@ -560,9 +562,7 @@ class ThorCNC(QObject, NavigationMixin):
         in_auto = getattr(self, "_current_mode", None) == linuxcnc.MODE_AUTO
         
         # Target the button in the Flyout
-        btn = None
-        if hasattr(self, "_flyout_item_buttons"):
-            btn = self._flyout_item_buttons.get("SHORTS_GO TO HOME")
+        btn = self.navigation._flyout_item_buttons.get("SHORTS_GO TO HOME") if self.navigation else None
         
         if not btn: return
         
@@ -963,7 +963,7 @@ class ThorCNC(QObject, NavigationMixin):
             self._btn_nav_home.setFixedWidth(60)
             self._btn_nav_home.setToolTip(_t("Home-Verzeichnis"))
 
-        self._update_nav_icons()
+        self.navigation.update_nav_icons()
 
         self._breadcrumb_container = self._w(QWidget, "breadcrumb_container")
         self._breadcrumb_layout = None
@@ -2040,8 +2040,8 @@ class ThorCNC(QObject, NavigationMixin):
         if hasattr(self, "ui") and not shiboken6.isValid(self.ui):
             return False
 
-        # Delegate to NavigationMixin for light-dismiss
-        if self._handle_navigation_event(event):
+        # Delegate to NavigationManager for light-dismiss
+        if self.navigation.handle_event(event):
             return True
 
         from PySide6.QtCore import QEvent
@@ -2576,11 +2576,11 @@ class ThorCNC(QObject, NavigationMixin):
             if idx >= 0:
                 cb_theme.setCurrentIndex(idx)
             
-            # Use blockSignals to avoid triggering _apply_theme during translation later
+            # Use blockSignals to avoid triggering apply_theme during translation later
             cb_theme.currentTextChanged.connect(
-                lambda t, c=cb_theme: self._apply_theme(c.currentData() or t)
+                lambda t, c=cb_theme: self.navigation.apply_theme(c.currentData() or t)
             )
-            self._apply_theme(saved)
+            self.navigation.apply_theme(saved)
 
         if cb_lang := self._w(QComboBox, "combo_language"):
             # Set internal keys as userData before translation
@@ -3453,9 +3453,6 @@ class ThorCNC(QObject, NavigationMixin):
         p.error_message.connect(self._on_error)
         p.info_message.connect(self._on_info)
         p.digital_outputs_changed.connect(self._on_digital_out_changed)
-        
-        # Navigation Flyout updates
-        self._connect_navigation_signals()
 
         # ── Machine Buttons (probe_basic widget names) ──────────────────────
         from PySide6.QtWidgets import QPushButton, QSlider
@@ -3708,7 +3705,7 @@ class ThorCNC(QObject, NavigationMixin):
             _MODES = {linuxcnc.MODE_MANUAL: "MANUAL", linuxcnc.MODE_AUTO: "AUTO", linuxcnc.MODE_MDI: "MDI"}
             current_txt = _MODES.get(mode, "")
             for m_txt in ("MANUAL", "AUTO", "MDI"):
-                if b := self._flyout_item_buttons.get(f"MODE_{m_txt}"):
+                if b := self.navigation._flyout_item_buttons.get(f"MODE_{m_txt}"):
                     b.setProperty("active", m_txt == current_txt)
                     b.style().unpolish(b)
                     b.style().polish(b)
@@ -3814,8 +3811,8 @@ class ThorCNC(QObject, NavigationMixin):
         else:
             set_status(btn_stop, "idle")
             set_status(s_stop, "idle")
-            
-        self._update_flyout_highlights()
+
+        self.navigation.update_highlights()
 
     @Slot(list)
     def _on_position(self, pos: list):

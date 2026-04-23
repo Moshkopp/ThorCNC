@@ -5,23 +5,29 @@ from PySide6.QtWidgets import QPushButton, QFrame, QVBoxLayout, QWidget, QLabel,
 
 from ..i18n import _t
 
-class NavigationMixin:
-    """Mixin for ThorCNC Flyout Navigation and Sidebar logic."""
-    
-    def _init_navigation(self):
-        """Initializes navigation state variables."""
+class NavigationManager:
+    """Manages ThorCNC Flyout Navigation and Sidebar logic."""
+
+    def __init__(self, thorc):
+        """Initialize NavigationManager with reference to ThorCNC."""
+        self._t = thorc  # Backref to ThorCNC
         self._flyout_panels = {}
         self._flyout_item_buttons = {}
         self._current_flyout = None
         self._flyout_anim = None
         self._close_shorts_on_idle = False
 
-    def _handle_navigation_event(self, event):
+    def setup(self):
+        """Setup signal connections after ThorCNC is fully initialized."""
+        if self._t.poller:
+            self._t.poller.periodic.connect(self._periodic_nav_update)
+
+    def handle_event(self, event):
         """Processes events for light-dismiss and sidebar logic."""
         import shiboken6
-        if not shiboken6.isValid(self) or not shiboken6.isValid(self.ui):
+        if not shiboken6.isValid(self._t) or not shiboken6.isValid(self._t.ui):
             return False
-            
+
         if event.type() == QEvent.MouseButtonPress:
             if self._current_flyout:
                 panel = self._flyout_panels.get(self._current_flyout)
@@ -31,62 +37,53 @@ class NavigationMixin:
                     else:
                         global_pt = event.globalPos()
 
-                    # 1. IMPORTANT: Check if we clicked ANY flyout toggle button.
-                    # If so, let the button's clicked signal handle it to avoid race conditions.
                     child = QApplication.instance().widgetAt(global_pt)
                     if isinstance(child, QPushButton):
                         if child.property("is_flyout_toggle") or child.objectName().startswith("btn_flyout_toggle"):
-                            # print(f"[ThorCNC] Click on toggle button {child.objectName()}, ignoring in filter")
                             return False
 
-                    # 2. Check if click is inside the current panel
                     local_pt = panel.mapFromGlobal(global_pt)
                     if not panel.rect().contains(local_pt):
-                        # Also check Start-At-Line mini flyout
-                        if hasattr(self, "_line_queue_panel") and self._line_queue_panel.isVisible():
-                            lq_local_pt = self._line_queue_panel.mapFromGlobal(global_pt)
-                            if self._line_queue_panel.rect().contains(lq_local_pt):
+                        if hasattr(self._t, "_line_queue_panel") and self._t._line_queue_panel.isVisible():
+                            lq_local_pt = self._t._line_queue_panel.mapFromGlobal(global_pt)
+                            if self._t._line_queue_panel.rect().contains(lq_local_pt):
                                 return False
 
                         self._close_flyout(self._current_flyout)
         return False
 
-    def _toggle_flyout(self, name, button):
+    def toggle_flyout(self, name, button):
         panel = self._flyout_panels.get(name)
-        if not panel: 
+        if not panel:
             print(f"[ThorCNC] Navigation Error: Flyout panel '{name}' not found!")
             return
-        
-        # 1. Close current if another one is open
+
         if self._current_flyout and self._current_flyout != name:
             self._close_flyout(self._current_flyout, immediate=True)
-            
+
         target_width = 250
         panel.setFixedWidth(target_width)
-        
-        # Sidebar edge in centralwidget coordinates
-        sidebar_edge = self.ui.leftPanel.width()
-        # Get button position relative to centralwidget
-        btn_local = self.ui.centralwidget.mapFromGlobal(button.mapToGlobal(QPoint(0, 0)))
+
+        sidebar_edge = self._t.ui.leftPanel.width()
+        btn_local = self._t.ui.centralwidget.mapFromGlobal(button.mapToGlobal(QPoint(0, 0)))
         target_y = btn_local.y()
-        
+
         is_opening = not panel.isVisible() or panel.x() < sidebar_edge
-        
+
         if is_opening:
             self._update_flyout_highlights()
-            
+
             num_items = panel.layout().count()
-            # Calculate height based on items
             panel_height = (num_items * 60) + ((num_items - 1) * 5) + 10
             panel.setFixedHeight(panel_height)
-            
+
             panel.show()
-            panel.raise_() # Put on top of everything
-            self.ui.leftPanel.raise_() # Pull the sidebar back to the very top
-            
+            panel.raise_()
+            self._t.ui.leftPanel.raise_()
+
             self._flyout_anim = QPropertyAnimation(panel, b"pos")
             self._flyout_anim.setDuration(350)
-            self._flyout_anim.setEasingCurve(QEasingCurve.OutQuart) # Smooth, organic slide
+            self._flyout_anim.setEasingCurve(QEasingCurve.OutQuart)
             self._flyout_anim.setStartValue(QPoint(sidebar_edge - target_width, target_y))
             self._flyout_anim.setEndValue(QPoint(sidebar_edge, target_y))
             self._flyout_anim.start()
@@ -97,10 +94,10 @@ class NavigationMixin:
     def _close_flyout(self, name, immediate=False):
         panel = self._flyout_panels.get(name)
         if not panel: return
-        
-        sidebar_edge = self.ui.leftPanel.width()
+
+        sidebar_edge = self._t.ui.leftPanel.width()
         target_width = panel.width()
-        
+
         if immediate:
             if self._flyout_anim: self._flyout_anim.stop()
             panel.move(sidebar_edge - target_width, panel.y())
@@ -117,131 +114,117 @@ class NavigationMixin:
         self._flyout_anim.start()
         self._current_flyout = None
 
-    def _connect_navigation_signals(self):
-        """Connects navigation logic to the status poller."""
-        if hasattr(self, "poller") and self.poller:
-            self.poller.periodic.connect(self._periodic_nav_update)
-
     def _periodic_nav_update(self):
         """Periodic check for flyout highlights and auto-close logic."""
         if self._current_flyout:
             self._update_flyout_highlights()
-            
-            # SHORTS auto-close logic: wait for MDI to finish
+
             if self._current_flyout == "SHORTS" and self._close_shorts_on_idle:
-                if self.poller.stat.interp_state == linuxcnc.INTERP_IDLE:
+                if self._t.poller.stat.interp_state == linuxcnc.INTERP_IDLE:
                     self._close_flyout("SHORTS")
                     self._close_shorts_on_idle = False
 
-    def _handle_flyout_action(self, flyout_name, action_text):
+    def handle_flyout_action(self, flyout_name, action_text):
         """Routes actions from flyout buttons to machine commands."""
         print(f"[ThorCNC] Flyout Action: {flyout_name} -> {action_text}")
-        
+
         if flyout_name == "MODE":
             mode_map = {"MANUAL": linuxcnc.MODE_MANUAL, "AUTO": linuxcnc.MODE_AUTO, "MDI": linuxcnc.MODE_MDI}
             if m := mode_map.get(action_text):
-                self.cmd.mode(m)
-                self.cmd.wait_complete()
-                self._current_mode = m
-                
+                self._t.cmd.mode(m)
+                self._t.cmd.wait_complete()
+                self._t._current_mode = m
+
         elif flyout_name == "SHORTS":
             if action_text == "GO TO HOME":
-                # Check if all joints are homed
-                s = self.poller.stat
+                s = self._t.poller.stat
                 all_homed = all(s.homed[i] for i in range(s.joints))
-                
+
                 if all_homed:
-                    # Already homed -> Go to machine zero (G53)
-                    if hasattr(self, "_run_mdi_command"):
-                        self._run_mdi_command("G53 G0 Z0") 
-                        # Small wait to ensure the first command is processed
-                        self.cmd.wait_complete()
-                        self._run_mdi_command("G53 G0 X0 Y0")
-                        self._status(_t("Fahre zu Maschinen-Nullpunkt (G53 X0 Y0 Z0)"))
+                    if hasattr(self._t, "_run_mdi_command"):
+                        self._t._run_mdi_command("G53 G0 Z0")
+                        self._t.cmd.wait_complete()
+                        self._t._run_mdi_command("G53 G0 X0 Y0")
+                        self._t._status(_t("Fahre zu Maschinen-Nullpunkt (G53 X0 Y0 Z0)"))
                 else:
-                    # Not homed -> Start homing sequence
-                    if hasattr(self, "_home_all"):
-                        self._home_all()
+                    if hasattr(self._t, "_home_all"):
+                        self._t._home_all()
                     else:
-                        # Fallback to internal MDI homing if _home_all is missing
-                        self.cmd.home(-1)
-                
+                        self._t.cmd.home(-1)
+
             elif action_text == "GOTO ZERO XY":
-                if hasattr(self, "_run_mdi_command"):
-                    self._run_mdi_command("O<goto_zero_xy> call")
-                    self._status(_t("Fahre zu WCS X0 Y0 (via NGC)"))
-                
+                if hasattr(self._t, "_run_mdi_command"):
+                    self._t._run_mdi_command("O<goto_zero_xy> call")
+                    self._t._status(_t("Fahre zu WCS X0 Y0 (via NGC)"))
+
         elif flyout_name == "OPT":
             if action_text == "COOLANT":
-                if hasattr(self, "_toggle_coolant_internal"): self._toggle_coolant_internal()
+                if hasattr(self._t, "_toggle_coolant_internal"):
+                    self._t._toggle_coolant_internal()
             elif action_text == "M1 STOP":
-                curr = getattr(self.poller.stat, "optional_stop", False)
-                self.cmd.set_optional_stop(not curr)
+                curr = getattr(self._t.poller.stat, "optional_stop", False)
+                self._t.cmd.set_optional_stop(not curr)
             elif action_text == "SINGLE BLOCK":
-                if hasattr(self, "is_single_block"):
-                    self.is_single_block = not self.is_single_block
+                if hasattr(self._t, "is_single_block"):
+                    self._t.is_single_block = not self._t.is_single_block
             elif action_text == "BLOCK DELETE":
-                curr = getattr(self.poller.stat, "block_delete", False)
-                self.cmd.set_block_delete(not curr)
-        
-        # Conditional closing logic
+                curr = getattr(self._t.poller.stat, "block_delete", False)
+                self._t.cmd.set_block_delete(not curr)
+
         if flyout_name == "MODE":
             self._close_flyout(flyout_name)
         elif flyout_name == "SHORTS":
-            # For SHORTS, we wait until machine is idle if we started a move
             self._close_shorts_on_idle = True
         elif flyout_name == "OPT":
-            # OPTIONAL stays open until user clicks away or toggles manually
             pass
-            
+
         self._update_flyout_highlights()
 
-    def _toggle_line_queue_flyout(self):
+    def toggle_line_queue_flyout(self):
         """Toggles the mini-flyout for line selection."""
-        if self._line_queue_panel.isVisible():
-            self._line_queue_panel.hide()
-            if self._queued_start_line is None:
+        if self._t._line_queue_panel.isVisible():
+            self._t._line_queue_panel.hide()
+            if self._t._queued_start_line is None:
                 self._update_run_from_line_visual(False)
         else:
-            if self.gcode_view:
-                cursor = self.gcode_view.textCursor()
-                self._line_input.setValue(cursor.blockNumber() + 1)
-            
-            pos = self._btn_run_from_line.mapToGlobal(QPoint(0, self._btn_run_from_line.height()))
-            self._line_queue_panel.move(pos)
-            self._line_queue_panel.show()
-            self._line_queue_panel.raise_()
+            if self._t.gcode_view:
+                cursor = self._t.gcode_view.textCursor()
+                self._t._line_input.setValue(cursor.blockNumber() + 1)
 
-    def _confirm_line_queue(self):
+            pos = self._t._btn_run_from_line.mapToGlobal(QPoint(0, self._t._btn_run_from_line.height()))
+            self._t._line_queue_panel.move(pos)
+            self._t._line_queue_panel.show()
+            self._t._line_queue_panel.raise_()
+
+    def confirm_line_queue(self):
         """Confirmed the line from the mini-flyout."""
-        line_num = self._line_input.value()
-        self._queued_start_line = line_num
-        self._line_queue_panel.hide()
-        self._status(f"START AB ZEILE {line_num} VORGEMERKT. Drücke CYCLE START!")
+        line_num = self._t._line_input.value()
+        self._t._queued_start_line = line_num
+        self._t._line_queue_panel.hide()
+        self._t._status(f"START AB ZEILE {line_num} VORGEMERKT. Drücke CYCLE START!")
         self._update_run_from_line_visual(True)
 
-    def _clear_line_queue(self):
+    def clear_line_queue(self):
         """Clears the queued line and resets the UI."""
-        self._queued_start_line = None
-        self._line_queue_panel.hide()
-        self._status(_t("Start-Vormerkung aufgehoben"))
+        self._t._queued_start_line = None
+        self._t._line_queue_panel.hide()
+        self._t._status(_t("Start-Vormerkung aufgehoben"))
         self._update_run_from_line_visual(False)
 
     def _update_run_from_line_visual(self, active):
-        if hasattr(self, "_btn_run_from_line") and self._btn_run_from_line:
-            self._btn_run_from_line.setProperty("active", active)
-            self._btn_run_from_line.style().unpolish(self._btn_run_from_line)
-            self._btn_run_from_line.style().polish(self._btn_run_from_line)
-            self._btn_run_from_line.update()
+        if hasattr(self._t, "_btn_run_from_line") and self._t._btn_run_from_line:
+            self._t._btn_run_from_line.setProperty("active", active)
+            self._t._btn_run_from_line.style().unpolish(self._t._btn_run_from_line)
+            self._t._btn_run_from_line.style().polish(self._t._btn_run_from_line)
+            self._t._btn_run_from_line.update()
 
-    def _run_from_selected_line(self):
-        self._toggle_line_queue_flyout()
+    def run_from_selected_line(self):
+        self.toggle_line_queue_flyout()
 
     def _update_flyout_highlights(self):
-        if not hasattr(self, "_flyout_item_buttons"): return
-        s = self.poller.stat
-        
-        # Helper to update button visual
+        if not hasattr(self._t, "_flyout_item_buttons"): return
+        s = self._t.poller.stat
+
         def set_btn_active(key, active):
             if b := self._flyout_item_buttons.get(key):
                 if b.property("active") != active:
@@ -252,30 +235,30 @@ class NavigationMixin:
         set_btn_active("OPT_COOLANT", getattr(s, "flood", 0) > 0)
         set_btn_active("OPT_M1 STOP", getattr(s, "optional_stop", False))
         set_btn_active("OPT_BLOCK DELETE", getattr(s, "block_delete", False))
-        set_btn_active("OPT_SINGLE BLOCK", getattr(self, "is_single_block", False))
+        set_btn_active("OPT_SINGLE BLOCK", getattr(self._t, "is_single_block", False))
 
         _MODES = {linuxcnc.MODE_MANUAL: "MANUAL", linuxcnc.MODE_AUTO: "AUTO", linuxcnc.MODE_MDI: "MDI"}
-        current_txt = _MODES.get(self._current_mode, "")
+        current_txt = _MODES.get(self._t._current_mode, "")
         for m_txt in ("MANUAL", "AUTO", "MDI"):
             set_btn_active(f"MODE_{m_txt}", m_txt == current_txt)
 
-    def _apply_theme(self, name: str):
+    def apply_theme(self, name: str):
         """Switches the UI theme and updates icons."""
         valid_themes = ["dark", "light"]
         if name not in valid_themes: return
-        
+
         from PySide6.QtWidgets import QApplication
         from ..main import load_theme
         load_theme(QApplication.instance(), name)
-        self.settings.set("theme", name)
-        self.settings.save()
-        self._update_nav_icons()
+        self._t.settings.set("theme", name)
+        self._t.settings.save()
+        self.update_nav_icons()
 
-    def _update_nav_icons(self):
+    def update_nav_icons(self):
         """Updates navigation icons for the sidebar based on theme."""
-        theme = self.settings.get("theme", "dark")
+        theme = self._t.settings.get("theme", "dark")
         icon_path = os.path.join(os.path.dirname(__file__), "..", "images", f"icons_{theme}")
-        
+
         mapping = {
             "btn_nav_main": "home.svg",
             "btn_nav_file": "file.svg",
@@ -284,10 +267,14 @@ class NavigationMixin:
             "btn_nav_settings": "settings.svg",
             "btn_nav_html": "web.svg"
         }
-        
+
         from PySide6.QtGui import QIcon
         for btn_name, icon_file in mapping.items():
-            if btn := self.ui.findChild(QPushButton, btn_name):
+            if btn := self._t.ui.findChild(QPushButton, btn_name):
                 full_path = os.path.join(icon_path, icon_file)
                 if os.path.exists(full_path):
                     btn.setIcon(QIcon(full_path))
+
+    def update_highlights(self):
+        """Update flyout button highlights."""
+        self._update_flyout_highlights()
