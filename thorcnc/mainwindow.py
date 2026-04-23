@@ -12,21 +12,15 @@ from .status_poller import StatusPoller
 from .gcode_parser import parse_file
 from .widgets.gcode_view import GCodeView
 from .widgets.backplot import BackplotWidget
-from .widgets.tool_dialog import ToolSelectionDialog
 from .widgets.simple_view import SimpleView
 from .i18n import TranslationManager, _t
 from .managers.navigation_manager import NavigationManager
 from .managers.probing_manager import ProbingManager
+from .modules.file_manager import FileManagerModule
+from .modules.tool_table import ToolTableModule
 # from .widgets.opt_options import OptOptionsDialog
 
 _DIR = os.path.dirname(__file__)
-
-class NumericTableWidgetItem(QTableWidgetItem):
-    def __lt__(self, other):
-        try:
-            return float(self.text()) < float(other.text())
-        except (ValueError, TypeError):
-            return super().__lt__(other)
 
 class ThorCNC(QObject):
 
@@ -34,7 +28,7 @@ class ThorCNC(QObject):
     def __init__(self, ini_path: str = "", parent=None):
         super().__init__(parent)
         self.navigation = NavigationManager(self)
-        # Probing manager will be initialized after settings are loaded
+        # Managers will be initialized after settings are loaded
 
         self.ini_path = ini_path or os.environ.get("INI_FILE_NAME", "")
         self.ini = linuxcnc.ini(self.ini_path) if self.ini_path else None
@@ -60,8 +54,10 @@ class ThorCNC(QObject):
         self._probe_center_inside = False
         self._load_settings()
 
-        # Initialize ProbingManager (after settings loaded)
+        # Initialize managers (after settings loaded)
         self.probing = ProbingManager(self)
+        self.file_manager = FileManagerModule(self)
+        self.tool_table = ToolTableModule(self)
         
         # i18n
         self.i18n = TranslationManager(self.settings.get("language", "Deutsch"))
@@ -74,8 +70,8 @@ class ThorCNC(QObject):
         self._setup_dro()
         self._setup_hal()
         self._setup_poller()
-        self._setup_file_manager()
-        self._setup_tool_table()
+        self.file_manager.setup()
+        self.tool_table.setup()
         self._setup_offsets_tab()
         self._setup_probing_tab()
         self._setup_html_tab()
@@ -87,10 +83,7 @@ class ThorCNC(QObject):
         self._last_gui_pos = [0.0, 0.0, 0.0]
         self._last_gui_rpm = 0.0
         self._last_gui_load = -1.0
-        
-        # Tool-Change Handler
-        self.poller.tool_change_request.connect(self._on_tool_change_request)
-        
+
         self._apply_ini_settings()
         
         # Start in MAIN tab
@@ -903,442 +896,7 @@ class ThorCNC(QObject):
         # Wir übergeben die HAL-Komponente, damit der Poller direkt auf die Pins zugreifen kann
         self.poller = StatusPoller(interval_ms=100, hal_comp=self._hal_comp, parent=self)
 
-    def _setup_file_manager(self):
-        from PySide6.QtWidgets import QTreeView, QTextBrowser, QPushButton, QFileSystemModel, QLabel, QWidget
-        from PySide6.QtCore import QDir
-        import os
 
-        tree = self._w(QTreeView, "fileManagerView")
-        
-        # Replace filePreviewArea placeholder with GCodeView (editable)
-        old_preview = self.ui.findChild(QWidget, "filePreviewArea")
-        if old_preview:
-            parent = old_preview.parent()
-            lay = parent.layout()
-            idx = lay.indexOf(old_preview)
-            lay.removeWidget(old_preview)
-            old_preview.deleteLater()
-            
-            self._file_preview = GCodeView(editable=True)
-            self._file_preview.setObjectName("filePreviewArea")
-            e_size = self.settings.get("editor_gcode_font_size", 22)
-            self._file_preview.set_font_size(e_size)
-            self._file_preview.zoom_changed.connect(
-                lambda s: (self.settings.set("editor_gcode_font_size", s), self.settings.save()))
-            lay.insertWidget(idx, self._file_preview)
-        else:
-            self._file_preview = self._w(GCodeView, "filePreviewArea")
-
-        self._btn_load = self._w(QPushButton, "load_gcode_button")
-        self._btn_save = self._w(QPushButton, "btn_save_file")
-        self._btn_save_as = self._w(QPushButton, "btn_save_as_file")
-        self._btn_cancel = self._w(QPushButton, "btn_cancel_edit")
-        
-        self._btn_zoom_in = self._w(QPushButton, "btn_zoom_in")
-        self._btn_zoom_out = self._w(QPushButton, "btn_zoom_out")
-        if self._btn_zoom_in: self._btn_zoom_in.clicked.connect(lambda: self._file_preview.zoomIn(1))
-        if self._btn_zoom_out: self._btn_zoom_out.clicked.connect(lambda: self._file_preview.zoomOut(1))
-
-        self._btn_nav_up = self._w(QPushButton, "btn_nav_up")
-        self._btn_nav_home = self._w(QPushButton, "btn_nav_home")
-        
-        # UI Polish: Narrower buttons with icons instead of text
-        from PySide6.QtGui import QIcon
-        if self._btn_nav_up:
-            self._btn_nav_up.setText("")
-            self._btn_nav_up.setFixedWidth(60)
-            self._btn_nav_up.setToolTip(_t("Übergeordnetes Verzeichnis"))
-            
-        if self._btn_nav_home:
-            self._btn_nav_home.setText("")
-            self._btn_nav_home.setFixedWidth(60)
-            self._btn_nav_home.setToolTip(_t("Home-Verzeichnis"))
-
-        self.navigation.update_nav_icons()
-
-        self._breadcrumb_container = self._w(QWidget, "breadcrumb_container")
-        self._breadcrumb_layout = None
-        if self._breadcrumb_container:
-            self._breadcrumb_layout = QHBoxLayout(self._breadcrumb_container)
-            self._breadcrumb_layout.setContentsMargins(0, 0, 0, 0)
-            self._breadcrumb_layout.setSpacing(2)
-
-        if not tree or not self._file_preview or not self._btn_load:
-            return
-
-        # Start directory from INI or default fallback
-        start_dir = os.path.expanduser("~/linuxcnc/nc_files")
-        if self.ini and self.ini_path:
-            cfg_dir = self.ini.find("DISPLAY", "PROGRAM_PREFIX")
-            if cfg_dir:
-                cfg_dir = os.path.expanduser(cfg_dir)
-                if not os.path.isabs(cfg_dir):
-                    ini_dir = os.path.dirname(self.ini_path)
-                    cfg_dir = os.path.abspath(os.path.join(ini_dir, cfg_dir))
-                start_dir = cfg_dir
-        
-        if not os.path.exists(start_dir):
-            try:
-                os.makedirs(start_dir, exist_ok=True)
-            except Exception:
-                start_dir = os.path.expanduser("~/linuxcnc/nc_files")
-
-        self._file_home_dir = start_dir
-
-        self._fs_model = QFileSystemModel()
-        self._fs_model.setRootPath(start_dir)
-        self._fs_model.setFilter(QDir.AllDirs | QDir.Files | QDir.NoDotAndDotDot)
-
-        tree.setModel(self._fs_model)
-        
-        # Hide unneeded columns for cleaner look
-        tree.setColumnWidth(0, 300)
-        tree.hideColumn(1) # size
-        tree.hideColumn(2) # type
-        tree.hideColumn(3) # date
-
-        tree.selectionModel().selectionChanged.connect(self._on_file_selected)
-        tree.doubleClicked.connect(self._on_file_double_clicked)
-        
-        if self._btn_nav_up:
-            self._btn_nav_up.clicked.connect(self._nav_up)
-        if self._btn_nav_home:
-            self._btn_nav_home.clicked.connect(self._nav_home)
-        
-        self._selected_filepath = None
-        self._btn_load.clicked.connect(self._load_selected_file)
-        self._btn_load.setEnabled(False)
-
-        if self._btn_save:
-            self._btn_save.clicked.connect(self._save_file)
-            self._btn_save.setEnabled(False)
-        if self._btn_save_as:
-            self._btn_save_as.clicked.connect(self._save_as_file)
-            self._btn_save_as.setEnabled(False)
-        if self._btn_cancel:
-            self._btn_cancel.clicked.connect(self._cancel_edit)
-            self._btn_cancel.setEnabled(False)
-        
-        last_dir = self.settings.get("last_file_dir")
-        if last_dir and os.path.exists(last_dir):
-            self._nav_set_dir(last_dir)
-        else:
-            self._nav_set_dir(start_dir)
-
-    def _nav_set_dir(self, path: str):
-        import os
-        from PySide6.QtWidgets import QTreeView
-        tree = self._w(QTreeView, "fileManagerView")
-        if tree and os.path.isdir(path):
-            tree.setRootIndex(self._fs_model.index(path))
-            self._current_dir = path
-            if hasattr(self, "_breadcrumb_container") and self._breadcrumb_container:
-                self._update_breadcrumbs(path)
-
-    def _update_breadcrumbs(self, path: str):
-        """Erstellt interaktive Breadcrumb-Buttons für den aktuellen Pfad."""
-        if not self._breadcrumb_layout:
-            return
-
-        # Layout leeren
-        while self._breadcrumb_layout.count():
-            item = self._breadcrumb_layout.takeAt(0)
-            if w := item.widget():
-                w.deleteLater()
-        
-        # Pfad normalisieren und aufteilen
-        path = os.path.normpath(path)
-        parts = [p for p in path.split(os.sep) if p]
-        
-        # Root Button (/)
-        self._add_breadcrumb_button("/", os.sep)
-        
-        # Segmente hinzufügen
-        current_acc = os.sep
-        for part in parts:
-            # Separator
-            sep = QLabel("›")
-            sep.setObjectName("breadcrumb_sep")
-            self._breadcrumb_layout.addWidget(sep)
-            
-            current_acc = os.path.join(current_acc, part)
-            self._add_breadcrumb_button(part, current_acc)
-            
-        self._breadcrumb_layout.addStretch()
-
-    def _add_breadcrumb_button(self, text, path):
-        btn = QPushButton(text)
-        btn.setObjectName("breadcrumb_item")
-        btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn.clicked.connect(lambda: self._nav_set_dir(path))
-        self._breadcrumb_layout.addWidget(btn)
-
-    def _nav_up(self):
-        import os
-        if hasattr(self, "_current_dir"):
-            parent_dir = os.path.dirname(self._current_dir)
-            if parent_dir and parent_dir != self._current_dir:
-                self._nav_set_dir(parent_dir)
-
-    def _nav_home(self):
-        if hasattr(self, "_file_home_dir"):
-            self._nav_set_dir(self._file_home_dir)
-            
-    def _on_file_double_clicked(self, idx):
-        import os
-        path = self._fs_model.filePath(idx)
-        if os.path.isdir(path):
-            self._nav_set_dir(path)
-        else:
-            self._selected_filepath = path
-            self._load_selected_file()
-
-    def _on_file_selected(self):
-        from PySide6.QtWidgets import QTreeView
-        import os
-        tree = self._w(QTreeView, "fileManagerView")
-        idx = tree.currentIndex()
-        if not idx.isValid():
-            return
-            
-        path = self._fs_model.filePath(idx)
-        if os.path.isdir(path):
-            self.settings.set("last_file_dir", path)
-            self._selected_filepath = None
-            self._btn_load.setEnabled(False)
-            self._file_preview.setPlainText(_t("[ORDNER AUSGEWÄHLT]"))
-        else:
-            self.settings.set("last_file_dir", os.path.dirname(path))
-            self._selected_filepath = path
-            self._btn_load.setEnabled(True)
-            if self._btn_save: self._btn_save.setEnabled(True)
-            if self._btn_save_as: self._btn_save_as.setEnabled(True)
-            if self._btn_cancel: self._btn_cancel.setEnabled(True)
-            
-            try:
-                # Load FULL file for editing
-                with open(path, "r", encoding="utf-8", errors="replace") as f:
-                    content = f.read()
-                self._file_preview.setPlainText(content)
-            except Exception as e:
-                self._file_preview.setPlainText(_t("Error loading:") + f"\n{e}")
-
-    def _save_file(self):
-        if not self._selected_filepath:
-            return
-        
-        try:
-            content = self._file_preview.toPlainText()
-            with open(self._selected_filepath, "w", encoding="utf-8") as f:
-                f.write(content)
-            self._status(_t("Datei gespeichert: {}").format(os.path.basename(self._selected_filepath)))
-        except Exception as e:
-            self._status(f"Error saving file: {e}", error=True)
-
-    def _save_as_file(self):
-        from PySide6.QtWidgets import QFileDialog
-        import os
-        
-        start_dir = self._current_dir if hasattr(self, "_current_dir") else os.path.expanduser("~")
-        path, _ = QFileDialog.getSaveFileName(self.ui, _t("SAVE AS"), start_dir, "G-Code (*.ngc *.tap *.txt);;All Files (*)")
-        
-        if path:
-            try:
-                content = self._file_preview.toPlainText()
-                with open(path, "w", encoding="utf-8") as f:
-                    f.write(content)
-                self._selected_filepath = path
-                self._status(_t("Datei gespeichert unter: {}").format(os.path.basename(path)))
-                # Refresh file tree if possible - fs_model updates automatically usually
-            except Exception as e:
-                self._status(f"Error saving file: {e}", error=True)
-
-    def _cancel_edit(self):
-        if self._selected_filepath:
-            self._on_file_selected()
-        else:
-            self._file_preview.clear()
-
-    def _load_selected_file(self):
-        if self._selected_filepath:
-            self._user_program = self._selected_filepath
-            # Tell linuxcnc to open the program
-            self.cmd.mode(linuxcnc.MODE_AUTO)
-            self.cmd.wait_complete()
-            self.cmd.program_open(self._selected_filepath)
-            
-            # Switch view back to MAIN
-            from PySide6.QtWidgets import QTabWidget
-            if tab := self._w(QTabWidget, "tabWidget"):
-                tab.setCurrentIndex(0)
-
-
-    def _setup_tool_table(self):
-        from PySide6.QtWidgets import QTableWidget, QPushButton
-        
-        self.tool_table = self._w(QTableWidget, "toolTable")
-        self.btn_add_tool = self._w(QPushButton, "btn_add_tool")
-        self.btn_delete_tool = self._w(QPushButton, "btn_delete_tool")
-        self.btn_reload_tools = self._w(QPushButton, "btn_reload_tools")
-        self.btn_save_tools = self._w(QPushButton, "btn_save_tools")
-
-        if not self.tool_table:
-            return
-
-        # UI Cleanup for tool table
-        self.tool_table.verticalHeader().setVisible(False)
-        self.tool_table.setSortingEnabled(True)
-
-        # Path resolvieren
-        self._tool_tbl_path = None
-        if self.ini and self.ini_path:
-            tbl_name = self.ini.find("EMCIO", "TOOL_TABLE")
-            if tbl_name:
-                import os
-                if not os.path.isabs(tbl_name):
-                    self._tool_tbl_path = os.path.abspath(os.path.join(os.path.dirname(self.ini_path), tbl_name))
-                else:
-                    self._tool_tbl_path = tbl_name
-
-        if self.btn_add_tool:
-            self.btn_add_tool.clicked.connect(self._add_tool)
-        if self.btn_delete_tool:
-            self.btn_delete_tool.clicked.connect(self._delete_tool)
-        if self.btn_reload_tools:
-            self.btn_reload_tools.clicked.connect(self._load_tool_table)
-        if self.btn_save_tools:
-            self.btn_save_tools.clicked.connect(self._save_tool_table)
-
-        # Context Menu
-        self.tool_table.setContextMenuPolicy(Qt.CustomContextMenu)
-        self.tool_table.customContextMenuRequested.connect(self._show_tool_table_context_menu)
-
-        self._load_tool_table()
-        
-        # Restore tool table column widths
-        tt_state = self.settings.get("tool_table_state")
-        if tt_state:
-            from PySide6.QtCore import QByteArray
-            self.tool_table.horizontalHeader().restoreState(QByteArray.fromHex(tt_state.encode()))
-
-    def _load_tool_table(self):
-        import os, re
-        from PySide6.QtWidgets import QTableWidgetItem
-        from PySide6.QtCore import Qt
-        if not self._tool_tbl_path or not os.path.exists(self._tool_tbl_path):
-            return
-
-        self.tool_table.setSortingEnabled(False)
-        self.tool_table.setRowCount(0)
-        try:
-            with open(self._tool_tbl_path, "r", encoding="utf-8") as f:
-                for line in f:
-                    line = line.strip()
-                    if not line or line.startswith(";"): 
-                        continue
-                    
-                    parts = line.split(";", 1)
-                    data = parts[0].strip()
-                    comment = parts[1].strip() if len(parts) > 1 else ""
-                    
-                    t = re.search(r'T(\d+)', data)
-                    p = re.search(r'P(\d+)', data)
-                    d = re.search(r'D([+-]?\d*\.\d+|\d+)', data)
-                    z = re.search(r'Z([+-]?\d*\.\d+|\d+)', data)
-                    
-                    dia_str = d.group(1) if d else ""
-                    if dia_str.startswith("+"):
-                        dia_str = dia_str[1:]
-                    
-                    row = self.tool_table.rowCount()
-                    self.tool_table.insertRow(row)
-                    
-                    self.tool_table.setItem(row, 0, NumericTableWidgetItem(t.group(1) if t else ""))
-                    self.tool_table.setItem(row, 1, NumericTableWidgetItem(p.group(1) if p else ""))
-                    self.tool_table.setItem(row, 2, NumericTableWidgetItem(dia_str))
-                    self.tool_table.setItem(row, 3, NumericTableWidgetItem(z.group(1) if z else ""))
-                    self.tool_table.setItem(row, 4, QTableWidgetItem(comment))
-            
-            # Sort by Tool Number initially
-            self.tool_table.sortByColumn(0, Qt.SortOrder.AscendingOrder)
-        except Exception as e:
-            self._status(_t("Error loading tool table: ") + str(e), error=True)
-        finally:
-            self.tool_table.setSortingEnabled(True)
-
-    def _delete_tool(self):
-        """Löscht die ausgewählten Zeilen aus der Werkzeugliste."""
-        if not self.tool_table: return
-        rows = set()
-        for item in self.tool_table.selectedItems():
-            rows.add(item.row())
-        
-        if not rows and self.tool_table.currentRow() >= 0:
-            rows.add(self.tool_table.currentRow())
-
-        if not rows:
-            return
-
-        # Von unten nach oben löschen, damit die Indizes gültig bleiben
-        for row in sorted(list(rows), reverse=True):
-            self.tool_table.removeRow(row)
-
-    def _show_tool_table_context_menu(self, pos):
-        """Zeigt das Kontextmenü für die Werkzeugliste an."""
-        from PySide6.QtWidgets import QMenu
-        menu = QMenu(self.tool_table)
-        delete_action = menu.addAction(_t("- Delete Selected"))
-        delete_action.triggered.connect(self._delete_tool)
-        menu.exec(self.tool_table.mapToGlobal(pos))
-
-    def _add_tool(self):
-        from PySide6.QtWidgets import QTableWidgetItem
-        if not self.tool_table: return
-        row = self.tool_table.rowCount()
-        self.tool_table.insertRow(row)
-        for c in range(5):
-            self.tool_table.setItem(row, c, QTableWidgetItem(""))
-
-    def _save_tool_table(self):
-        if not self._tool_tbl_path or not self.tool_table:
-            return
-            
-        lines = []
-        for row in range(self.tool_table.rowCount()):
-            t = self.tool_table.item(row, 0)
-            p = self.tool_table.item(row, 1)
-            d = self.tool_table.item(row, 2)
-            z = self.tool_table.item(row, 3)
-            c = self.tool_table.item(row, 4)
-            
-            ts = t.text().strip() if t and t.text().strip() else ""
-            ps = p.text().strip() if p and p.text().strip() else ""
-            ds = d.text().strip().replace(",", ".") if d and d.text().strip() else ""
-            zs = z.text().strip().replace(",", ".") if z and z.text().strip() else ""
-            cs = c.text().strip() if c and c.text().strip() else ""
-            
-            if not ts: continue # T is required
-            
-            # Format nicely
-            parts = [f"T{ts}"]
-            if ps: parts.append(f"P{ps}")
-            if ds: parts.append(f"D{ds}")
-            if zs: parts.append(f"Z{zs}")
-            
-            line = " ".join(parts)
-            if cs:
-                line += f" ;{cs}"
-            lines.append(line)
-            
-        try:
-            with open(self._tool_tbl_path, "w", encoding="utf-8") as f:
-                f.write("\n".join(lines) + "\n")
-                
-            # Reload tool table in LinuxCNC
-            self.cmd.load_tool_table()
-            self._status(_t("Tool table saved and reloaded!"))
-        except Exception as e:
-            self._status(_t("Error saving tool table: ") + str(e), error=True)
 
     # ── Settings Tab ──────────────────────────────────────────────────────────
 
@@ -3025,8 +2583,10 @@ class ThorCNC(QObject):
 
     def _on_show_pocket_column_changed(self, visible: bool):
         """Blendet die Pocket-Spalte in der Werkzeugliste ein/aus."""
-        if self.tool_table:
-            self.tool_table.setColumnHidden(1, not visible)
+        from PySide6.QtWidgets import QTableWidget
+        w = self._w(QTableWidget, "toolTable")
+        if w:
+            w.setColumnHidden(1, not visible)
         self.settings.set("show_pocket_column", visible)
         self.settings.save()
 
@@ -3361,8 +2921,6 @@ class ThorCNC(QObject):
         p.mode_changed.connect(self._on_mode)
         p.interp_changed.connect(self._on_interp)
         p.position_changed.connect(self._on_position)
-        p.tool_in_spindle.connect(self._on_tool)
-        p.tool_offset_changed.connect(self._on_tool_offset_changed)
         p.spindle_at_speed.connect(self._on_spindle_at_speed)
         p.spindle_speed_actual.connect(self._on_spindle_actual)
         p.spindle_load.connect(self._on_spindle_load)
@@ -3376,7 +2934,7 @@ class ThorCNC(QObject):
         p.g5x_offset_changed.connect(self._on_g5x_offset)
         p.gcodes_changed.connect(self._on_gcodes)
         p.mcodes_changed.connect(self._on_mcodes)
-        p.file_loaded.connect(self._on_file_loaded)
+        p.file_loaded.connect(self.file_manager._on_file_loaded)
         p.program_line.connect(self._on_program_line)
         p.error_message.connect(self._on_error)
         p.info_message.connect(self._on_info)
@@ -3462,8 +3020,6 @@ class ThorCNC(QObject):
                 lay.setSpacing(4)
                 # Flush to right and bottom (0 margins)
                 lay.setContentsMargins(0, 0, 0, 0)
-        if b := btn("btn_m6_change"):
-            b.clicked.connect(self._send_m6)
         if b := btn("ref_all_button"):
             b.clicked.connect(self._home_all)
         if b := btn("ref_x_button"):
@@ -3564,6 +3120,10 @@ class ThorCNC(QObject):
             # Initial sync (Wait a bit for machine state)
             from PySide6.QtCore import QTimer
             QTimer.singleShot(500, lambda: self._sync_nav_buttons(tab.currentIndex()))
+
+        # Module signal connections
+        self.file_manager.connect_signals()
+        self.tool_table.connect_signals()
 
         # Simple View — fullscreen overlay, opened by clicking the status bar
         self._setup_simple_overlay()
@@ -3844,82 +3404,6 @@ class ThorCNC(QObject):
             self.simple_view.set_feed_rpm(feed, rpm)
 
     @Slot(int)
-    def _on_tool(self, tool: int):
-        from PySide6.QtWidgets import QLineEdit, QTableWidget, QLabel
-        if tool == 0:
-            return  # Tool 0 = no/unknown tool, do not overwrite display
-
-        # Update modular status bar label
-        lbl = self.status_bar.findChild(QLabel, "label_tool_nr")
-        if lbl:
-            lbl.setText(f"T{tool}")
-            
-        if entry := self._w(QLineEdit, "mdi_m6_entry"):
-            # Nur aktualisieren wenn der User gerade nicht tippt
-            if not entry.hasFocus():
-                entry.setText(str(tool))
-
-        # Tool-Tabelle neu einlesen (Messung kann .tbl Datei geändert haben)
-        self._load_tool_table()
-
-        # Geometrie aus dem gerade neu geladenen Widget lesen
-        from PySide6.QtWidgets import QTableWidget
-        table = self._w(QTableWidget, "toolTable")
-        dia, length, comment = "0.000", "0.000", "-"
-        if table:
-            for r in range(table.rowCount()):
-                t_item = table.item(r, 0)
-                if t_item and t_item.text().strip() == str(tool):
-                    d_item = table.item(r, 2)
-                    len_item = table.item(r, 3)
-                    c_item = table.item(r, 4)
-                    if d_item: dia = d_item.text()
-                    if len_item: length = len_item.text()
-                    if c_item: comment = c_item.text()
-                    break
-
-        def _fmt3(val: str) -> str:
-            try:
-                return f"{float(val):.3f}"
-            except ValueError:
-                return val
-
-        if dia_lbl := self._w(QLabel, "tool_dia_label"):
-            dia_lbl.setText(_fmt3(dia))
-        if len_lbl := self._w(QLabel, "tool_len_label"):
-            len_lbl.setText(_fmt3(length))
-        if c_lbl := self._w(QLabel, "tool_comment_label"):
-            c_lbl.setText(comment)
-        # Probe-Statusbar mitsyncen
-        if nr_lbl := self._w(QLabel, "probe_tool_nr_label"):
-            nr_lbl.setText(f"T{tool}")
-        if dia_lbl := self._w(QLabel, "probe_tool_dia_label"):
-            dia_lbl.setText(_fmt3(dia))
-        if len_lbl := self._w(QLabel, "probe_tool_len_label"):
-            len_lbl.setText(_fmt3(length))
-        if c_lbl := self._w(QLabel, "probe_tool_comment_label"):
-            c_lbl.setText(comment)
-            
-        try:
-            fdia = float(dia) if dia.strip() else 0.0
-        except ValueError:
-            fdia = 0.0
-        try:
-            flen = float(length) if length.strip() else 0.0
-        except ValueError:
-            flen = 0.0
-        self.backplot.set_tool_geometry(fdia, flen)
-        # Sync to Simple View if present
-        sv = getattr(self, "simple_view", None)
-        if sv and hasattr(sv, "backplot") and sv.backplot:
-            sv.backplot.set_tool_geometry(fdia, flen)
-
-    @Slot(list)
-    def _on_tool_offset_changed(self, _):
-        """Tool offset has changed (e.g. after measurement) -> update tool display."""
-        tool = self.poller.stat.tool_in_spindle
-        if tool > 0:
-            self._on_tool(tool)
 
     @Slot(tuple)
     def _on_gcodes(self, gcodes: tuple):
@@ -4272,89 +3756,12 @@ class ThorCNC(QObject):
             except Exception:
                 pass
 
-    @Slot(int)
-    def _on_tool_change_request(self, tool_nr: int):
-        """Called via HAL tool-change-request pin."""
-        from thorcnc.widgets.m6_dialog import M6Dialog
-        
-        # Alle Tool-Daten aus der Tabelle suchen
-        tool_data = {'id': tool_nr, 'comment': '', 'diameter': 0.0, 'zoffset': 0.0}
-        try:
-            for t in self.poller.stat.tool_table:
-                if t.id == tool_nr:
-                    tool_data['comment'] = getattr(t, 'comment', "").strip()
-                    tool_data['diameter'] = getattr(t, 'diameter', 0.0)
-                    tool_data['zoffset'] = getattr(t, 'zoffset', 0.0)
-                    break
-            
-            # FALLBACK: Falls LinuxCNC keinen Kommentar liefert, direkt aus der Datei lesen
-            if not tool_data['comment'] and self.ini:
-                tbl_path = self.ini.find("EMCIO", "TOOL_TABLE")
-                if tbl_path:
-                    # Pfad korrigieren falls relativ
-                    if not os.path.isabs(tbl_path):
-                        tbl_path = os.path.join(os.path.dirname(self.ini_path), tbl_path)
-                    
-                    if os.path.exists(tbl_path):
-                        with open(tbl_path, 'r') as f:
-                            for line in f:
-                                # Suche Zeile die mit T<nummer> startet
-                                if line.strip().startswith(f"T{tool_nr} "):
-                                    if ";" in line:
-                                        tool_data['comment'] = line.split(";", 1)[1].strip()
-                                        break
-        except Exception as e:
-            print(f"[M6] Fehler beim Laden der Werkzeug-Details: {e}")
-
-        dlg = M6Dialog(tool_nr, tool_data, self.ui)
-        
-        # Bestätigung an HAL senden, wenn der User den Button klickt
-        if dlg.exec():
-            if self._hal_comp:
-                self._hal_comp["tool-changed-confirm"] = True
-                # Nach kurzer Zeit wieder auf False, damit der nächste Wechsel sauber triggert
-                from PySide6.QtCore import QTimer
-                QTimer.singleShot(1000, lambda: self._set_hal_pin("tool-changed-confirm", False))
-
     @Slot(str)
-    def _on_file_loaded(self, path: str):
-        if not path or not os.path.isfile(path):
-            return
-        # Subroutinen (messe.ngc etc.) ignorieren – nur das User-Hauptprogramm anzeigen
-        if path != self._user_program:
-            return
-        self._has_file = True
-        self.gcode_view.load_file(path)
-        tp = parse_file(path)
-        self._last_toolpath = tp
-        self.backplot.load_toolpath(tp)
-        if not self._view_restored:
-            self.backplot.fit_view(tp)
-        
-        if hasattr(self, "simple_view"):
-            if self.simple_view.backplot:
-                self.simple_view.backplot.load_toolpath(tp)
-                self.simple_view.backplot.fit_view(tp)
-            self.simple_view.load_gcode(path)
-        self._update_run_buttons()
-        if hasattr(self, "_html_list"):
-            self._refresh_html_list(path)
-
     @Slot(tuple)
     def _on_digital_out_changed(self, dout: tuple):
         """React to M64/M65 on specific pins to show a visual warning."""
         self._last_dout = dout # Store for settings refresh
-        
-        if not self._probe_warning_enabled:
-            # If function is disabled, ensure property is false and reset style
-            if hasattr(self, "status_bar") and self.status_bar:
-                if self.status_bar.property("probe_active"):
-                    self.status_bar.setProperty("probe_active", False)
-                    self.status_bar.setStyleSheet("")
-                    self.status_bar.style().unpolish(self.status_bar)
-                    self.status_bar.style().polish(self.status_bar)
-            return
-            
+
         # Delegate probe warning update to ProbingManager
         if hasattr(self, 'probing') and self.probing:
             self.probing.update_probe_warning(dout)
@@ -4773,33 +4180,6 @@ class ThorCNC(QObject):
         except Exception as e:
             self._status(f"MDI error: {e}")
         
-    def _send_m6(self):
-        # Prepare tool data from current table
-        tool_data = []
-        if self.tool_table:
-            for row in range(self.tool_table.rowCount()):
-                try:
-                    nr_item = self.tool_table.item(row, 0)
-                    dia_item = self.tool_table.item(row, 2)
-                    comment_item = self.tool_table.item(row, 4)
-                    
-                    if nr_item:
-                        nr_str = nr_item.text().strip()
-                        if nr_str:
-                            tool_data.append({
-                                'nr': int(nr_str),
-                                'dia': float(dia_item.text()) if dia_item and dia_item.text().strip() else 0.0,
-                                'comment': comment_item.text() if comment_item else ""
-                            })
-                except Exception:
-                    continue
-
-        dialog = ToolSelectionDialog(tool_data, self.ui)
-        if dialog.exec():
-            val = dialog.get_selected_tool()
-            if val is not None:
-                self._send_mdi(f"T{val} M6 G43")
-
     def _set_jog_increment(self, inc: float):
         self._jog_increment = inc
         from PySide6.QtWidgets import QPushButton

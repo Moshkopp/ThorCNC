@@ -1,3 +1,8 @@
-T1   P2   D+6.000000 Z+19.320000 ;bla 2mm
-T14  P13  D+35.000000 Z+21.490000 ;Schaftfraeser 20mm
-T99  P99  D+3.050000 Z+32.170000 ;3D-Taster
+T1 P2 D6.000000 Z+19.320000 ;bla 2mm
+T2 D10 Z0 ;Gühring 3T 10mm
+T3 D4 ;Gühring 3T 4mm
+T4 D6 ;SeoGeo Ø6mm 3T gerade
+T5 D8 ;Ø8mm SeoGeo 1T
+T6 D12 ;Seco Ø12mm 4T
+T14 P13 D35.000000 Z+21.490000 ;Planfräser 35mm
+T99 D3 ;3D-Taster
