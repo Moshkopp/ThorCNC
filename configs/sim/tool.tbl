@@ -1,8 +1,9 @@
 T1 P2 D6.000000 Z+19.320000 ;bla 2mm
-T2 D10 Z0 ;Gühring 3T 10mm
-T3 D4 ;Gühring 3T 4mm
-T4 D6 ;SeoGeo Ø6mm 3T gerade
-T5 D8 ;Ø8mm SeoGeo 1T
-T6 D12 ;Seco Ø12mm 4T
-T14 P13 D35.000000 Z+21.490000 ;Planfräser 35mm
-T99 D3 ;3D-Taster
+T2 P2 D10 Z0 ;Gühring 3T 10mm
+T3 P3 D4 ;Gühring 3T 4mm
+T4 P4 D6 ;SeoGeo Ø6mm 3T gerade
+T5 P5 D8 ;Ø8mm SeoGeo 1T
+T6 P6 D12 ;Seco Ø12mm 4T
+T7 P7 D56 ;Ø56mm
+T14 P14 D35.000000 Z+21.490000 ;Planfräser 35mm
+T99 P99 D3 ;3D-Taster tees

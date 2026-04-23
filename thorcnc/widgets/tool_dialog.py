@@ -83,6 +83,7 @@ class ToolSelectionDialog(QDialog):
         
         self.search_input.setFocus()
         self._populate_table()
+        self.table.clearSelection()  # Ensure no row is selected by default
 
     def _populate_table(self):
         self.table.setRowCount(0)
