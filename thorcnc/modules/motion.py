@@ -310,7 +310,7 @@ class MotionModule(ThorModule):
             axis_map = {0: "X", 1: "Y", 2: "Z"}
             axis = axis_map.get(joint)
             if axis:
-                self._t._send_mdi(f"G53 G0 {axis}0")
+                self._t.mdi_mod._send_mdi(f"G53 G0 {axis}0")
             return
 
         self._t.cmd.mode(linuxcnc.MODE_MANUAL)

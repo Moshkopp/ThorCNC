@@ -114,6 +114,16 @@ class ToolTableModule(ThorModule):
 
         self._widget.setSortingEnabled(False)
         self._widget.setRowCount(0)
+
+        # Set column headers
+        self._widget.setColumnCount(5)
+        self._widget.setHorizontalHeaderLabels([
+            _t("Tool #"),
+            _t("Pocket"),
+            _t("Diameter"),
+            _t("Length"),
+            _t("Comment")
+        ])
         try:
             with open(self._tbl_path, "r", encoding="utf-8", errors="ignore") as f:
                 for line in f:
@@ -331,7 +341,8 @@ class ToolTableModule(ThorModule):
         self._t.backplot.set_tool_geometry(fdia, flen)
 
         # Sync to simple view if present
-        if sv := getattr(self._t, "simple_view", None):
+        if self._t.simple_view_mod and self._t.simple_view_mod.simple_view:
+            sv = self._t.simple_view_mod.simple_view
             if hasattr(sv, "backplot") and sv.backplot:
                 sv.backplot.set_tool_geometry(fdia, flen)
 
@@ -413,4 +424,4 @@ class ToolTableModule(ThorModule):
         if dialog.exec():
             val = dialog.get_selected_tool()
             if val is not None:
-                self._t._send_mdi(f"T{val} M6 G43")
+                self._t.mdi_mod._send_mdi(f"T{val} M6 G43")
