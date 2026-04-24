@@ -73,7 +73,7 @@ MainWindow.py (5000+ Zeilen) in ein modulares System umwandeln, wo jede Funktion
   - GCode/MDI Panel Switching
   - ~98 Zeilen extrahiert
 
-**Aktueller Stand:** MainWindow **1393** Zeilen (von 5027 → **3634 Zeilen gespart!**)
+**Aktueller Stand:** MainWindow **1355** Zeilen (von 5027 → **3672 Zeilen gespart!**)
 
 ---
 
@@ -92,14 +92,14 @@ MainWindow.py (5000+ Zeilen) in ein modulares System umwandeln, wo jede Funktion
   - Z-Safety Checks for G53 Shortcuts
   - ~130 Zeilen extrahiert
 
-### Schritt 12: Backplot / 3D View Module (TODO)
-**Geschätzter Aufwand:** ~250 Zeilen
-
-Umfasst:
-- Backplot Initialization & View Management
-- Camera/Perspective Handling
-- Toolpath Display & Updates
-- View State Restoration (zoom, rotation)
+### Schritt 12: Backplot / 3D View Module ✅
+- [x] `thorcnc/modules/backplot.py` - 3D Visualization Management
+  - Backplot Widget Initialization & Configuration
+  - View Button Management (ISO, TOP, FRONT, SIDE)
+  - Machine Envelope Setup (from INI config)
+  - View State Save/Restore (zoom, rotation, perspective)
+  - Program Line Tracking Integration
+  - ~105 Zeilen extrahiert
 
 ---
 
@@ -121,14 +121,15 @@ Umfasst:
 | MDIModule | ✅ | ~98 | thorcnc/modules/mdi.py |
 | HALModule | ✅ | ~102 | thorcnc/modules/hal.py |
 | ControlPanelModule | ✅ | ~130 | thorcnc/modules/control_panel.py |
-| **Gesamt (Modularisiert)** | - | **~3.858** | - |
+| BackplotModule | ✅ | ~105 | thorcnc/modules/backplot.py |
+| **Gesamt (Modularisiert)** | - | **~3.963** | - |
 
 ---
 
 ## 🏗️ Struktur-Status (MainWindow)
 *   **Original:** ~5.027 Zeilen
-*   **Aktuell:** **1.393 Zeilen** (↓ 169 Zeilen seit Schritt 10)
-*   **Status:** HAL & Control Panel Module abgeschlossen. MainWindow ist jetzt ~73% kleiner. Nächste Kandidaten: Backplot/3D View, oder kleinere Utility-Module.
+*   **Aktuell:** **1.355 Zeilen** (↓ 38 Zeilen seit Schritt 11)
+*   **Status:** Backplot/3D View Module abgeschlossen. MainWindow ist jetzt ~73% kleiner. 13 spezialisierte Module + 1 Base-Modul. Verbleibende Kandidaten: File Loading, Status Display, oder weitere Utility-Module.
 
 ---
 
@@ -142,7 +143,8 @@ Umfasst:
 
 ---
 
-*Letztes Update: 24.04.2026 nach HAL & Control Panel Modul-Extraktion*  
-*Status: Schritt 11 ✅ abgeschlossen (MainWindow 1393 Zeilen, ↓ 169 Zeilen seit Schritt 10)*  
-*Gesamt-Einsparung: 3634 Zeilen (72% der Original-MainWindow)*  
-*Nächster Start: Backplot/3D View Module (Schritt 12) oder weitere Refactoring*
+*Letztes Update: 24.04.2026 nach Backplot/3D View Modul-Extraktion*  
+*Status: Schritt 12 ✅ abgeschlossen (MainWindow 1355 Zeilen, ↓ 38 Zeilen seit Schritt 11)*  
+*Gesamt-Einsparung: 3672 Zeilen (73% der Original-MainWindow)*  
+*Module count: 13 Spezialisierte Module + 1 Base-Modul = **14 insgesamt***  
+*Nächste Optionen: Status Display Module, File Loading Module, oder andere Utility-Module*

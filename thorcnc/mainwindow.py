@@ -15,7 +15,7 @@ from .widgets.backplot import BackplotWidget
 from .widgets.simple_view import SimpleView
 from .i18n import TranslationManager, _t
 from .modules import (FileManagerModule, ToolTableModule, OffsetsModule,
-                        MotionModule, ProbingTabModule, NavigationModule, SettingsTabModule, DROModule, SpindleModule, SimpleViewModule, GCodeViewModule, MDIModule, HALModule, ControlPanelModule)
+                        MotionModule, ProbingTabModule, NavigationModule, SettingsTabModule, DROModule, SpindleModule, SimpleViewModule, GCodeViewModule, MDIModule, HALModule, ControlPanelModule, BackplotModule)
 # from .widgets.opt_options import OptOptionsDialog
 
 _DIR = os.path.dirname(__file__)
@@ -65,12 +65,16 @@ class ThorCNC(QObject):
         self.mdi_mod = MDIModule(self)
         self.hal_mod = HALModule(self)
         self.control_panel_mod = ControlPanelModule(self)
+        self.backplot_mod = BackplotModule(self)
         
         # i18n
         self.i18n = TranslationManager(self.settings.get("language", "Deutsch"))
-        
+
         self._load_ui()
-        
+
+        # Backplot needs to be setup before _replace_custom_widgets() can use it
+        self.backplot_mod.setup()
+
         self._replace_custom_widgets()
 
         self._restore_window_state()
@@ -426,30 +430,11 @@ class ThorCNC(QObject):
         self.mdi_mod._switch_gcode_panel(0)
 
         # ── Backplot mit View-Toolbar ─────────────────────────────────────────
+        # Backplot wurde bereits in backplot_mod.setup() erstellt
+        self.backplot = self.backplot_mod.backplot
+
         old_vtk = self.ui.findChild(QWidget, "vtk")
         parent_vtk = old_vtk.parent() if old_vtk else None
-
-        _aa_on = self.settings.get("backplot_antialiasing", True)
-        _msaa  = self.settings.get("backplot_msaa_samples", 4) if _aa_on else 0
-        self.backplot = BackplotWidget(msaa_samples=_msaa)
-        self.backplot.setObjectName("vtk")
-
-        # Buttons direkt in BackplotWidget's eingebaute Toolbar einfügen
-        # (kein Wrapper-Widget → kein GLViewWidget-Reparenting-Problem)
-        tb_lay = self.backplot.toolbar_layout()
-        # View-Buttons links (vor dem Stretch)
-        tb_lay.takeAt(0)   # den initialen Stretch kurz rausnehmen (wird unten neu eingefügt)
-        for label, fn in ((_t("ISO"),        self.backplot.set_view_iso),
-                          (_t("TOP"),        self.backplot.set_view_z),
-                          (_t("FRONT"),      self.backplot.set_view_y),
-                          (_t("SIDE"),       self.backplot.set_view_x),
-                          (_t("CLR TRAIL"),  self.backplot.clear_trail)):
-            b = QPushButton(label)
-            b.setObjectName("btn_backplot_view")
-            b.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-            b.clicked.connect(fn)
-            tb_lay.addWidget(b)
-        tb_lay.addStretch()   # Stretch wieder einfügen (trennt links von rechts)
 
         self.motion._update_goto_home_style(all_homed=False)
         
@@ -541,13 +526,10 @@ class ThorCNC(QObject):
                 lay.insertWidget(idx, self.backplot)
             old_vtk.deleteLater()
 
-        bpm = self.settings.get("backplot_view")
-        if bpm:
-            self.backplot.set_view_opts(bpm)
-            self._view_restored = True
-            # The flag prevents auto-fitting during startup signals (WCS, first file load)
-            # We clear it after a short delay to allow normal auto-fitting later.
-            QTimer.singleShot(1500, self._clear_view_restored_flag)
+        # View state restoration is handled by backplot_mod.setup()
+        # Set up timer to clear the restored flag for auto-fitting
+        if self.backplot_mod._view_restored:
+            QTimer.singleShot(1500, self.backplot_mod.clear_view_restored_flag)
 
 
 
@@ -555,29 +537,12 @@ class ThorCNC(QObject):
 
 
     def _apply_ini_settings(self):
+        """Apply INI settings to UI (machine name in window title)."""
         name = "ThorCNC"
         if self.ini:
             name = self.ini.find("EMC", "MACHINE") or name
         self.ui.setWindowTitle(name)
-        self._apply_machine_envelope()
-
-    def _apply_machine_envelope(self):
-        if not self.ini:
-            return
-        def lim(axis, key, default):
-            v = self.ini.find(f"AXIS_{axis}", key)
-            return float(v) if v else default
-
-        # Envelope zeigt nutzbaren Arbeitsbereich (0 bis MAX bzw. MIN bis 0)
-        # nicht die technischen Soft-Limits mit Homing-Überfahrt
-        envelope = dict(
-            x_min=lim("X", "MIN_LIMIT", 0), x_max=lim("X", "MAX_LIMIT", 600),
-            y_min=lim("Y", "MIN_LIMIT", 0), y_max=lim("Y", "MAX_LIMIT", 500),
-            z_min=lim("Z", "MIN_LIMIT", -200), z_max=lim("Z", "MAX_LIMIT", 0),
-        )
-        self.backplot.set_machine_envelope(**envelope)
-        # SimpleView overlay backplot gets the same envelope (created later via singleShot)
-        self._backplot_envelope = envelope
+        # Machine envelope is set by backplot_mod.setup()
 
     # ── StatusPoller ──────────────────────────────────────────────────────────
 
@@ -811,6 +776,7 @@ class ThorCNC(QObject):
         self.gcode_view_mod.connect_signals()
         self.mdi_mod.connect_signals()
         self.control_panel_mod.connect_signals()
+        self.backplot_mod.connect_signals()
 
         # Simple View — fullscreen overlay, opened by clicking the status bar
 
@@ -1388,6 +1354,4 @@ class ThorCNC(QObject):
 
         self.settings.save()
 
-    def _clear_view_restored_flag(self):
-        self._view_restored = False
 

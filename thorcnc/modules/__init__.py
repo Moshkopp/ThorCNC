@@ -19,6 +19,7 @@ from .gcode_view import GCodeViewModule
 from .mdi import MDIModule
 from .hal import HALModule
 from .control_panel import ControlPanelModule
+from .backplot import BackplotModule
 
 __all__ = [
     "ThorModule",
@@ -35,5 +36,6 @@ __all__ = [
     "GCodeViewModule",
     "MDIModule",
     "HALModule",
-    "ControlPanelModule"
+    "ControlPanelModule",
+    "BackplotModule"
 ]
