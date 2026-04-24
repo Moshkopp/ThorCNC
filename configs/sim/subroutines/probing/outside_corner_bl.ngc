@@ -4,20 +4,19 @@
 O<outside_corner_bl> sub
     ( 1. Initialization )
     G90 G17 G40 G21
-    
+
     ( 1. Z-Probe )
     G91
     G38.2 Z-[#4] F#5
     G1 Z#13 F#11 ( Step Off )
     G38.2 Z-[#13 * 2] F#6 ( Fine Probe )
-    G90
-    #<z_surface> = #5063 ( Save probed Z in current WCS )
+    ( Tool is now physically at probed surface )
     O101 if [#9 GT 0.5]
-        G10 L20 P0 Z0
-        #<z_surface> = 0 ( After G10 the surface is Z=0 )
+        G10 L20 P0 Z0 ( Zero Z in WCS at surface )
     O101 endif
-    G1 Z[#<z_surface> + #7] F#11 ( Move to Z Clearance above surface )
+    G1 Z#7 F#11 ( Relative up to Z clearance above surface )
 
+    G90
     #<start_x> = #5420
     #<start_y> = #5421
     #<dia> = #10
@@ -29,61 +28,48 @@ O<outside_corner_bl> sub
         #<rapid> = [#5 * 2]
     O<check_rapid> endif
     #<rad> = [#<dia> / 2]
-    
+    #<plunge_delta> = [#7 + #<rad> + #8] ( Distance from clearance down to probing depth )
+
     ( 2. X-Probe from left )
-    ( Travel to approach position: EdgeWidth + XY_Clearance )
     G1 X[#<start_x> - #12] Y#<start_y> F#<rapid>
-    ( Plunge to depth relative to probed surface )
-    G1 Z[#<z_surface> - #<rad> - #8] F#<rapid>
+    G91
+    G1 Z-#<plunge_delta> F#<rapid> ( Plunge relative to surface )
 
     ( Search Probe X+ )
-    G91
     G38.2 X[#12 + #3] F#5
-    ( Retract by Step Off )
     G1 X-[#13] F#<rapid>
     ( Fine Probe X+ )
     G38.2 X[#13 * 1.5] F#6
     #<x_hit> = #5061
-    ( FINAL Retract after fine hit )
     G1 X-[#13] F#<rapid>
+    ( Raise Z back to clearance )
+    G1 Z#<plunge_delta> F#<rapid>
     G90
-    ( Raise Z to clearance height above probed surface )
-    G1 Z[#<z_surface> + #7] F#<rapid>
 
     ( 3. Y-Probe from bottom )
-    ( Travel to Y approach position )
     G1 X#<start_x> Y[#<start_y> - #12] F#<rapid>
-    ( Plunge to depth relative to probed surface )
-    G1 Z[#<z_surface> - #<rad> - #8] F#<rapid>
+    G91
+    G1 Z-#<plunge_delta> F#<rapid> ( Plunge relative to surface )
 
     ( Search Probe Y+ )
-    G91
     G38.2 Y[#12 + #3] F#5
-    ( Retract by Step Off )
     G1 Y-[#13] F#<rapid>
     ( Fine Probe Y+ )
     G38.2 Y[#13 * 1.5] F#6
     #<y_hit> = #5062
-    ( FINAL Retract after fine hit )
     G1 Y-[#13] F#<rapid>
+    ( Raise Z back to clearance )
+    G1 Z#<plunge_delta> F#<rapid>
     G90
-    ( Raise Z to clearance height above probed surface )
-    G1 Z[#<z_surface> + #7] F#<rapid>
 
     ( 4. Move to Corner & Zero )
     #<x_corner> = [#<x_hit> + #<rad>]
     #<y_corner> = [#<y_hit> + #<rad>]
-    G1 Z[#<z_surface> + #7] F#<rapid>
-
-    ( Move to found corner at safe Z )
     G1 X#<x_corner> Y#<y_corner> F#<rapid>
-    
+
     O102 if [#9 GT 0.5]
-        ( Current position is now exactly above the corner )
         G10 L20 P0 X0 Y0
     O102 endif
-    
-    ( End routine at clearance height Z )
 
 O<outside_corner_bl> endsub
 M2

@@ -4,18 +4,19 @@
 O<outside_corner_br> sub
     ( 1. Initialization )
     G90 G17 G40 G21
-    
+
     ( 1. Z-Probe )
     G91
     G38.2 Z-[#4] F#5
     G1 Z#13 F#11 ( Step Off )
     G38.2 Z-[#13 * 2] F#6 ( Fine Probe )
+    ( Tool is now physically at probed surface )
     O101 if [#9 GT 0.5]
-        G10 L20 P0 Z0
+        G10 L20 P0 Z0 ( Zero Z in WCS at surface )
     O101 endif
-    G1 Z#7 F#11 ( Move to Z Clearance )
-    G90
+    G1 Z#7 F#11 ( Relative up to Z clearance above surface )
 
+    G90
     #<start_x> = #5420
     #<start_y> = #5421
     #<dia> = #10
@@ -27,36 +28,41 @@ O<outside_corner_br> sub
         #<rapid> = [#5 * 2]
     O<check_rapid> endif
     #<rad> = [#<dia> / 2]
-    
+    #<plunge_delta> = [#7 + #<rad> + #8] ( Distance from clearance down to probing depth )
+
     ( 2. X-Probe from right )
     G1 X[#<start_x> + #12] Y#<start_y> F#<rapid>
-    G1 Z-[#<rad> + #8] F#<rapid>
     G91
+    G1 Z-#<plunge_delta> F#<rapid> ( Plunge relative to surface )
+
     G38.2 X-[#12 + #3] F#5
     G1 X#13 F#<rapid>
     G38.2 X-[#13 * 1.5] F#6
     #<x_hit> = #5061
     G1 X#13 F#<rapid>
+    ( Raise Z back to clearance )
+    G1 Z#<plunge_delta> F#<rapid>
     G90
-    G1 Z#7 F#<rapid>
-    
+
     ( 3. Y-Probe from bottom )
     G1 X#<start_x> Y[#<start_y> - #12] F#<rapid>
-    G1 Z-[#<rad> + #8] F#<rapid>
     G91
+    G1 Z-#<plunge_delta> F#<rapid> ( Plunge relative to surface )
+
     G38.2 Y[#12 + #3] F#5
     G1 Y-[#13] F#<rapid>
     G38.2 Y[#13 * 1.5] F#6
     #<y_hit> = #5062
     G1 Y-[#13] F#<rapid>
+    ( Raise Z back to clearance )
+    G1 Z#<plunge_delta> F#<rapid>
     G90
-    G1 Z#7 F#<rapid>
-    
+
     ( 4. Move to Corner & Zero )
     #<x_corner> = [#<x_hit> - #<rad>]
     #<y_corner> = [#<y_hit> + #<rad>]
-    G1 Z#7 F#<rapid>
     G1 X#<x_corner> Y#<y_corner> F#<rapid>
+
     O102 if [#9 GT 0.5]
         G10 L20 P0 X0 Y0
     O102 endif
