@@ -15,6 +15,8 @@ from .settings_tab import SettingsTabModule
 from .dro import DROModule
 from .spindle import SpindleModule
 from .simple_view import SimpleViewModule
+from .gcode_view import GCodeViewModule
+from .mdi import MDIModule
 
 __all__ = [
     "ThorModule",
@@ -27,5 +29,7 @@ __all__ = [
     "SettingsTabModule",
     "DROModule",
     "SpindleModule",
-    "SimpleViewModule"
+    "SimpleViewModule",
+    "GCodeViewModule",
+    "MDIModule"
 ]

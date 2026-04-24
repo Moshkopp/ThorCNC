@@ -21,209 +21,117 @@ MainWindow.py (5000+ Zeilen) in ein modulares System umwandeln, wo jede Funktion
 - [x] `thorcnc/modules/file_manager.py` - Erstes echtes Modul
   - 13 Methoden extrahiert
   - ~270 Zeilen aus MainWindow gespart
-  - Alle File-Tab Funktionen (Browse, Load, Save, Edit)
 
 ### Schritt 2: ToolTableModule ✅
 - [x] `thorcnc/modules/tool_table.py` - Werkzeugtabellen-Management
   - 10 Methoden extrahiert
-  - `NumericTableWidgetItem` Klasse verschoben
   - ~333 Zeilen aus MainWindow gespart
-  - Tool-Tabelle UI + Datei I/O + Tool-Change HAL + M6 MDI
-  - **UX Features:**
-    - Auto-Toolnummer (nächste freie Nummer)
-    - Auto-Description aus Diameter (Ø{dia}mm)
-    - Fokus direkt auf Diameter-Feld
-    - Saubere Sortierung (disabled während Edit, enabled beim Save)
+
+### Schritt 3: OffsetsModule ✅
+- [x] `thorcnc/modules/offsets.py` - Offsets/WCS Management
+  - ~172 Zeilen extrahiert
+
+### Schritt 4: MotionModule ✅
+- [x] `thorcnc/modules/motion.py` - Bewegungs-Management
+  - 21 Methoden extrahiert
+  - ~343 Zeilen extrahiert
+
+### Schritt 5: ProbingTabModule ✅
+- [x] `thorcnc/modules/probing_tab.py` - Probing-Management
+  - 26 Methoden extrahiert
+  - ~801 Zeilen extrahiert
+
+### Schritt 6: SettingsTabModule ✅
+- [x] `thorcnc/modules/settings_tab.py` - Settings-Management
+  - ~500 Zeilen extrahiert
+  - Preferences, Theme, Language-Handling gekapselt
+
+### Schritt 7: DROModule + SpindleModule ✅
+- [x] `thorcnc/modules/dro.py` - DRO-Anzeige & WCS-Sync
+- [x] `thorcnc/modules/spindle.py` - Spindel-Steuerung & Feed/RPM Display
+  - ~460 Zeilen kombiniert extrahiert
+
+### Schritt 8: SimpleViewModule ✅
+- [x] `thorcnc/modules/simple_view.py` - Fullscreen-Overlay (Simple View)
+  - Extraktion der Overlay-Logik, Geometrie-Sync und Statusleisten-Integration
+  - ~120 Zeilen extrahiert
+
+### Schritt 9: Feature-Cleanup ✅
+- [x] Entfernung der HTML/PDF Dokumentations-Funktion
+  - Löschung von `_setup_html_tab`, `_refresh_html_list` und zugehörigen Settings
+  - ~100 Zeilen Code eingespart
+
+### Schritt 10: GCode/MDI Module ✅
+- [x] `thorcnc/modules/gcode_view.py` - GCode Viewer & Edit Management
+  - Edit-Mode Toggle, Modification Tracking, Saving
+  - M6 (Tool Change) Navigation
+  - Active GCode/MCode Display mit Highlighting und Coolant-Status
+  - ~217 Zeilen extrahiert
+- [x] `thorcnc/modules/mdi.py` - MDI Input & History
+  - MDI Command Execution
+  - History Management (max 50 items)
+  - GCode/MDI Panel Switching
+  - ~98 Zeilen extrahiert
+
+**Aktueller Stand:** MainWindow **1562** Zeilen (von 5027 → **3465 Zeilen gespart!**)
 
 ---
 
 ## 🚀 Nächste Schritte (Roadmap)
 
-### Schritt 3: OffsetsModule ✅
-- [x] `thorcnc/modules/offsets.py` - Offsets/WCS Management
-  - ~172 Zeilen
-  - 6 Methoden extrahiert + `_WCS_LIST` Klassenattribut
-  - ~163 Zeilen aus MainWindow gespart
-
-### Schritt 4: MotionModule ✅
-- [x] `thorcnc/modules/motion.py` - Bewegungs-Management
-  - 21 Methoden extrahiert
-  - ~343 Zeilen
-  - ~333 Zeilen aus MainWindow gespart
-  - Jogging (alle Richtungen, Inkremente)
-  - Home / Limit-Handling
-  - Override-Slider (Feed, Spindle, Rapid)
-  - Soft-Limits Visualisierung
-
-### Schritt 5: ProbingTabModule ✅
-- [x] `thorcnc/modules/probing_tab.py` - Probing-Management
-  - 26 Methoden extrahiert
-  - ~801 Zeilen
-  - ~790 Zeilen aus MainWindow gespart
-  - Komplette UI-Initialisierung (SVG-Icons, StackedWidget)
-  - Alle Probe-Sequenzen (Edge, Hole, Pocket, etc.)
-  - Probe-Marker Positionierung
-  - Preference-Management (before/after probe NGCs)
-  - DRO-Synchronisierung (compact probe DRO)
-  - **Konsolidierung:** ProbingManager integriert (Probe-Warning State)
-
-**Aktueller Stand:** MainWindow 3004 Zeilen (von 5027 → **2023 Zeilen gespart!**)
-
----
-
-### Schritt 6: SettingsTabModule (TODO)
-**Geschätzter Aufwand:** ~450 Zeilen
+### Schritt 11: HAL / Hardware Module (TODO)
+**Geschätzter Aufwand:** ~400 Zeilen
 
 Umfasst:
-- `_setup_settings_tab` - alle Settings-Widgets
-- Preferenzen speichern/laden
-- Theme-Anwendung
-- Sprache-Wechsel
+- `_setup_hal` und `_load_postgui_hal`
+- HAL-Signal Verknüpfungen (S32/Bit Pins)
+- Postgui HAL-File Loading
 
----
+### Schritt 12: Backplot / 3D View Module (TODO)
+**Geschätzter Aufwand:** ~250 Zeilen
 
-### Schritt 7: DROModule + SpindleModule (TODO)
-**Geschätzter Aufwand:** ~150 Zeilen kombiniert
-
-**DROModule:**
-- Position Display aktualisierung
-- Work vs. Machine Koordinaten
-
-**SpindleModule:**
-- Spindle Speed Display + Control
-- Direction Buttons (CW/CCW)
-
----
-
-### Schritt 8: MainWindow Cleanup (TODO)
-**Nach allen Module-Extraktion**
-
-Upgrade der bestehenden Manager auf neues ThorModule Interface:
-- `NavigationManager` → **Gelöscht** (Integriert in NavigationModule)
-- `ProbingManager` → **Gelöscht** (Integriert in ProbingTabModule)
+Umfasst:
+- Backplot Initialization & View Management
+- Camera/Perspective Handling
+- Toolpath Display & Updates
 
 ---
 
 ## 📊 Extraction Progress
 
-| Modul | Status | Zeilen | Methoden | Quelle |
-|---|---|---|---|---|
-| FileManagerModule | ✅ | ~270 | 13 | thorcnc/modules/file_manager.py |
-| ToolTableModule | ✅ | ~362 | 10 | thorcnc/modules/tool_table.py |
-| OffsetsModule | ✅ | ~172 | 6 | thorcnc/modules/offsets.py |
-| MotionModule | ✅ | ~343 | 21 | thorcnc/modules/motion.py |
-| ProbingTabModule | ✅ | ~801 | 26 | thorcnc/modules/probing_tab.py |
-| NavigationModule | ✅ | ~281 | 15+ | thorcnc/modules/navigation.py |
-| SettingsTabModule | ✅ | ~500 | 20+ | thorcnc/modules/settings_tab.py |
-| DROModule | ✅ | ~310 | 10+ | thorcnc/modules/dro.py |
-| SpindleModule | ✅ | ~150 | 8+ | thorcnc/modules/spindle.py |
-| **Gesamt (Modularisiert)** | - | **~2,800+** | **~100+** | - |
+| Modul | Status | Zeilen | Quelle |
+|---|---|---|---|
+| FileManagerModule | ✅ | ~270 | thorcnc/modules/file_manager.py |
+| ToolTableModule | ✅ | ~362 | thorcnc/modules/tool_table.py |
+| OffsetsModule | ✅ | ~172 | thorcnc/modules/offsets.py |
+| MotionModule | ✅ | ~343 | thorcnc/modules/motion.py |
+| ProbingTabModule | ✅ | ~801 | thorcnc/modules/probing_tab.py |
+| NavigationModule | ✅ | ~281 | thorcnc/modules/navigation.py |
+| SettingsTabModule | ✅ | ~500 | thorcnc/modules/settings_tab.py |
+| DROModule | ✅ | ~310 | thorcnc/modules/dro.py |
+| SpindleModule | ✅ | ~150 | thorcnc/modules/spindle.py |
+| SimpleViewModule | ✅ | ~120 | thorcnc/modules/simple_view.py |
+| GCodeViewModule | ✅ | ~217 | thorcnc/modules/gcode_view.py |
+| MDIModule | ✅ | ~98 | thorcnc/modules/mdi.py |
+| **Gesamt (Modularisiert)** | - | **~3.626** | - |
 
 ---
 
 ## 🏗️ Struktur-Status (MainWindow)
-*   **Original:** ~3.050 Zeilen
-*   **Aktuell:** **2.009 Zeilen**
-*   **Status:** Alle funktionalen Sub-Systeme erfolgreich in Manager-Module (Composition) ausgelagert. Keine Mixins mehr!
-
-
-**Einsparung in MainWindow:** ~2,500 Zeilen
-**Zielgröße:** 500-600 Zeilen (nur Infrastruktur)
-
----
-
-## 🏗️ Architektur-Pattern
-
-### ThorModule Base Class
-```python
-class ThorModule:
-    def __init__(self, thorc):
-        self._t = thorc  # Backref zu MainWindow/ThorCNC
-    
-    def setup(self):
-        """UI bauen, lokale State init"""
-        pass
-    
-    def connect_signals(self):
-        """Qt Signals wiren nach allen setups"""
-        pass
-    
-    def teardown(self):
-        """Cleanup vor Shutdown"""
-        pass
-```
-
-### Initialisierungsreihenfolge in `__init__`
-```python
-# 1. Managers + Module instanziieren
-self.file_manager = FileManagerModule(self)
-self.tool_table = ToolTableModule(self)
-# ... weitere ...
-
-# 2. _load_ui() aufrufen (UI-Layout laden)
-
-# 3. Alle setup() Methoden aufrufen
-self.file_manager.setup()
-self.tool_table.setup()
-# ... weitere ...
-
-# 4. Alle connect_signals() aufrufen
-self.file_manager.connect_signals()
-self.tool_table.connect_signals()
-# ... weitere ...
-
-# 5. Event Filter zum Schluss (nach poller ist vollständig init!)
-QApplication.instance().installEventFilter(self)
-```
-
----
-
-## ⚠️ Wichtige Richtlinien
-
-### Bevor ihr ein Modul extrahiert:
-
-1. **Umfang klären** - Welche Methoden gehören dazu?
-2. **Abhängigkeiten mappen** - Was braucht das Modul von MainWindow?
-3. **Signal-Flow verstehen** - Welche Qt-Signals kommen von Poller/HAL?
-4. **Externe Zugriffe dokumentieren** - Wer else aus MainWindow auf das Modul zugreift
-
-### Red Flags:
-- ❌ Modul hat zu viele externe Abhängigkeiten → logisch nicht gut abgegrenzt
-- ❌ Zirkuläre Abhängigkeiten zwischen Modulen → Refactoring nötig
-- ❌ Methode passt in 3+ Module → falsche Granularität
-
-### Best Practice:
-- ✅ Ein Modul = ein Tab/Bereich der UI
-- ✅ Modul besitzt seine Widgets und State vollständig
-- ✅ Zugriff von außen nur über öffentliche Methoden
-- ✅ Signals über `self._t.poller` oder `self._t.cmd`
-
----
-
-## 🔍 Nächste konkrete Aktion
-
-**Wer:** Moshy  
-**Was:** Schritt 6 - SettingsTabModule extrahieren  
-**Wie:** 
-1. Plan-Mode für SettingsTabModule
-2. `thorcnc/modules/settings_tab.py` erstellen
-3. ~10+ Methoden extrahieren (Preferences, Theme, Language)
-4. MainWindow aktualisieren
-5. ~450 Zeilen Einsparung = MainWindow auf ~2500 Zeilen
-
-**Begründung:** Nächster logischer Schritt, um den UI-Setup-Teil von MainWindow zu entlasten.
+*   **Original:** ~5.027 Zeilen
+*   **Aktuell:** **1.562 Zeilen** (↓ 214 Zeilen seit Schritt 9)
+*   **Status:** G-Code/MDI Modul-Extraktion abgeschlossen. MainWindow enthält hauptsächlich UI-Setup und Infrastruktur. HAL-Initialisierung ist der nächste Kandidat für Modularisierung.
 
 ---
 
 ## 📝 Notizen
-
-- **Mixins waren problematisch:** Memory-Access-Fehler in LinuxCNC wegen Event Filter Installation vor poller-init
-- **Lösung:** Komposition statt Vererbung → Manager/Module mit Backref `self._t`
-- **Performance:** Keine Overhead durch diesen Ansatz, ähnlich zu normalen Klassen
-- **Git:** User macht commits selbst, Claude nur Code-Changes
+- **GCode/MDI Struktur:** Geschäftslogik in Module extrahiert, UI-Setup bleibt in MainWindow (pragmatischer Ansatz für große Refactorings)
+- **Coolant-Status:** Real-time M7/M8/M9 Handling aus Poller.stat statt aus Interpreter (umgeht Modal-Caching)
+- **MDI History:** Auto-saved in Settings, max 50 items gehalten
+- **Module.setup():** Wird nach MainWindow.__init__() aufgerufen, damit alle UI-Refs verfügbar sind
 
 ---
 
-*Letztes Update: 23.04.2026 nach ProbingTabModule Extraktion*  
-*Status: Schritt 5 ✅ abgeschlossen (MainWindow 3017 Zeilen, -2010 Zeilen gesamt)*  
-*Nächster Start: SettingsTabModule (Schritt 6)*
+*Letztes Update: 24.04.2026 nach GCode/MDI Modul-Extraktion*  
+*Status: Schritt 10 ✅ abgeschlossen (MainWindow 1562 Zeilen, ↓ 214)*  
+*Nächster Start: HAL Module (Schritt 11)*

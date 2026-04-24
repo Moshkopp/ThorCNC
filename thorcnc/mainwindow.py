@@ -15,7 +15,7 @@ from .widgets.backplot import BackplotWidget
 from .widgets.simple_view import SimpleView
 from .i18n import TranslationManager, _t
 from .modules import (FileManagerModule, ToolTableModule, OffsetsModule,
-                        MotionModule, ProbingTabModule, NavigationModule, SettingsTabModule, DROModule, SpindleModule, SimpleViewModule)
+                        MotionModule, ProbingTabModule, NavigationModule, SettingsTabModule, DROModule, SpindleModule, SimpleViewModule, GCodeViewModule, MDIModule)
 # from .widgets.opt_options import OptOptionsDialog
 
 _DIR = os.path.dirname(__file__)
@@ -61,6 +61,8 @@ class ThorCNC(QObject):
         self.dro = DROModule(self)
         self.spindle = SpindleModule(self)
         self.simple_view_mod = SimpleViewModule(self)
+        self.gcode_view_mod = GCodeViewModule(self)
+        self.mdi_mod = MDIModule(self)
         
         # i18n
         self.i18n = TranslationManager(self.settings.get("language", "Deutsch"))
@@ -81,6 +83,8 @@ class ThorCNC(QObject):
         self.dro.setup()
         self.spindle.setup()
         self.simple_view_mod.setup()
+        self.gcode_view_mod.setup()
+        self.mdi_mod.setup()
         self._connect_signals()
         self._setup_opt_jalousie()
         
@@ -281,7 +285,7 @@ class ThorCNC(QObject):
         self._btn_find_m6 = QPushButton(_t("FIND M6"))
         self._btn_find_m6.setObjectName("btn_find_m6")
         self._btn_find_m6.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        self._btn_find_m6.clicked.connect(self._find_next_m6)
+        self._btn_find_m6.clicked.connect(self.gcode_view_mod._find_next_m6)
         h_lay.addWidget(self._btn_find_m6)
 
         # Run From Line Button
@@ -331,14 +335,14 @@ class ThorCNC(QObject):
         self._btn_edit_gcode.setCheckable(True)
         self._btn_edit_gcode.setObjectName("btn_edit_gcode")
         self._btn_edit_gcode.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        self._btn_edit_gcode.clicked.connect(self._on_toggle_gcode_edit)
+        self._btn_edit_gcode.clicked.connect(self.gcode_view_mod._on_toggle_gcode_edit)
         h_lay.addWidget(self._btn_edit_gcode)
 
         # Save Button
         self._btn_save_gcode = QPushButton(_t("SAVE"))
         self._btn_save_gcode.setObjectName("btn_save_gcode")
         self._btn_save_gcode.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        self._btn_save_gcode.clicked.connect(self._on_save_gcode)
+        self._btn_save_gcode.clicked.connect(self.gcode_view_mod._on_save_gcode)
         self._btn_save_gcode.setEnabled(False) # Only if edited? Or always?
         h_lay.addWidget(self._btn_save_gcode)
 
@@ -364,7 +368,7 @@ class ThorCNC(QObject):
         self.gcode_view.set_font_size(v_size)
         
         # Modification tracking
-        self.gcode_view.document().modificationChanged.connect(self._on_gcode_modification_changed)
+        self.gcode_view.document().modificationChanged.connect(self.gcode_view_mod._on_gcode_modification_changed)
         
         gcode_lay.addWidget(self.gcode_view)
         
@@ -381,12 +385,15 @@ class ThorCNC(QObject):
         self._mdi_input.setPlaceholderText(_t("MDI COMMAND..."))
         self._mdi_input.setMinimumHeight(40)
         self._mdi_input.returnPressed.connect(
-            lambda: self._send_mdi(self._mdi_input.text(), self._mdi_input))
+            lambda: self.mdi_mod._send_mdi(self._mdi_input.text(), self._mdi_input))
 
         self._mdi_history_widget = QListWidget()
         self._mdi_history_widget.setObjectName("mdiHistory")
         self._mdi_history_widget.itemDoubleClicked.connect(
             lambda item: self._mdi_input.setText(item.text()))
+        # Also connect to MDI send when history item is double-clicked
+        self._mdi_history_widget.itemDoubleClicked.connect(
+            lambda item: self.mdi_mod._send_mdi(item.text()))
 
         mdi_page_lay.addWidget(self._mdi_input)
         mdi_page_lay.addWidget(self._mdi_history_widget)
@@ -396,9 +403,9 @@ class ThorCNC(QObject):
         self._btn_show_gcode = self.ui.findChild(QPushButton, "btn_gcode_view")
         self._btn_show_mdi   = self.ui.findChild(QPushButton, "btn_mdi_view")
         if self._btn_show_gcode:
-            self._btn_show_gcode.clicked.connect(lambda: self._switch_gcode_panel(0))
+            self._btn_show_gcode.clicked.connect(lambda: self.mdi_mod._switch_gcode_panel(0))
         if self._btn_show_mdi:
-            self._btn_show_mdi.clicked.connect(lambda: self._switch_gcode_panel(1))
+            self._btn_show_mdi.clicked.connect(lambda: self.mdi_mod._switch_gcode_panel(1))
 
         self._setup_highlight_settings()
 
@@ -414,7 +421,7 @@ class ThorCNC(QObject):
         for entry in self.settings.get("mdi_history", []):
             self._mdi_history_widget.addItem(entry)
 
-        self._switch_gcode_panel(0)
+        self.mdi_mod._switch_gcode_panel(0)
 
         # ── Backplot mit View-Toolbar ─────────────────────────────────────────
         old_vtk = self.ui.findChild(QWidget, "vtk")
@@ -540,12 +547,6 @@ class ThorCNC(QObject):
             # We clear it after a short delay to allow normal auto-fitting later.
             QTimer.singleShot(1500, self._clear_view_restored_flag)
 
-    def _switch_gcode_panel(self, idx: int):
-        self._gcode_mdi_stack.setCurrentIndex(idx)
-        for b, active_idx in ((self._btn_show_gcode, 0), (self._btn_show_mdi, 1)):
-            if b is None:
-                continue
-            b.setChecked(idx == active_idx)
 
 
 
@@ -809,124 +810,11 @@ class ThorCNC(QObject):
             
         self._opt_anim.start()
 
-    def _run_mdi_command(self, cmd_text):
-        """Helper to run MDI commands with robust mode switching."""
-        if not self._is_machine_on: return
-        
-        import time
-        # Switch to MDI and wait until it's really there (max 1s)
-        self.cmd.mode(linuxcnc.MODE_MDI)
-        for _ in range(10):
-            if self.poller.stat.task_mode == linuxcnc.MODE_MDI:
-                break
-            time.sleep(0.05)
-            
-        self.cmd.mdi(cmd_text)
 
 
-    def _on_toggle_gcode_edit(self):
-        """Schaltet den G-Code Viewer in den Editiermodus um."""
-        if not self.gcode_view:
-            return
-        
-        is_edit = self._btn_edit_gcode.isChecked()
-        self.gcode_view.setReadOnly(not is_edit)
-        self._btn_save_gcode.setEnabled(is_edit)
-        
-        # Style-Update via Property (optional)
-        self._btn_edit_gcode.setProperty("active", is_edit)
-        self._btn_edit_gcode.style().unpolish(self._btn_edit_gcode)
-        self._btn_edit_gcode.style().polish(self._btn_edit_gcode)
-        
-        if is_edit:
-            self._status(_t("G-CODE EDIT MODE ENABLED"))
-            # Update save button state based on current modification
-            self._on_gcode_modification_changed(self.gcode_view.document().isModified())
-        else:
-            self._status(_t("G-CODE EDIT MODE DISABLED"))
-            self._btn_save_gcode.setEnabled(False)
 
-    @Slot(bool)
-    def _on_gcode_modification_changed(self, modified: bool):
-        """Wird aufgerufen, wenn sich der Änderungsstatus des G-Codes ändert."""
-        if not self.gcode_view:
-            return
-            
-        # Button nur aktivieren, wenn wir auch im Edit-Modus sind
-        is_edit = self._btn_edit_gcode.isChecked()
-        self._btn_save_gcode.setEnabled(is_edit and modified)
-        
-        # Property für das Styling
-        self._btn_save_gcode.setProperty("modified", modified)
-        self._btn_save_gcode.style().unpolish(self._btn_save_gcode)
-        self._btn_save_gcode.style().polish(self._btn_save_gcode)
 
-    def _on_save_gcode(self):
-        """Speichert den aktuell editierten G-Code zurück in die Datei."""
-        if not self._user_program or not os.path.exists(self._user_program):
-            self._status(_t("SAVE FAILED: NO FILE LOADED"))
-            return
-            
-        try:
-            content = self.gcode_view.toPlainText()
-            with open(self._user_program, 'w') as f:
-                f.write(content)
-            
-            self.gcode_view.document().setModified(False)
-            self._status(f"G-CODE SAVED: {os.path.basename(self._user_program)}")
-            
-            # Neu parsen für Backplot
-            tp = parse_file(self._user_program)
-            self._last_toolpath = tp
-            self.backplot.load_toolpath(tp)
-            
-            # Wenn wir fertig sind mit Speichern, Edit-Mode verlassen?
-            # Der User entscheidet das meist selbst. Wir lassen ihn drin.
-        except Exception as e:
-            self._status(f"SAVE ERROR: {str(e)}")
 
-    def _find_next_m6(self):
-        """Sucht nach dem nächsten M6 Werkzeugwechsel im G-Code."""
-        if not self.gcode_view:
-            return
-
-        text = self.gcode_view.toPlainText()
-        if not text:
-            return
-            
-        lines = text.split('\n')
-        total_lines = len(lines)
-        
-        # Aktuelle Zeile (0-basiert)
-        cursor = self.gcode_view.textCursor()
-        start_line = cursor.blockNumber()
-        
-        # Regex für M6 (G-Code konform: ignoriert Kommentare)
-        m6_ptrn = re.compile(r'(?<!\()(?:\bM6\b)', re.IGNORECASE)
-
-        # 1. Suche ab der nächsten Zeile bis zum Dateiende
-        found_idx = -1
-        for i in range(start_line + 1, total_lines):
-            line_clean = re.sub(r'\(.*?\)|;.*', '', lines[i])
-            if m6_ptrn.search(line_clean):
-                found_idx = i
-                break
-        
-        # 2. Zyklische Suche: Falls nichts gefunden, vom Dateianfang bis zur aktuellen Zeile
-        if found_idx == -1:
-            for i in range(0, start_line + 1):
-                line_clean = re.sub(r'\(.*?\)|;.*', '', lines[i])
-                if m6_ptrn.search(line_clean):
-                    found_idx = i
-                    break
-        
-        if found_idx != -1:
-            # Zeile hervorheben und Statusmeldung
-            # Wir erzwingen den Cursor-Sprung (move_cursor=True), damit der User sieht wo das M6 ist
-            self.gcode_view.set_current_line(found_idx + 1, move_cursor=True)
-            self._status(f"M6 gefunden in Zeile {found_idx + 1}")
-        else:
-            self._status(_t("Kein M6 im Programm gefunden."))
 
     def _on_language_changed(self, lang: str):
         """Callback: Sprache geändert."""
@@ -948,8 +836,8 @@ class ThorCNC(QObject):
 
         p.g5x_index_changed.connect(self.dro._on_g5x_index)
         p.g5x_offset_changed.connect(self.dro._on_g5x_offset)
-        p.gcodes_changed.connect(self._on_gcodes)
-        p.mcodes_changed.connect(self._on_mcodes)
+        p.gcodes_changed.connect(self.gcode_view_mod._on_gcodes)
+        p.mcodes_changed.connect(self.gcode_view_mod._on_mcodes)
         p.file_loaded.connect(self.file_manager._on_file_loaded)
         p.program_line.connect(self._on_program_line)
         p.error_message.connect(self._on_error)
@@ -1090,6 +978,8 @@ class ThorCNC(QObject):
         self.motion.connect_signals()
         self.probing_tab.connect_signals()
         self.spindle.connect_signals()
+        self.gcode_view_mod.connect_signals()
+        self.mdi_mod.connect_signals()
 
         # Simple View — fullscreen overlay, opened by clicking the status bar
 
@@ -1174,10 +1064,10 @@ class ThorCNC(QObject):
         if hasattr(self, "_gcode_mdi_stack"):
             if mode == linuxcnc.MODE_MDI:
                 if not getattr(self, "_silent_mdi", False):
-                    self._switch_gcode_panel(1)
+                    self.mdi_mod._switch_gcode_panel(1)
             else:
                 self._silent_mdi = False
-                self._switch_gcode_panel(0)
+                self.mdi_mod._switch_gcode_panel(0)
         # GO TO HOME im AUTO-Modus deaktivieren
         self.motion._update_goto_home_style(self._is_machine_on and getattr(self, "_all_joints_homed", False))
 
@@ -1295,89 +1185,7 @@ class ThorCNC(QObject):
 
 
     @Slot(tuple)
-    def _on_gcodes(self, gcodes: tuple):
-        self._current_gcodes = gcodes
-        self._update_active_codes_display()
-        self.dro._sync_wcs_from_gcodes(gcodes)
 
-
-
-    @Slot(tuple)
-    def _on_mcodes(self, mcodes: tuple):
-        self._current_mcodes = mcodes
-        self._update_active_codes_display()
-
-    def _update_active_codes_display(self):
-        from PySide6.QtWidgets import QLabel
-        from PySide6.QtCore import Qt
-        lbl = self._w(QLabel, "active_gcodes_label")
-        if not lbl:
-            return
-
-        # Lade Einstellungen
-        s = self.settings
-        imp_list = set(s.get("hlight_gc_imp_list", "").replace(",", " ").upper().split())
-        warn_list = set(s.get("hlight_gc_warn_list", "").replace(",", " ").upper().split())
-        m_list = set(s.get("hlight_mc_list", "").replace(",", " ").upper().split())
-        
-        col_imp = s.get("hlight_gc_imp_color", "#ffffff")
-        col_warn = s.get("hlight_gc_warn_color", "#ffffff")
-        col_m = s.get("hlight_mc_color", "#ffffff")
-        col_def = "#cccccc" # Standardfarbe für nicht-markierte Codes
-
-        active_g = []
-        # Format G-codes
-        for g in self._current_gcodes[1:]:
-            if g == -1: continue
-            val = g / 10.0
-            g_str = f"G{val:g}".upper()
-            
-            color = col_def
-            weight = "normal"
-            
-            if g_str in warn_list:
-                color = col_warn
-                weight = "bold"
-            elif g_str in imp_list:
-                color = col_imp
-                weight = "bold"
-            
-            active_g.append(f'<span style="color: {color}; font-weight: {weight};">{g_str}</span>')
-
-        # Format M-codes
-        active_m = []
-        
-        # We handle M8/M9 (flood) and M7 (mist) based on REAL status,
-        # because manual toggles bypass the interpreter's modal list.
-        flood_active = (self.poller.stat.flood > 0)
-        mist_active  = (self.poller.stat.mist > 0)
-        
-        for m in self._current_mcodes[1:]:
-            if m == -1: continue
-            
-            # Skip interpreter's M7/M8/M9 - we insert our own based on real status
-            if m in (7, 8, 9):
-                continue
-                
-            m_str = f"M{m}".upper()
-            color = col_def
-            weight = "normal"
-            if m_str in m_list:
-                color = col_m
-                weight = "bold"
-            active_m.append(f'<span style="color: {color}; font-weight: {weight};">{m_str}</span>')
-            
-        # Insert real-time coolant codes
-        if flood_active:
-            active_m.append(f'<span style="color: {col_m if "M8" in m_list else col_def}; font-weight: bold;">M8</span>')
-        else:
-            active_m.append(f'<span style="color: {col_def};">M9</span>')
-            
-        if mist_active:
-            active_m.append(f'<span style="color: {col_m if "M7" in m_list else col_def}; font-weight: bold;">M7</span>')
-            
-        all_codes = "<br>".join(active_g + active_m)
-        lbl.setText(f'<html><body>{all_codes}</body></html>')
 
     def _setup_highlight_settings(self):
         from PySide6.QtWidgets import QLineEdit, QPushButton
@@ -1663,28 +1471,6 @@ class ThorCNC(QObject):
         self.cmd.mode(linuxcnc.MODE_MANUAL)
         self._status(_t("PROGRAMM ABGEBROCHEN"))
 
-    def _send_mdi(self, text: str, widget=None):
-        text = text.strip()
-        if not text:
-            return
-        try:
-            self.cmd.mode(linuxcnc.MODE_MDI)
-            self.cmd.wait_complete()
-            self.cmd.mdi(text)
-            # Modus bleibt MDI — Poller aktualisiert Combobox automatisch.
-            # User switches back to MANUAL/AUTO via combobox.
-            if widget:
-                widget.clear()
-            self._status(f"MDI: {text}")
-            # History eintragen (kein Duplikat direkt oben)
-            if hasattr(self, "_mdi_history_widget"):
-                hw = self._mdi_history_widget
-                if hw.count() == 0 or hw.item(0).text() != text:
-                    hw.insertItem(0, text)
-                    if hw.count() > 50:
-                        hw.takeItem(hw.count() - 1)
-        except Exception as e:
-            self._status(f"MDI error: {e}")
         
     # ── Lifecycle ─────────────────────────────────────────────────────────────
 
