@@ -151,7 +151,7 @@ class SpindleModule(ThorModule):
             c.flood(new_state)
         
         # Update UI immediately
-        self._t._update_active_codes_display()
+        self._t.gcode_view_mod._update_active_codes_display()
         
         state_text = _t("ON") if new_state == 1 else _t("OFF")
         self._t._status(_t("Coolant: ") + state_text)
@@ -167,5 +167,5 @@ class SpindleModule(ThorModule):
                 btn_coolant.setChecked(flood_active)
                 btn_coolant.blockSignals(False)
                 # Display ebenfalls aktualisieren
-                self._t._update_active_codes_display()
+                self._t.gcode_view_mod._update_active_codes_display()
             btn_coolant.setEnabled(is_on)

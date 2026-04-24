@@ -73,19 +73,24 @@ MainWindow.py (5000+ Zeilen) in ein modulares System umwandeln, wo jede Funktion
   - GCode/MDI Panel Switching
   - ~98 Zeilen extrahiert
 
-**Aktueller Stand:** MainWindow **1562** Zeilen (von 5027 → **3465 Zeilen gespart!**)
+**Aktueller Stand:** MainWindow **1393** Zeilen (von 5027 → **3634 Zeilen gespart!**)
 
 ---
 
 ## 🚀 Nächste Schritte (Roadmap)
 
-### Schritt 11: HAL / Hardware Module (TODO)
-**Geschätzter Aufwand:** ~400 Zeilen
-
-Umfasst:
-- `_setup_hal` und `_load_postgui_hal`
-- HAL-Signal Verknüpfungen (S32/Bit Pins)
-- Postgui HAL-File Loading
+### Schritt 11: HAL & Control Panel Module ✅
+- [x] `thorcnc/modules/hal.py` - Hardware Abstraction Layer
+  - HAL Component Initialization & Pin Creation
+  - Post-GUI HAL File Loading from INI
+  - Simulation-specific HAL Setup (spindle mass, limits)
+  - ~102 Zeilen extrahiert
+- [x] `thorcnc/modules/control_panel.py` - Machine Control Panel (OPT Panel)
+  - OPT Panel UI with Expand/Collapse Animation
+  - Single Block & M1 (Optional Stop) Toggle Controls
+  - Button State Synchronization with Machine Status
+  - Z-Safety Checks for G53 Shortcuts
+  - ~130 Zeilen extrahiert
 
 ### Schritt 12: Backplot / 3D View Module (TODO)
 **Geschätzter Aufwand:** ~250 Zeilen
@@ -94,6 +99,7 @@ Umfasst:
 - Backplot Initialization & View Management
 - Camera/Perspective Handling
 - Toolpath Display & Updates
+- View State Restoration (zoom, rotation)
 
 ---
 
@@ -113,25 +119,30 @@ Umfasst:
 | SimpleViewModule | ✅ | ~120 | thorcnc/modules/simple_view.py |
 | GCodeViewModule | ✅ | ~217 | thorcnc/modules/gcode_view.py |
 | MDIModule | ✅ | ~98 | thorcnc/modules/mdi.py |
-| **Gesamt (Modularisiert)** | - | **~3.626** | - |
+| HALModule | ✅ | ~102 | thorcnc/modules/hal.py |
+| ControlPanelModule | ✅ | ~130 | thorcnc/modules/control_panel.py |
+| **Gesamt (Modularisiert)** | - | **~3.858** | - |
 
 ---
 
 ## 🏗️ Struktur-Status (MainWindow)
 *   **Original:** ~5.027 Zeilen
-*   **Aktuell:** **1.562 Zeilen** (↓ 214 Zeilen seit Schritt 9)
-*   **Status:** G-Code/MDI Modul-Extraktion abgeschlossen. MainWindow enthält hauptsächlich UI-Setup und Infrastruktur. HAL-Initialisierung ist der nächste Kandidat für Modularisierung.
+*   **Aktuell:** **1.393 Zeilen** (↓ 169 Zeilen seit Schritt 10)
+*   **Status:** HAL & Control Panel Module abgeschlossen. MainWindow ist jetzt ~73% kleiner. Nächste Kandidaten: Backplot/3D View, oder kleinere Utility-Module.
 
 ---
 
 ## 📝 Notizen
-- **GCode/MDI Struktur:** Geschäftslogik in Module extrahiert, UI-Setup bleibt in MainWindow (pragmatischer Ansatz für große Refactorings)
-- **Coolant-Status:** Real-time M7/M8/M9 Handling aus Poller.stat statt aus Interpreter (umgeht Modal-Caching)
-- **MDI History:** Auto-saved in Settings, max 50 items gehalten
+- **Modulare Architektur:** Business Logic wird in Module extrahiert, UI-Setup bleibt in MainWindow (pragmatischer Ansatz)
+- **Timing:** HAL.setup() wird vor UI-Initialisierung aufgerufen (Timing-Fix für Hardware Init)
+- **Control Panel:** Synchronisiert regelmäßig mit Poller für Button-States und Z-Safety Checks
+- **Z-Safety:** G53 Shortcuts (Home X/Y) deaktiviert wenn Z nicht bei Machine-Zero ist (Sicherheitsfeature)
 - **Module.setup():** Wird nach MainWindow.__init__() aufgerufen, damit alle UI-Refs verfügbar sind
+- **Module.connect_signals():** Wird erst nach allen setup()-Calls aufgerufen (Signal-Verbindungen)
 
 ---
 
-*Letztes Update: 24.04.2026 nach GCode/MDI Modul-Extraktion*  
-*Status: Schritt 10 ✅ abgeschlossen (MainWindow 1562 Zeilen, ↓ 214)*  
-*Nächster Start: HAL Module (Schritt 11)*
+*Letztes Update: 24.04.2026 nach HAL & Control Panel Modul-Extraktion*  
+*Status: Schritt 11 ✅ abgeschlossen (MainWindow 1393 Zeilen, ↓ 169 Zeilen seit Schritt 10)*  
+*Gesamt-Einsparung: 3634 Zeilen (72% der Original-MainWindow)*  
+*Nächster Start: Backplot/3D View Module (Schritt 12) oder weitere Refactoring*

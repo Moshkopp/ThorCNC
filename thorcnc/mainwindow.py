@@ -15,7 +15,7 @@ from .widgets.backplot import BackplotWidget
 from .widgets.simple_view import SimpleView
 from .i18n import TranslationManager, _t
 from .modules import (FileManagerModule, ToolTableModule, OffsetsModule,
-                        MotionModule, ProbingTabModule, NavigationModule, SettingsTabModule, DROModule, SpindleModule, SimpleViewModule, GCodeViewModule, MDIModule)
+                        MotionModule, ProbingTabModule, NavigationModule, SettingsTabModule, DROModule, SpindleModule, SimpleViewModule, GCodeViewModule, MDIModule, HALModule, ControlPanelModule)
 # from .widgets.opt_options import OptOptionsDialog
 
 _DIR = os.path.dirname(__file__)
@@ -63,6 +63,8 @@ class ThorCNC(QObject):
         self.simple_view_mod = SimpleViewModule(self)
         self.gcode_view_mod = GCodeViewModule(self)
         self.mdi_mod = MDIModule(self)
+        self.hal_mod = HALModule(self)
+        self.control_panel_mod = ControlPanelModule(self)
         
         # i18n
         self.i18n = TranslationManager(self.settings.get("language", "Deutsch"))
@@ -72,7 +74,7 @@ class ThorCNC(QObject):
         self._replace_custom_widgets()
 
         self._restore_window_state()
-        self._setup_hal()
+        self.hal_mod.setup()
         self._setup_poller()
         self.file_manager.setup()
         self.tool_table.setup()
@@ -85,8 +87,8 @@ class ThorCNC(QObject):
         self.simple_view_mod.setup()
         self.gcode_view_mod.setup()
         self.mdi_mod.setup()
+        self.control_panel_mod.setup()
         self._connect_signals()
-        self._setup_opt_jalousie()
         
         # Performance/Throttle state
         self._last_gui_pos = [0.0, 0.0, 0.0]
@@ -583,80 +585,6 @@ class ThorCNC(QObject):
         # Wir übergeben die HAL-Komponente, damit der Poller direkt auf die Pins zugreifen kann
         self.poller = StatusPoller(interval_ms=100, hal_comp=self._hal_comp, parent=self)
 
-    def _setup_hal(self):
-        """Initialisiert die HAL-Komponente so früh wie möglich (Timing-Fix)."""
-        try:
-            import hal
-            from PySide6.QtCore import QTimer
-            self._hal_comp = hal.component("thorcnc")
-            
-            # Pins für Tool-Sensor (aus Settings/VCP-Style)
-            for _, key, _ in self.settings_tab._TOOLSENSOR_FIELDS:
-                pin_name = key.replace("_", "-")
-                self._hal_comp.newpin(pin_name, hal.HAL_FLOAT, hal.HAL_OUT)
-            
-            # Standard pins for status & control
-            self._hal_comp.newpin("probe-sim",          hal.HAL_BIT,   hal.HAL_OUT)
-            self._hal_comp.newpin("spindle-atspeed",    hal.HAL_BIT,   hal.HAL_IN)
-            print(f"[HAL] Erzeuge Pins für Komponente 'thorcnc'...")
-            self._hal_comp.newpin("spindle-speed-actual", hal.HAL_FLOAT, hal.HAL_IN)
-            self._hal_comp.newpin("spindle-load",       hal.HAL_FLOAT, hal.HAL_IN)
-
-            # Pins für Manuellen Werkzeugwechsler (M6)
-            self._hal_comp.newpin("tool-change-request", hal.HAL_BIT,   hal.HAL_IN)
-            self._hal_comp.newpin("tool-number",         hal.HAL_S32,   hal.HAL_IN)
-            self._hal_comp.newpin("tool-changed-confirm", hal.HAL_BIT,  hal.HAL_OUT)
-            
-            # Pins für TsHW / Handrad Integration (falls gewünscht)
-            self._hal_comp.newpin("jog-vel-final",      hal.HAL_FLOAT, hal.HAL_OUT)
-            
-            self._hal_comp.ready()
-            print(f"[HAL] Komponente 'thorcnc' ist READY.")
-            self._status(_t("HAL component 'thorcnc' ready."))
-            
-            # LinuxCNC Core lädt keine Post-GUI Dateien. Dies ist Aufgabe der GUI!
-            self._load_postgui_hal()
-            
-            
-            # Sim-Parameter + Net-Verbindung per halcmd (nur Simulation)
-            if "sim" in self.ini_path.lower():
-                import subprocess
-                _hc = lambda *args: subprocess.run(["halcmd"] + list(args), capture_output=True)
-                _hc("setp", "limit_speed.maxv", "600.0")
-                _hc("setp", "spindle_mass.gain", "0.002")
-                _hc("net", "spindle-at-speed",    "thorcnc.spindle-atspeed")
-                _hc("net", "spindle-rpm-filtered", "thorcnc.spindle-speed-actual")
-                
-        except Exception as e:
-            print(f"[ThorCNC] HAL-Initialisierung übersprungen: {e}")
-            self._hal_comp = None
-
-    def _load_postgui_hal(self):
-        """Liest alle POSTGUI_HALFILE Einträge aus der INI und führt sie aus."""
-        if not self.ini:
-            return
-            
-        postgui_files = self.ini.findall("HAL", "POSTGUI_HALFILE")
-        if not postgui_files:
-            return
-            
-        import subprocess
-        ini_dir = os.path.dirname(self.ini_path) if self.ini_path else ""
-        if not ini_dir:
-            ini_dir = os.getcwd()
-            
-        for pfile in postgui_files:
-            hal_path = os.path.join(ini_dir, pfile)
-            print(f"[HAL] Lade Post-GUI Datei: {hal_path}")
-            if os.path.exists(hal_path):
-                # Nutzen von -i um die ini an das halcmd weiterzugeben (für [ ] variablen)
-                res = subprocess.run(["halcmd", "-i", self.ini_path, "-f", hal_path], capture_output=True, text=True)
-                if res.returncode != 0:
-                    print(f"[HAL] Fehler beim Laden von {pfile}:\n{res.stderr}")
-                else:
-                    print(f"[HAL] {pfile} erfolgreich geladen.")
-            else:
-                print(f"[HAL] FEHLER: Post-GUI Datei nicht gefunden: {hal_path}")
 
     def eventFilter(self, watched, event):
         import shiboken6
@@ -711,104 +639,6 @@ class ThorCNC(QObject):
         return super().eventFilter(watched, event)
 
 
-    def _setup_opt_jalousie(self):
-        """Initialisiert die Animation für das OPT-Panel."""
-        self._opt_panel = self.ui.findChild(QFrame, "optExpandPanel")
-        if not self._opt_panel:
-            print("[ThorCNC] WARNUNG: optExpandPanel nicht in UI gefunden.")
-            return
-            
-        self._opt_anim = QPropertyAnimation(self._opt_panel, b"maximumHeight")
-        self._opt_anim.setDuration(300)
-        self._opt_anim.setEasingCurve(QEasingCurve.Type.InOutQuart)
-        
-        # Buttons im Panel verbinden
-        btn_sb = self.ui.findChild(QPushButton, "btn_opt_sb")
-        btn_m1 = self.ui.findChild(QPushButton, "btn_opt_m1")
-        
-        if btn_sb:
-            btn_sb.clicked.connect(self._toggle_sb_internal)
-        if btn_m1:
-            btn_m1.clicked.connect(self._toggle_m1_internal)
-        
-        btn_coolant = self.ui.findChild(QPushButton, "btn_opt_coolant")
-        if btn_coolant:
-            btn_coolant.clicked.connect(self.spindle.toggle_coolant)
-            
-        # Status-Sync für die neuen Buttons
-        self.poller.periodic.connect(self._sync_opt_buttons)
-
-    def _sync_opt_buttons(self):
-        """Synchronisiert die Sidebar-Buttons mit dem Maschinenstatus."""
-        btn_sb = self.ui.findChild(QPushButton, "btn_opt_sb")
-        btn_m1 = self.ui.findChild(QPushButton, "btn_opt_m1")
-        
-        if btn_sb:
-            btn_sb.setChecked(self.is_single_block)
-        if btn_m1:
-            btn_m1.setChecked(bool(self.poller.stat.optional_stop))
-            
-        # Homing / G53 Buttons sperren wenn Maschine läuft
-        is_idle = self.poller.stat.interp_state == linuxcnc.INTERP_IDLE
-        is_on = not self.poller.stat.estop and self.poller.stat.enabled
-        can_mdi = is_idle and is_on
-        
-        self.spindle.sync_buttons()
-
-        # Z-Safety: G53 X/Y shortcuts only if Z is at machine zero
-        homed = getattr(self.poller, "_homed", [])
-        enable_g53 = self.settings.get("homing_g53_conversion", False)
-        z_mach = getattr(self, "_last_pos", [0,0,-999])[2]
-        z_safe = abs(z_mach) < 0.1 # 0.1mm Toleranz
-
-        if self.dro._btn_ref_all:
-            self.dro._btn_ref_all.setEnabled(can_mdi)
-            
-        for i, axis in enumerate(("X", "Y", "Z")):
-            if axis in self.dro._dro_ref_btn:
-                btn = self.dro._dro_ref_btn[axis]
-                is_homed = i < len(homed) and homed[i]
-                
-                btn_enabled = can_mdi
-                # Wenn G53-Modus für X/Y aktiv ist, prüfen wir Z-Sicherheit
-                if axis in ("X", "Y") and enable_g53 and is_homed:
-                    if not z_safe:
-                        btn_enabled = False
-                
-                btn.setEnabled(btn_enabled)
-
-        # Find M6 Button sperren
-        if hasattr(self, "_btn_find_m6") and self._btn_find_m6:
-            self._btn_find_m6.setEnabled(is_idle)
-        if hasattr(self, "_btn_run_from_line") and self._btn_run_from_line:
-            self._btn_run_from_line.setEnabled(is_idle)
-
-    def _toggle_sb_internal(self):
-        self.is_single_block = not self.is_single_block
-        self._status(f"Single Block: {'AN' if self.is_single_block else 'AUS'}")
-
-    def _toggle_m1_internal(self):
-        curr = bool(self.poller.stat.optional_stop)
-        self.cmd.set_optional_stop(not curr)
-        self._status(f"M1 Optional Stop: {'AN' if not curr else 'AUS'}")
-
-
-
-    def _on_opt_clicked(self):
-        """Toggle-Logik für das Jalousie-Panel."""
-        if not hasattr(self, "_opt_panel") or not self._opt_panel:
-            return
-            
-        is_expanded = self._opt_panel.maximumHeight() > 0
-        
-        if is_expanded:
-            self._opt_anim.setStartValue(175)
-            self._opt_anim.setEndValue(0)
-        else:
-            self._opt_anim.setStartValue(0)
-            self._opt_anim.setEndValue(175) # Höhe für 3 Buttons + Spacing + Margins
-            
-        self._opt_anim.start()
 
 
 
@@ -856,7 +686,7 @@ class ThorCNC(QObject):
         if b := btn("stop_button"):
             b.clicked.connect(self._stop_program)
         if b := btn("btn_opt"):
-            b.clicked.connect(self._on_opt_clicked)
+            b.clicked.connect(self.control_panel_mod._on_opt_clicked)
         if b := btn("btn_run"):
             b.clicked.connect(self._run_program)
         if b := btn("manual_mode_button"):
@@ -980,6 +810,7 @@ class ThorCNC(QObject):
         self.spindle.connect_signals()
         self.gcode_view_mod.connect_signals()
         self.mdi_mod.connect_signals()
+        self.control_panel_mod.connect_signals()
 
         # Simple View — fullscreen overlay, opened by clicking the status bar
 

@@ -17,6 +17,8 @@ from .spindle import SpindleModule
 from .simple_view import SimpleViewModule
 from .gcode_view import GCodeViewModule
 from .mdi import MDIModule
+from .hal import HALModule
+from .control_panel import ControlPanelModule
 
 __all__ = [
     "ThorModule",
@@ -31,5 +33,7 @@ __all__ = [
     "SpindleModule",
     "SimpleViewModule",
     "GCodeViewModule",
-    "MDIModule"
+    "MDIModule",
+    "HALModule",
+    "ControlPanelModule"
 ]
