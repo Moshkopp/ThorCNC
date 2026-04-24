@@ -26,8 +26,8 @@ class SettingsTabModule(ThorModule):
         ("dsb_ts_search_vel",   "ts_search_vel",   100.0),
         ("dsb_ts_probe_vel",    "ts_probe_vel",    10.0),
         ("dsb_ts_max_probe",    "ts_max_probe",    10.0),
-        ("dsb_ts_latch_dist",   "ts_latch_dist",   1.0),
-        ("dsb_ts_z_clearance",  "ts_z_clearance",  5.0),
+        ("dsb_ts_retract",      "ts_retract",      1.0),
+        ("dsb_ts_spindle_zero", "ts_spindle_zero", 100.0),
     ]
 
     def __init__(self, thorc):
