@@ -4,46 +4,50 @@
 O<inside_edge_right> sub
     ( 1. Initialization )
     G90 G17 G40 G21
-    
+
     ( 1. Z-Probe to find top )
     G91
     G38.2 Z-[#4] F#5
     G1 Z#13 F#11 ( Step Off )
     G38.2 Z-[#13 * 2] F#6 ( Fine Probe )
+    ( Tool is now physically at probed surface )
     O101 if [#9 GT 0.5]
-        G10 L20 P0 Z0
+        G10 L20 P0 Z0 ( Zero Z in WCS at surface )
     O101 endif
-    G1 Z#7 F#11
-    G90
+    G1 Z#7 F#11 ( Relative up to Z clearance above surface )
 
+    G90
     #<start_x> = #5420
     #<dia> = #10
     O<check_dia> if [#<dia> LE 0]
         #<dia> = #5410
     O<check_dia> endif
     #<rapid> = #11
+    O<check_rapid> if [#<rapid> LE 0]
+        #<rapid> = [#5 * 2]
+    O<check_rapid> endif
     #<rad> = [#<dia> / 2]
+    #<plunge_delta> = [#7 + #<rad> + #8] ( Distance from clearance down to probing depth )
     #<jump_x> = -[#12]
-    
+
     ( 2. Move into Pocket & Plunge )
     G91
-    G1 X#<jump_x> F#11
-    G90
-    G1 Z-[#<rad> + #8] F#11
-    
+    G1 X#<jump_x> F#<rapid>
+    G1 Z-#<plunge_delta> F#<rapid> ( Plunge relative to surface )
+
     ( 3. X-Probe to right wall )
-    G91
     G38.2 X[#12 + #3] F#5
-    G1 X-[#13] F#11
+    G1 X-[#13] F#<rapid>
     G38.2 X[#13 * 1.5] F#6
     #<x_hit> = #5061
-    G1 X-[#13] F#11
+    G1 X-[#13] F#<rapid>
+    ( Raise Z back to clearance )
+    G1 Z#<plunge_delta> F#<rapid>
     G90
-    
+
     ( 4. Move to Edge & Zero )
     #<x_wall> = [#<x_hit> + #<rad>]
-    G1 Z#7 F#11
-    G1 X#<x_wall> F#11
+    G1 X#<x_wall> F#<rapid>
     O102 if [#9 GT 0.5]
         G10 L20 P0 X0
     O102 endif

@@ -4,18 +4,19 @@
 O<center_rect_y> sub
     ( 1. Initialization )
     G90 G17 G40 G21
-    
+
     ( 1. Z-Probe )
     G91
     G38.2 Z-[#4] F#5
     G1 Z#13 F#11 ( Step Off )
     G38.2 Z-[#13 * 2] F#6 ( Fine Probe )
+    ( Tool is now physically at probed surface )
     O101 if [#9 GT 0.5]
-        G10 L20 P0 Z0
+        G10 L20 P0 Z0 ( Zero Z in WCS at surface )
     O101 endif
-    G1 Z#7 F#11
-    G90
+    G1 Z#7 F#11 ( Relative up to Z clearance above surface )
 
+    G90
     #<start_y> = #5421
     #<dia> = #10
     O<check_dia> if [#<dia> LE 0]
@@ -26,33 +27,34 @@ O<center_rect_y> sub
         #<rapid> = [#5 * 2]
     O<check_rapid> endif
     #<rad> = [#<dia> / 2]
+    #<plunge_delta> = [#7 + #<rad> + #8] ( Distance from clearance down to probing depth )
     #<search_dist_y> = [[#2 / 2] + #12]
 
     ( 2. Y-Center Finding )
     ( Probe Y- side )
     G1 Y[#<start_y> - #<search_dist_y>] F#<rapid>
-    G1 Z-[#<rad> + #8] F#<rapid>
     G91
+    G1 Z-#<plunge_delta> F#<rapid>
     G38.2 Y[#12 + #3] F#5
     G1 Y-[#13] F#<rapid>
     G38.2 Y[#13 * 1.5] F#6
     #<y1> = #5062
     G1 Y-[#13] F#<rapid>
+    G1 Z#<plunge_delta> F#<rapid> ( Raise Z back to clearance )
     G90
-    G1 Z#7 F#<rapid>
 
     ( Probe Y+ side )
     G1 Y[#<start_y> + #<search_dist_y>] F#<rapid>
-    G1 Z-[#<rad> + #8] F#<rapid>
     G91
+    G1 Z-#<plunge_delta> F#<rapid>
     G38.2 Y-[#12 + #3] F#5
     G1 Y#13 F#<rapid>
     G38.2 Y-[#13 * 1.5] F#6
     #<y2> = #5062
     G1 Y#13 F#<rapid>
+    G1 Z#<plunge_delta> F#<rapid> ( Raise Z back to clearance )
     G90
-    G1 Z#7 F#<rapid>
-    
+
     #<y_center> = [[#<y1> + #<y2>] / 2]
 
     ( 3. Final Positioning & Zeroing )
@@ -60,7 +62,6 @@ O<center_rect_y> sub
     O102 if [#9 GT 0.5]
         G10 L20 P0 Y0
     O102 endif
-    G1 Z#7 F#<rapid>
-    
+
 O<center_rect_y> endsub
 M2

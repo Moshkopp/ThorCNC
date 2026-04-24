@@ -4,18 +4,19 @@
 O<inside_round> sub
     ( 1. Initialization )
     G90 G17 G40 G21
-    
+
     ( 1. Z-Probe to find top )
     G91
     G38.2 Z-[#4] F#5
     G1 Z#13 F#11
     G38.2 Z-[#13 * 2] F#6
+    ( Tool is now physically at probed surface )
     O101 if [#9 GT 0.5]
-        G10 L20 P0 Z0
+        G10 L20 P0 Z0 ( Zero Z in WCS at surface )
     O101 endif
-    G1 Z#7 F#11
-    G90
+    G1 Z#7 F#11 ( Relative up to Z clearance above surface )
 
+    G90
     #<start_x> = #5420
     #<start_y> = #5421
     #<dia> = #10
@@ -27,15 +28,16 @@ O<inside_round> sub
         #<rapid> = [#5 * 2]
     O<check_rapid> endif
     #<rad> = [#<dia> / 2]
+    #<plunge_delta> = [#7 + #<rad> + #8] ( Distance from clearance down to probing depth )
     #<jump_x> = [[#1 / 2] + #12]
-    
+
     ( 2. Move to Center & Plunge )
     G91
     G1 X#<jump_x> F#<rapid>
+    G1 Z-#<plunge_delta> F#<rapid> ( Plunge relative to surface )
     G90
-    G1 Z-[#<rad> + #8] F#<rapid>
     #<center_x> = #5420
-    
+
     ( 3. X-Center Finding )
     G91
     G38.2 X-[[#1 / 2] + #3] F#5
@@ -45,7 +47,7 @@ O<inside_round> sub
     G1 X#13 F#<rapid>
     G90
     G1 X#<center_x> F#<rapid>
-    
+
     G91
     G38.2 X[[#1 / 2] + #3] F#5
     G1 X-[#13] F#<rapid>
@@ -53,7 +55,7 @@ O<inside_round> sub
     #<x2> = #5061
     G1 X-[#13] F#<rapid>
     G90
-    
+
     #<x_center> = [[#<x1> + #<x2>] / 2]
     G1 X#<x_center> F#<rapid>
 
@@ -66,7 +68,7 @@ O<inside_round> sub
     G1 Y#13 F#<rapid>
     G90
     G1 Y#<start_y> F#<rapid>
-    
+
     G91
     G38.2 Y[[#1 / 2] + #3] F#5
     G1 Y-[#13] F#<rapid>
@@ -74,7 +76,7 @@ O<inside_round> sub
     #<y2> = #5062
     G1 Y-[#13] F#<rapid>
     G90
-    
+
     #<y_center> = [[#<y1> + #<y2>] / 2]
 
     ( 5. Final Positioning & Zeroing )
@@ -82,7 +84,9 @@ O<inside_round> sub
     O102 if [#9 GT 0.5]
         G10 L20 P0 X0 Y0
     O102 endif
-    G1 Z#7 F#<rapid>
+    G91
+    G1 Z#<plunge_delta> F#<rapid> ( Raise Z back to clearance )
+    G90
 
 O<inside_round> endsub
 M2
