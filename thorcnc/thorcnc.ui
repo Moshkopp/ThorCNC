@@ -109,19 +109,6 @@
         </widget>
        </item>
        <item>
-        <widget class="QPushButton" name="nav_html">
-         <property name="minimumSize">
-          <size>
-           <width>0</width>
-           <height>38</height>
-          </size>
-         </property>
-         <property name="text">
-          <string>HTML</string>
-         </property>
-        </widget>
-       </item>
-       <item>
         <widget class="QPushButton" name="nav_settings">
          <property name="minimumSize">
           <size>

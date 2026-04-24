@@ -284,9 +284,6 @@ class NavigationModule(ThorModule):
                 if os.path.exists(full_path):
                     btn.setIcon(QIcon(full_path))
                 
-                # Hide the HTML button explicitly
-                if btn_name == "btn_nav_html":
-                    btn.hide()
 
     def update_highlights(self):
         """Update flyout button highlights."""
