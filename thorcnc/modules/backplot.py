@@ -48,6 +48,7 @@ class BackplotModule(ThorModule):
             btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
             btn.clicked.connect(fn)
             tb_lay.addWidget(btn)
+        tb_lay.addStretch()  # Push buttons to the left
 
         # Restore saved view state from settings
         bpm = self._t.settings.get("backplot_view", None)

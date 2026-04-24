@@ -18,7 +18,8 @@ class SpindleModule(ThorModule):
         self._last_gui_load = 0.0
 
     def setup(self):
-        pass
+        # Initialize button states
+        self._update_spindle_buttons()
 
     def connect_signals(self):
         p = self._t.poller
@@ -97,6 +98,8 @@ class SpindleModule(ThorModule):
                 rev_style = style
             else: # CCW
                 fwd_style = style
+            # Stop-Button rot, wenn Spindel läuft (aktive Aktion verfügbar)
+            stop_style = _base + "background-color: #c0392b; color: white; }"
         elif running:
             # Grüner Rahmen: läuft, aber noch nicht auf Drehzahl
             style = _base + "border: 2px solid #27ae60; color: #27ae60; }"
@@ -104,8 +107,11 @@ class SpindleModule(ThorModule):
                 rev_style = style
             else: # CCW
                 fwd_style = style
-        else:
+            # Stop-Button rot, wenn Spindel läuft
             stop_style = _base + "background-color: #c0392b; color: white; }"
+        else:
+            # Grau mit Rot-Rahmen, wenn Spindel aus (inaktiv)
+            stop_style = _base + "border: 2px solid #c0392b; color: #c0392b; }"
 
         if b := self._t._w(QPushButton, "btn_spindle_fwd"):
             b.setStyleSheet(fwd_style)
@@ -116,6 +122,11 @@ class SpindleModule(ThorModule):
 
     def start_spindle(self, direction):
         """Starts the spindle in the given direction with the current speed."""
+        # Safety check: machine must be powered on (not estop)
+        if self._t.poller.stat.estop:
+            self._t._status(_t("Machine is in estop!"), error=True)
+            return
+
         speed = abs(self._t.poller.stat.spindle[0]['speed'])
         if speed < 1:
             speed = 6000
@@ -130,6 +141,10 @@ class SpindleModule(ThorModule):
         self._t.cmd.spindle(direction, speed)
 
     def stop_spindle(self):
+        # Safety check: machine must be powered on (not estop)
+        if self._t.poller.stat.estop:
+            self._t._status(_t("Machine is in estop!"), error=True)
+            return
         self._t.cmd.spindle(linuxcnc.SPINDLE_OFF)
 
     def toggle_coolant(self):

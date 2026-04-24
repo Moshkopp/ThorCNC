@@ -140,25 +140,16 @@ class NavigationModule(ThorModule):
 
         elif flyout_name == "SHORTS":
             if action_text == "GO TO HOME":
-                s = self._t.poller.stat
-                all_homed = all(s.homed[i] for i in range(s.joints))
-
-                if all_homed:
-                    if hasattr(self._t, "_run_mdi_command"):
-                        self._t._run_mdi_command("G53 G0 Z0")
-                        self._t.cmd.wait_complete()
-                        self._t._run_mdi_command("G53 G0 X0 Y0")
-                        self._t._status(_t("Fahre zu Maschinen-Nullpunkt (G53 X0 Y0 Z0)"))
-                else:
-                    if hasattr(self._t, "_home_all"):
-                        self._t._home_all()
-                    else:
-                        self._t.cmd.home(-1)
+                # Go to machine zero (buttons are disabled if not all homed)
+                self._t.mdi_mod._send_mdi("G53 G0 Z0")
+                self._t.cmd.wait_complete()
+                self._t.mdi_mod._send_mdi("G53 G0 X0 Y0")
+                self._t._status(_t("Fahre zu Maschinen-Nullpunkt (G53 X0 Y0 Z0)"))
 
             elif action_text == "GOTO ZERO XY":
-                if hasattr(self._t, "_run_mdi_command"):
-                    self._t._run_mdi_command("O<goto_zero_xy> call")
-                    self._t._status(_t("Fahre zu WCS X0 Y0 (via NGC)"))
+                # Go to WCS X0 Y0 via NGC subroutine
+                self._t.mdi_mod._send_mdi("O<goto_zero_xy> call")
+                self._t._status(_t("Fahre zu WCS X0 Y0 (via NGC)"))
 
         elif flyout_name == "OPT":
             if action_text == "COOLANT":
@@ -244,14 +235,17 @@ class NavigationModule(ThorModule):
                     b.style().unpolish(b); b.style().polish(b)
                     b.update()
 
-        set_btn_state("OPT_COOLANT", active=(getattr(s, "flood", 0) > 0))
-        set_btn_state("OPT_M1 STOP", active=getattr(s, "optional_stop", False))
-        set_btn_state("OPT_BLOCK DELETE", active=getattr(s, "block_delete", False))
-        set_btn_state("OPT_SINGLE BLOCK", active=getattr(self._t, "is_single_block", False))
+        # Check if all axes are homed
+        all_homed = all(s.homed[i] for i in range(s.joints))
 
-        # Disable SHORTS buttons if not idle
-        set_btn_state("SHORTS_GO TO HOME", enabled=can_mdi)
-        set_btn_state("SHORTS_GOTO ZERO XY", enabled=can_mdi)
+        set_btn_state("OPT_COOLANT", active=(getattr(s, "flood", 0) > 0), enabled=(can_mdi and all_homed))
+        set_btn_state("OPT_M1 STOP", active=getattr(s, "optional_stop", False), enabled=(can_mdi and all_homed))
+        set_btn_state("OPT_BLOCK DELETE", active=getattr(s, "block_delete", False), enabled=(can_mdi and all_homed))
+        set_btn_state("OPT_SINGLE BLOCK", active=getattr(self._t, "is_single_block", False), enabled=(can_mdi and all_homed))
+
+        # Disable SHORTS buttons if not idle or not all homed
+        set_btn_state("SHORTS_GO TO HOME", enabled=(can_mdi and all_homed))
+        set_btn_state("SHORTS_GOTO ZERO XY", enabled=(can_mdi and all_homed))
 
         _MODES = {linuxcnc.MODE_MANUAL: "MANUAL", linuxcnc.MODE_AUTO: "AUTO", linuxcnc.MODE_MDI: "MDI"}
         current_txt = _MODES.get(self._t._current_mode, "")

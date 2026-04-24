@@ -442,7 +442,6 @@ class BackplotWidget(QFrame):
         self._toolbar_lay = QHBoxLayout(toolbar_widget)
         self._toolbar_lay.setContentsMargins(6, 2, 6, 2)
         self._toolbar_lay.setSpacing(4)
-        self._toolbar_lay.addStretch()   # rechts ausrichten per default
         outer.addWidget(toolbar_widget)
 
         if _HAS_GL:
