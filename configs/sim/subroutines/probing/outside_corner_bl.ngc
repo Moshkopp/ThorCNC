@@ -10,11 +10,13 @@ O<outside_corner_bl> sub
     G38.2 Z-[#4] F#5
     G1 Z#13 F#11 ( Step Off )
     G38.2 Z-[#13 * 2] F#6 ( Fine Probe )
+    G90
+    #<z_surface> = #5063 ( Save probed Z in current WCS )
     O101 if [#9 GT 0.5]
         G10 L20 P0 Z0
+        #<z_surface> = 0 ( After G10 the surface is Z=0 )
     O101 endif
-    G1 Z#7 F#11 ( Move to Z Clearance )
-    G90
+    G1 Z[#<z_surface> + #7] F#11 ( Move to Z Clearance above surface )
 
     #<start_x> = #5420
     #<start_y> = #5421
@@ -31,9 +33,9 @@ O<outside_corner_bl> sub
     ( 2. X-Probe from left )
     ( Travel to approach position: EdgeWidth + XY_Clearance )
     G1 X[#<start_x> - #12] Y#<start_y> F#<rapid>
-    ( Plunge to depth )
-    G1 Z-[#<rad> + #8] F#<rapid>
-    
+    ( Plunge to depth relative to probed surface )
+    G1 Z[#<z_surface> - #<rad> - #8] F#<rapid>
+
     ( Search Probe X+ )
     G91
     G38.2 X[#12 + #3] F#5
@@ -45,15 +47,15 @@ O<outside_corner_bl> sub
     ( FINAL Retract after fine hit )
     G1 X-[#13] F#<rapid>
     G90
-    ( Raise Z to clearance height )
-    G1 Z#7 F#<rapid>
-    
+    ( Raise Z to clearance height above probed surface )
+    G1 Z[#<z_surface> + #7] F#<rapid>
+
     ( 3. Y-Probe from bottom )
     ( Travel to Y approach position )
     G1 X#<start_x> Y[#<start_y> - #12] F#<rapid>
-    ( Plunge to depth )
-    G1 Z-[#<rad> + #8] F#<rapid>
-    
+    ( Plunge to depth relative to probed surface )
+    G1 Z[#<z_surface> - #<rad> - #8] F#<rapid>
+
     ( Search Probe Y+ )
     G91
     G38.2 Y[#12 + #3] F#5
@@ -65,14 +67,14 @@ O<outside_corner_bl> sub
     ( FINAL Retract after fine hit )
     G1 Y-[#13] F#<rapid>
     G90
-    ( Raise Z to clearance height )
-    G1 Z#7 F#<rapid>
-    
+    ( Raise Z to clearance height above probed surface )
+    G1 Z[#<z_surface> + #7] F#<rapid>
+
     ( 4. Move to Corner & Zero )
     #<x_corner> = [#<x_hit> + #<rad>]
     #<y_corner> = [#<y_hit> + #<rad>]
-    G1 Z#7 F#<rapid>
-    
+    G1 Z[#<z_surface> + #7] F#<rapid>
+
     ( Move to found corner at safe Z )
     G1 X#<x_corner> Y#<y_corner> F#<rapid>
     
