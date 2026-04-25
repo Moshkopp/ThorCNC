@@ -120,6 +120,9 @@ else
 fi
 
 # --- Subroutines synchronisieren ---------------------------------------------
+# Hinweis: Probe-Parameter (1000-1042) werden beim ThorCNC-Start automatisch
+# in die eigene var-Datei eingetragen - kein manueller Schritt nötig.
+
 install_subroutines() {
     SRC="$SCRIPT_DIR/configs/sim/subroutines"
     DEST="$HOME/linuxcnc/nc_files/subroutines"
@@ -135,6 +138,33 @@ install_subroutines() {
 }
 
 install_subroutines
+
+# --- Probe-Parameter in var-Datei vorinitialisieren --------------------------
+seed_probe_params() {
+    # Sucht alle INI-Dateien im linuxcnc/configs-Verzeichnis und ergänzt
+    # fehlende Probe-Parameter (1000-1042) ohne bestehende Werte zu überschreiben.
+    PROBE_PARAMS="1000 1001 1010 1011 1012 1013 1014 1020 1021 1030 1031 1040"
+    CONFIGS_DIR="$HOME/linuxcnc/configs"
+
+    find "$CONFIGS_DIR" -name "*.ini" 2>/dev/null | while read -r ini_file; do
+        var_name=$(grep -i "^PARAMETER_FILE" "$ini_file" 2>/dev/null | head -1 | awk -F'=' '{print $2}' | tr -d ' \r')
+        [ -z "$var_name" ] && continue
+        var_file="$(dirname "$ini_file")/$var_name"
+        [ -f "$var_file" ] || continue
+
+        added=0
+        for p in $PROBE_PARAMS; do
+            if ! grep -q "^${p}[[:space:]]" "$var_file"; then
+                echo -e "${p}\t0.000000" >> "$var_file"
+                added=$((added + 1))
+            fi
+        done
+
+        if [ "$added" -gt 0 ]; then
+            ok "Probe-Parameter ($added neu) in: $var_file"
+        fi
+    done
+}
 
 echo ""
 echo -e "${BOLD}Update abgeschlossen.${NC}"

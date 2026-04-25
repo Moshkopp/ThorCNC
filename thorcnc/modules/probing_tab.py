@@ -416,6 +416,11 @@ class ProbingTabModule(ThorModule):
             except Exception:
                 layout.addWidget(self._probe_result_panel)
 
+        self._setup_sim_probe_button(layout)
+
+        # Ensure probe parameters exist in var file
+        self._seed_probe_var_params()
+
         # Set up polling for #1001 counter via .var file
         try:
             self._probe_stat = linuxcnc.stat()
@@ -432,6 +437,66 @@ class ProbingTabModule(ThorModule):
         self._probe_poll_timer.setInterval(200)  # 5Hz
         self._probe_poll_timer.timeout.connect(self._poll_probe_results)
         self._probe_poll_timer.start()
+
+    def _setup_sim_probe_button(self, layout):
+        """Add a momentary SIM probe trigger button — only if thorcnc.probe-sim pin exists."""
+        try:
+            if not self._t._hal_comp:
+                return
+            _ = self._t._hal_comp["probe-sim"]
+        except Exception:
+            return  # not a sim setup or HAL not available
+
+        from PySide6.QtWidgets import QPushButton, QWidget, QHBoxLayout
+        row = QWidget()
+        row.setObjectName("sim_probe_row")
+        hl = QHBoxLayout(row)
+        hl.setContentsMargins(4, 2, 4, 2)
+
+        btn = QPushButton("⚡ SIM Probe Trigger (halten)")
+        btn.setObjectName("btn_sim_probe")
+        btn.setCheckable(False)
+        btn.setFixedHeight(28)
+        btn.setStyleSheet("QPushButton { background: #7a3000; color: #ffcc88; font-weight: bold; border-radius: 4px; }"
+                          "QPushButton:pressed { background: #ff6600; color: white; }")
+        btn.pressed.connect(self._sim_probe_press)
+        btn.released.connect(self._sim_probe_release)
+
+        hl.addStretch()
+        hl.addWidget(btn)
+        hl.addStretch()
+
+        if layout is not None:
+            layout.addWidget(row)
+
+    def _sim_probe_press(self):
+        self.set_sim_probe(True)
+
+    def _sim_probe_release(self):
+        self.set_sim_probe(False)
+
+    _PROBE_PARAMS = [1000, 1001, 1010, 1011, 1012, 1013, 1014,
+                     1020, 1021, 1030, 1031, 1040]
+
+    def _seed_probe_var_params(self):
+        """Add missing probe parameters to the var file (only when LinuxCNC is stopped)."""
+        path = self._var_file_path()
+        if not path:
+            return
+        try:
+            with open(path, "r") as f:
+                content = f.read()
+            existing = {int(l.split()[0]) for l in content.splitlines()
+                        if l.strip() and len(l.split()) >= 2
+                        and l.split()[0].isdigit()}
+            missing = [p for p in self._PROBE_PARAMS if p not in existing]
+            if missing:
+                with open(path, "a") as f:
+                    for p in missing:
+                        f.write(f"{p}\t0.000000\n")
+                print(f"[ThorCNC] Probe var params added: {missing}")
+        except OSError as e:
+            print(f"[ThorCNC] Could not seed probe var params: {e}")
 
     def _var_file_path(self) -> str | None:
         if not self._t.ini or not self._t.ini_path:
@@ -464,25 +529,32 @@ class ProbingTabModule(ThorModule):
         """Check #1001 counter; if changed, build ProbeResult and update UI."""
         path = self._var_file_path()
         if not path:
+            print("[ProbeDBG] var file path not found")
             return
         try:
             mtime = os.path.getmtime(path)
         except OSError:
+            print(f"[ProbeDBG] cannot stat {path}")
             return
         if mtime == self._probe_var_mtime:
             return
+        print(f"[ProbeDBG] var file changed: {path}  mtime={mtime}")
         self._probe_var_mtime = mtime
 
         params = self._read_probe_var_file()
+        print(f"[ProbeDBG] params with keys 999-1042: { {k:v for k,v in params.items() if 999<=k<=1042} }")
         if 1001 not in params:
+            print("[ProbeDBG] #1001 not in params → skip")
             return
 
         counter = int(params.get(1001, 0))
+        print(f"[ProbeDBG] counter={counter}  last={self._probe_last_counter}")
         if counter == self._probe_last_counter:
             return
         self._probe_last_counter = counter
 
-        type_code = int(params[1000])
+        type_code = int(params.get(1000, -1))
+        print(f"[ProbeDBG] type_code={type_code}  known={type_code in PROBE_TYPES}")
         if type_code not in PROBE_TYPES:
             return
         type_name, kind = PROBE_TYPES[type_code]
