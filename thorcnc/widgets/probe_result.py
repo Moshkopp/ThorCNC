@@ -12,7 +12,7 @@ from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
     QGroupBox, QVBoxLayout, QHBoxLayout, QGridLayout,
     QLabel, QPushButton, QDialog, QTableWidget, QTableWidgetItem,
-    QHeaderView, QAbstractItemView,
+    QHeaderView, QAbstractItemView, QFrame,
 )
 
 
@@ -117,43 +117,57 @@ class ProbeResultPanel(QGroupBox):
 
     def _build_ui(self):
         v = QVBoxLayout(self)
-        v.setContentsMargins(10, 6, 10, 8)
-        v.setSpacing(6)
+        v.setContentsMargins(12, 12, 12, 12)
+        v.setSpacing(12)
 
-        top = QHBoxLayout()
+        # Row 1: Info (WCS, Type, Time)
+        row1 = QHBoxLayout()
+        row1.setSpacing(10)
+
         self._lbl_wcs = QLabel("---")
         self._lbl_wcs.setObjectName("probe_wcs_pill")
         self._lbl_wcs.setStyleSheet(
             "QLabel#probe_wcs_pill { background:#3776ab; color:white; "
-            "padding:2px 10px; border-radius:9px; font-weight:bold; }"
+            "padding:4px 12px; border-radius:10px; font-weight:bold; }"
         )
-        top.addWidget(self._lbl_wcs)
+        row1.addWidget(self._lbl_wcs)
 
         self._lbl_type = QLabel("(no result yet)")
-        self._lbl_type.setStyleSheet("font-weight: bold;")
-        top.addWidget(self._lbl_type)
+        self._lbl_type.setStyleSheet("font-weight: bold; font-size: 11pt;")
+        row1.addWidget(self._lbl_type)
 
-        top.addStretch()
+        row1.addStretch()
 
         self._lbl_time = QLabel("")
-        self._lbl_time.setStyleSheet("color: #888;")
-        top.addWidget(self._lbl_time)
+        self._lbl_time.setStyleSheet("color: #ccc; font-size: 10pt;")
+        row1.addWidget(self._lbl_time)
+        
+        v.addLayout(row1)
 
+        # Row 2: Actions (History, Clear)
+        row2 = QHBoxLayout()
+        row2.setSpacing(10)
+        
         self._btn_history = QPushButton("History")
-        self._btn_history.setMaximumWidth(90)
         self._btn_history.clicked.connect(self.history_clicked)
-        top.addWidget(self._btn_history)
+        row2.addWidget(self._btn_history)
 
         self._btn_clear = QPushButton("Clear")
-        self._btn_clear.setMaximumWidth(70)
         self._btn_clear.clicked.connect(self._on_clear)
-        top.addWidget(self._btn_clear)
+        row2.addWidget(self._btn_clear)
+        
+        v.addLayout(row2)
 
-        v.addLayout(top)
+        # Add a subtle separator line
+        sep = QFrame()
+        sep.setFrameShape(QFrame.HLine)
+        sep.setFrameShadow(QFrame.Sunken)
+        sep.setStyleSheet("color: #333;")
+        v.addWidget(sep)
 
         self._body = QGridLayout()
         self._body.setHorizontalSpacing(20)
-        self._body.setVerticalSpacing(2)
+        self._body.setVerticalSpacing(8)
         v.addLayout(self._body)
 
         self._lbl_az = QLabel("")
@@ -170,12 +184,12 @@ class ProbeResultPanel(QGroupBox):
 
     def _add_row(self, row: int, label: str, value: str, color: str = ""):
         l = QLabel(label)
-        l.setStyleSheet("color: #888;")
+        l.setStyleSheet("color: #fff; font-size: 13pt; font-weight: bold;")
         v = QLabel(value)
         if color:
-            v.setStyleSheet(f"color: {color}; font-weight: bold;")
+            v.setStyleSheet(f"color: {color}; font-weight: bold; font-size: 13pt;")
         else:
-            v.setStyleSheet("font-weight: bold;")
+            v.setStyleSheet("color: #fff; font-weight: bold; font-size: 13pt;")
         self._body.addWidget(l, row, 0)
         self._body.addWidget(v, row, 1)
 

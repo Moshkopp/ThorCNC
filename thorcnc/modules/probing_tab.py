@@ -398,25 +398,95 @@ class ProbingTabModule(ThorModule):
         self._setup_probe_result_panel()
 
     def _setup_probe_result_panel(self):
-        """Build Probe Result Panel, insert into vl_probing_main, start polling."""
-        # Allow Kasten 1 (pattern + before/after) to grow vertically
-        if frm := self._t._w(QFrame, "frm_probe_grid"):
-            frm.setMaximumSize(QSize(600, 16777215))
-        if frm := self._t._w(QFrame, "frm_probe_pre_post"):
-            frm.setMaximumSize(QSize(280, 16777215))
-
+        """Build Probe Result Panel, insert into layout, start polling."""
+        # 1. Create the result panel
         self._probe_result_panel = ProbeResultPanel()
         self._probe_result_panel.history_clicked.connect(self._show_probe_history)
 
-        layout = self._t.ui.tab_probing.layout()
-        if layout is not None:
-            # Insert as second item (after hl_probe_main)
-            try:
-                layout.insertWidget(1, self._probe_result_panel)
-            except Exception:
-                layout.addWidget(self._probe_result_panel)
+        # 2. Get widgets and layouts
+        hl_probe_main = self._t.ui.findChild(QHBoxLayout, "hl_probe_main")
+        vl_probe_right = self._t.ui.findChild(QVBoxLayout, "vl_probe_right") # Center column
+        grid_row = self._t.ui.findChild(QHBoxLayout, "hl_probe_grid_row")
+        frm_grid = self._t._w(QFrame, "frm_probe_grid")
+        frm_pre_post = self._t._w(QFrame, "frm_probe_pre_post")
+        te_before = self._t._w(QTextEdit, "te_probe_before")
+        te_after = self._t._w(QTextEdit, "te_probe_after")
 
-        self._setup_sim_probe_button(layout)
+        # 3. Setup Center Column (vl_probe_right)
+        if vl_probe_right and grid_row and frm_grid:
+            # Clear grid_row layout items
+            widgets_to_keep = [frm_grid]
+            while grid_row.count():
+                item = grid_row.takeAt(0)
+                if w := item.widget():
+                    if w not in widgets_to_keep:
+                        w.setParent(None)
+            
+            # Center Grid horizontally
+            grid_row.setContentsMargins(0, 0, 0, 0)
+            grid_row.addStretch()
+            grid_row.addWidget(frm_grid)
+            grid_row.addStretch()
+            
+            frm_grid.setFixedSize(432, 432)
+
+        # 4. Setup Before/After Frame under the grid
+        if vl_probe_right and te_before and te_after:
+            # Create a compact frame for Before/After
+            frm_bottom = QFrame()
+            frm_bottom.setObjectName("frm_probe_bottom_macros")
+            frm_bottom.setStyleSheet("QFrame#frm_probe_bottom_macros { background: #1a1a1a; border-radius: 6px; padding: 6px; border: 1px solid #333; }")
+            frm_bottom.setFixedWidth(432) # Match grid width
+            frm_bottom.setMaximumHeight(130)
+            
+            hl_bottom = QHBoxLayout(frm_bottom)
+            hl_bottom.setContentsMargins(12, 6, 12, 6)
+            hl_bottom.setSpacing(16)
+            
+            # Set larger font for G-Code input
+            te_before.setStyleSheet("font-size: 16pt; font-family: Monospace;")
+            te_after.setStyleSheet("font-size: 16pt; font-family: Monospace;")
+
+            # Before
+            vl_before = QVBoxLayout()
+            lbl_before = QLabel(_t("BEFORE PROBING"))
+            lbl_before.setStyleSheet("font-weight: bold; color: #aaa; font-size: 12pt;")
+            vl_before.addWidget(lbl_before)
+            vl_before.addWidget(te_before)
+            te_before.setMaximumHeight(80)
+            hl_bottom.addLayout(vl_before)
+            
+            # After
+            vl_after = QVBoxLayout()
+            lbl_after = QLabel(_t("AFTER PROBING"))
+            lbl_after.setStyleSheet("font-weight: bold; color: #aaa; font-size: 12pt;")
+            vl_after.addWidget(lbl_after)
+            vl_after.addWidget(te_after)
+            te_after.setMaximumHeight(80)
+            hl_bottom.addLayout(vl_after)
+            
+            # Center the frame in the column
+            hl_wrap = QHBoxLayout()
+            hl_wrap.addStretch()
+            hl_wrap.addWidget(frm_bottom)
+            hl_wrap.addStretch()
+            
+            vl_probe_right.addLayout(hl_wrap)
+
+        # 5. Setup Right Column (Probe Results)
+        if hl_probe_main:
+            self._probe_result_panel.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
+            self._probe_result_panel.setFixedWidth(320)
+            hl_probe_main.addWidget(self._probe_result_panel)
+
+        # Hide the old container
+        if frm_pre_post:
+            frm_pre_post.hide()
+            frm_pre_post.setParent(None)
+
+        # SIM Button
+        main_layout = self._t.ui.tab_probing.layout()
+        self._setup_sim_probe_button(main_layout)
 
         # Ensure probe parameters exist in var file
         self._seed_probe_var_params()

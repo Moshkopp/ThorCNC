@@ -218,16 +218,24 @@ MainWindow.py (5000+ Zeilen) in ein modulares System umwandeln, wo jede Funktion
 
 ### Implementation-Reihenfolge
 1. ~~Erst Maschinen-Test der 27 Subs abwarten~~ ✅ erledigt
-2. Type-Code-Mapping definieren (G-Code + Python)
-3. `probe_run.ngc` Header schreiben
-4. Result-Publishing in alle 28 Subs einfügen
-5. Python: `ProbeResultPanel` Widget erstellen
-6. Python: `ProbeHistoryDialog` erstellen
-7. `probing_tab.py` Layout anpassen (Kasten 1 höher, Panel einfügen)
-8. Polling im StatusPoller hooken oder eigener QTimer
-9. Tests an Maschine
+2. ~~Type-Code-Mapping definieren~~ ✅ erledigt
+3. ~~`probe_run.ngc` Header schreiben~~ ✅ erledigt
+4. ~~Result-Publishing in alle 28 Subs einfügen~~ ✅ erledigt
+5. ~~Python: `ProbeResultPanel` Widget erstellen~~ ✅ erledigt
+6. ~~Python: `ProbeHistoryDialog` erstellen~~ ✅ erledigt
+7. ~~`probing_tab.py` Layout anpassen + Panel einfügen~~ ✅ erledigt
+8. ~~Polling via var-Datei (mtime + Read)~~ ✅ erledigt (stat.parameters existiert nicht in 2.9.8)
+9. Tests an Maschine — läuft
 
-### Offene Punkte für später
+### Erledigt (2026-04-25)
+- [x] `ProbeResultPanel` + `ProbeHistoryDialog` implementiert
+- [x] Polling über `.var`-Datei (mtime-basiert) statt `stat.parameters` (nicht verfügbar in LinuxCNC 2.9.8)
+- [x] Parameter 1000–1042 in var-Datei vorinitialisieren — `_seed_probe_var_params()` beim Start (sortiert, damit LinuxCNC nicht "Parameter-Datei nicht in Ordnung" meldet)
+- [x] SIM Probe Trigger Button eingebaut (momentary, nur sichtbar wenn `probe_sim` im INI)
+- [x] `update.sh`: `-n` Flag bei `cp` entfernt → Subroutines werden jetzt korrekt überschrieben
+
+### Offene Punkte
+- [ ] **Probe Result Panel: Layout & Style überarbeiten** — aktuelle Darstellung unfertig, Anordnung und visuelle Gestaltung müssen angepasst werden
 - [ ] Toleranz für Δ-Anzeige konfigurierbar machen (initial fix ±0.05mm)
 - [ ] CSV-Export aus History
 - [ ] Optional: Banner-Warnung "MEASURE ONLY MODE" bei Auto-Zero OFF
