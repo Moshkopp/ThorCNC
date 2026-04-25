@@ -439,13 +439,12 @@ class ProbingTabModule(ThorModule):
         self._probe_poll_timer.start()
 
     def _setup_sim_probe_button(self, layout):
-        """Add a momentary SIM probe trigger button — only if thorcnc.probe-sim pin exists."""
+        """Add a momentary SIM probe trigger button — only if probe_sim.hal is loaded (or2.0 exists)."""
         try:
-            if not self._t._hal_comp:
-                return
-            _ = self._t._hal_comp["probe-sim"]
+            import hal
+            hal.get_value("or2.0.in0")
         except Exception:
-            return  # not a sim setup or HAL not available
+            return  # probe_sim.hal not loaded → real machine
 
         from PySide6.QtWidgets import QPushButton, QWidget, QHBoxLayout
         row = QWidget()
