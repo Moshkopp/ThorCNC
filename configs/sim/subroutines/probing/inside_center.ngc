@@ -2,15 +2,31 @@
 ( #3: Max XY, #4: Max Z, #5: Search Vel, #6: Probe Vel, #7: Z Cl, #8: Depth, #9: Auto Zero )
 
 O<inside_center> sub
-    ( Simple Z-Probe at current location inside pocket )
+    ( 1. Initialization )
+    G90 G17 G40 G21
+    G92.1 ( Cancel any lingering G92 offsets )
+    M50 P0 ( Disable Feed Override )
+
+    ( 2. Simple Z-Probe at current location inside pocket )
     G91
     G38.2 Z-[#4] F#5
     G0 Z#7
     G38.2 Z-[#7 * 1.5] F#6
+
+    G90 ( From here on Z is absolute in current WCS )
+
+    ( 3. Capture surface and optional Auto-Zero )
+    #<z_surface> = #5063
     O101 if [#9 GT 0.5]
         G10 L20 P0 Z0
+        #<z_surface> = 0
     O101 endif
-    G0 Z#7
-    G90
+    #<z_clearance> = [#<z_surface> + #7]
+
+    G0 Z#<z_clearance> ( Absolute raise to clearance )
+
+    ( 4. Cleanup )
+    M50 P1 ( Re-enable Feed Override )
+
 O<inside_center> endsub
 M2

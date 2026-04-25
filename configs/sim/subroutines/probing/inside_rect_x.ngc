@@ -4,19 +4,31 @@
 O<inside_rect_x> sub
     ( 1. Initialization )
     G90 G17 G40 G21
+    G92.1 ( Cancel any lingering G92 offsets )
+    M50 P0 ( Disable Feed Override )
 
-    ( 1. Z-Probe to find top )
+    ( 2. Z-Probe to find top )
     G91
     G38.2 Z-[#4] F#5
     G1 Z#13 F#11
     G38.2 Z-[#13 * 2] F#6
     ( Tool is now physically at probed surface )
+
+    G90 ( From here on Z is absolute in current WCS )
+
+    ( 3. Capture surface in current WCS )
+    #<z_surface> = #5063
     O101 if [#9 GT 0.5]
         G10 L20 P0 Z0 ( Zero Z in WCS at surface )
+        #<z_surface> = 0 ( WCS shifted - surface is now at 0 )
     O101 endif
-    G1 Z#7 F#11 ( Relative up to Z clearance above surface )
 
-    G90
+    #<z_clearance> = [#<z_surface> + #7]
+    #<z_plunge>    = [#<z_surface> - #8]
+
+    G1 Z#<z_clearance> F#11 ( Absolute raise to clearance )
+
+    ( 4. Common variables )
     #<start_x> = #5420
     #<dia> = #10
     O<check_dia> if [#<dia> LE 0]
@@ -27,17 +39,16 @@ O<inside_rect_x> sub
         #<rapid> = [#5 * 2]
     O<check_rapid> endif
     #<rad> = [#<dia> / 2]
-    #<plunge_delta> = [#7 + #<rad> + #8] ( Distance from clearance down to probing depth )
     #<jump_x> = [[#1 / 2] + #12]
 
-    ( 2. Move to Center & Plunge )
+    ( 5. Move to Center & Plunge )
     G91
     G1 X#<jump_x> F#<rapid>
-    G1 Z-#<plunge_delta> F#<rapid> ( Plunge relative to surface )
     G90
+    G1 Z#<z_plunge> F#<rapid> ( Absolute plunge to probing depth )
     #<center_x> = #5420
 
-    ( 3. X-Center Finding )
+    ( 6. X-Center Finding )
     G91
     G38.2 X-[[#1 / 2] + #3] F#5
     G1 X#13 F#<rapid>
@@ -57,14 +68,15 @@ O<inside_rect_x> sub
 
     #<x_center> = [[#<x1> + #<x2>] / 2]
 
-    ( 4. Final Positioning & Zeroing )
+    ( 7. Final Positioning & Zeroing )
     G1 X#<x_center> F#<rapid>
     O102 if [#9 GT 0.5]
         G10 L20 P0 X0
     O102 endif
-    G91
-    G1 Z#<plunge_delta> F#<rapid> ( Raise Z back to clearance )
-    G90
+    G1 Z#<z_clearance> F#<rapid> ( Absolute raise to clearance )
+
+    ( 8. Cleanup )
+    M50 P1 ( Re-enable Feed Override )
 
 O<inside_rect_x> endsub
 M2

@@ -4,19 +4,29 @@
 O<angle_edge_right> sub
     ( 1. Initialization )
     G90 G17 G40 G21
+    G92.1 ( Cancel any lingering G92 offsets )
+    M50 P0 ( Disable Feed Override )
 
     ( Clear rotation before measuring to get absolute angle )
     G10 L2 P0 R0
 
-    ( 2. Z-Probe )
+    ( 2. Z-Probe to find surface )
     G91
     G38.2 Z-[#4] F#5
     G1 Z#13 F#11 ( Step Off )
     G38.2 Z-[#13 * 2] F#6 ( Fine Probe )
     ( Tool is now physically at probed surface )
-    G1 Z#7 F#11 ( Relative up to Z clearance above surface )
 
-    G90
+    G90 ( From here on Z is absolute in current WCS )
+
+    ( 3. Capture surface in current WCS )
+    #<z_surface> = #5063
+    #<z_clearance> = [#<z_surface> + #7]
+    #<z_plunge>    = [#<z_surface> - #8]
+
+    G1 Z#<z_clearance> F#11 ( Absolute raise to clearance )
+
+    ( 4. Common variables )
     #<start_x> = #5420
     #<start_y> = #5421
     #<dia> = #10
@@ -29,48 +39,50 @@ O<angle_edge_right> sub
     O<check_rapid> endif
     #<rad> = [#<dia> / 2]
     #<dist> = #1
-    #<plunge_delta> = [#7 + #<rad> + #8] ( Distance from clearance down to probing depth )
 
-    ( 3. Probe Point 1 )
+    ( 5. Probe Point 1 )
     G1 X[#<start_x> + #12] F#<rapid>
+    G1 Z#<z_plunge> F#<rapid> ( Absolute plunge to probing depth )
     G91
-    G1 Z-#<plunge_delta> F#<rapid>
     G38.2 X-[#12 + #3] F#5
     G1 X[#13] F#<rapid>
     G38.2 X-[#13 * 1.5] F#6
     #<p1_x> = #5061
     #<p1_y> = #5062
     G1 X[#13] F#<rapid>
-    G1 Z#<plunge_delta> F#<rapid> ( Raise Z back to clearance )
     G90
+    G1 Z#<z_clearance> F#<rapid> ( Absolute raise to clearance )
 
-    ( 4. Move to Point 2 )
+    ( 6. Move to Point 2 )
     G1 X#<start_x> Y[#<start_y> + #<dist>] F#<rapid>
 
-    ( 5. Probe Point 2 )
+    ( 7. Probe Point 2 )
     G1 X[#<start_x> + #12] F#<rapid>
+    G1 Z#<z_plunge> F#<rapid> ( Absolute plunge to probing depth )
     G91
-    G1 Z-#<plunge_delta> F#<rapid>
     G38.2 X-[#12 + #3] F#5
     G1 X[#13] F#<rapid>
     G38.2 X-[#13 * 1.5] F#6
     #<p2_x> = #5061
     #<p2_y> = #5062
     G1 X[#13] F#<rapid>
-    G1 Z#<plunge_delta> F#<rapid> ( Raise Z back to clearance )
     G90
+    G1 Z#<z_clearance> F#<rapid> ( Absolute raise to clearance )
 
-    ( 6. Calculate Angle )
+    ( 8. Calculate Angle )
     #<dx> = [#<p2_x> - #<p1_x>]
     #<dy> = [#<p2_y> - #<p1_y>]
 
     #<angle> = [ -1 * ATAN[#<dx>]/[#<dy>] ]
 
-    ( 7. Apply Rotation )
+    ( 9. Apply Rotation )
     G10 L2 P0 R#<angle>
 
-    ( 8. Move back to start )
+    ( 10. Move back to start )
     G1 X#<start_x> Y#<start_y> F#<rapid>
+
+    ( 11. Cleanup )
+    M50 P1 ( Re-enable Feed Override )
 
 O<angle_edge_right> endsub
 M2

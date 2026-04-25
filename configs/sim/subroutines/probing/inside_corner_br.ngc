@@ -4,19 +4,31 @@
 O<inside_corner_br> sub
     ( 1. Initialization )
     G90 G17 G40 G21
+    G92.1 ( Cancel any lingering G92 offsets )
+    M50 P0 ( Disable Feed Override )
 
-    ( 1. Z-Probe )
+    ( 2. Z-Probe to find top )
     G91
     G38.2 Z-[#4] F#5
     G1 Z#13 F#11 ( Step Off )
     G38.2 Z-[#13 * 2] F#6 ( Fine Probe )
     ( Tool is now physically at probed surface )
+
+    G90 ( From here on Z is absolute in current WCS )
+
+    ( 3. Capture surface in current WCS )
+    #<z_surface> = #5063
     O101 if [#9 GT 0.5]
         G10 L20 P0 Z0 ( Zero Z in WCS at surface )
+        #<z_surface> = 0 ( WCS shifted - surface is now at 0 )
     O101 endif
-    G1 Z#7 F#11 ( Relative up to Z clearance above surface )
 
-    G90
+    #<z_clearance> = [#<z_surface> + #7]
+    #<z_plunge>    = [#<z_surface> - #8]
+
+    G1 Z#<z_clearance> F#11 ( Absolute raise to clearance )
+
+    ( 4. Common variables )
     #<start_x> = #5420
     #<start_y> = #5421
     #<dia> = #10
@@ -28,19 +40,18 @@ O<inside_corner_br> sub
         #<rapid> = [#5 * 2]
     O<check_rapid> endif
     #<rad> = [#<dia> / 2]
-    #<plunge_delta> = [#7 + #<rad> + #8] ( Distance from clearance down to probing depth )
     #<jump_x> = -[#12]
     #<jump_y> = #12
 
-    ( 2. Move into Pocket & Plunge )
+    ( 5. Move into Pocket & Plunge )
     G91
     G1 X#<jump_x> Y#<jump_y> F#<rapid>
-    G1 Z-#<plunge_delta> F#<rapid> ( Plunge relative to surface )
     G90
+    G1 Z#<z_plunge> F#<rapid> ( Absolute plunge to probing depth )
     #<center_x> = #5420
     #<center_y> = #5421
 
-    ( 3. X-Probe to right wall )
+    ( 6. X-Probe to right wall )
     G91
     G38.2 X[#12 + #3] F#5
     G1 X-[#13] F#<rapid>
@@ -50,7 +61,7 @@ O<inside_corner_br> sub
     G90
     G1 X#<center_x> F#<rapid>
 
-    ( 4. Y-Probe to bottom wall )
+    ( 7. Y-Probe to bottom wall )
     G91
     G38.2 Y-[#12 + #3] F#5
     G1 Y#13 F#<rapid>
@@ -60,16 +71,17 @@ O<inside_corner_br> sub
     G90
     G1 Y#<center_y> F#<rapid>
 
-    ( 5. Move to Corner & Zero )
+    ( 8. Move to Corner & Zero )
     #<x_corner> = [#<x_hit> + #<rad>]
     #<y_corner> = [#<y_hit> - #<rad>]
-    G91
-    G1 Z#<plunge_delta> F#<rapid> ( Raise Z back to clearance )
-    G90
+    G1 Z#<z_clearance> F#<rapid> ( Absolute raise to clearance )
     G1 X#<x_corner> Y#<y_corner> F#<rapid>
     O102 if [#9 GT 0.5]
         G10 L20 P0 X0 Y0
     O102 endif
+
+    ( 9. Cleanup )
+    M50 P1 ( Re-enable Feed Override )
 
 O<inside_corner_br> endsub
 M2
