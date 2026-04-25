@@ -478,22 +478,27 @@ class ProbingTabModule(ThorModule):
                      1020, 1021, 1030, 1031, 1040]
 
     def _seed_probe_var_params(self):
-        """Add missing probe parameters to the var file (only when LinuxCNC is stopped)."""
+        """Add missing probe parameters to the var file, keeping it sorted."""
         path = self._var_file_path()
         if not path:
             return
         try:
             with open(path, "r") as f:
-                content = f.read()
-            existing = {int(l.split()[0]) for l in content.splitlines()
-                        if l.strip() and len(l.split()) >= 2
-                        and l.split()[0].isdigit()}
-            missing = [p for p in self._PROBE_PARAMS if p not in existing]
-            if missing:
-                with open(path, "a") as f:
-                    for p in missing:
-                        f.write(f"{p}\t0.000000\n")
-                print(f"[ThorCNC] Probe var params added: {missing}")
+                lines = f.readlines()
+            params: dict[int, str] = {}
+            for line in lines:
+                parts = line.split()
+                if len(parts) >= 2 and parts[0].lstrip("-").isdigit():
+                    params[int(parts[0])] = line
+            missing = [p for p in self._PROBE_PARAMS if p not in params]
+            if not missing:
+                return
+            for p in missing:
+                params[p] = f"{p}\t0.000000\n"
+            with open(path, "w") as f:
+                for key in sorted(params):
+                    f.write(params[key])
+            print(f"[ThorCNC] Probe var params added: {missing}")
         except OSError as e:
             print(f"[ThorCNC] Could not seed probe var params: {e}")
 
