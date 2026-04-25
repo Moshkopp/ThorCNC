@@ -474,7 +474,7 @@ class ProbingTabModule(ThorModule):
         self._probe_var_mtime = mtime
 
         params = self._read_probe_var_file()
-        if not params or 1040 not in params:
+        if 1001 not in params:
             return
 
         counter = int(params.get(1001, 0))
@@ -505,16 +505,16 @@ class ProbingTabModule(ThorModule):
             kind=kind,
             wcs=wcs,
             auto_zero=auto_zero,
-            x_hit=float(params[1010]),
-            y_hit=float(params[1011]),
-            z_surface=float(params[1012]),
-            p2_x=float(params[1013]),
-            p2_y=float(params[1014]),
-            x_result=float(params[1020]),
-            y_result=float(params[1021]),
-            measured_x=float(params[1030]),
-            measured_y=float(params[1031]),
-            angle=float(params[1040]),
+            x_hit=float(params.get(1010, 0.0)),
+            y_hit=float(params.get(1011, 0.0)),
+            z_surface=float(params.get(1012, 0.0)),
+            p2_x=float(params.get(1013, 0.0)),
+            p2_y=float(params.get(1014, 0.0)),
+            x_result=float(params.get(1020, 0.0)),
+            y_result=float(params.get(1021, 0.0)),
+            measured_x=float(params.get(1030, 0.0)),
+            measured_y=float(params.get(1031, 0.0)),
+            angle=float(params.get(1040, 0.0)),
             expected=self._probe_pending_expected,
         )
         self._probe_pending_expected = None
