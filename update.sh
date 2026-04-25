@@ -127,8 +127,7 @@ install_subroutines() {
     if [ -d "$SRC" ]; then
         info "Synchronisiere Subroutines nach $DEST..."
         mkdir -p "$DEST"
-        # Kopiert nur neue Dateien (-n), damit Benutzeranpassungen in nc_files erhalten bleiben
-        cp -rn "$SRC/"* "$DEST/" || true
+        cp -r "$SRC/"* "$DEST/" || true
         ok "Subroutines synchronisiert."
     else
         warn "Subroutines-Quellordner nicht gefunden: $SRC"
