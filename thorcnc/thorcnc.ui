@@ -1856,16 +1856,6 @@
                     </item>
                     <item>
                      <property name="text">
-                      <string>dark_green</string>
-                     </property>
-                    </item>
-                    <item>
-                     <property name="text">
-                      <string>dark_orange</string>
-                     </property>
-                    </item>
-                    <item>
-                     <property name="text">
                       <string>light</string>
                      </property>
                     </item>

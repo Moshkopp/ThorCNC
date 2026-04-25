@@ -12,6 +12,7 @@ from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QLabel
 
 from .base import ThorModule
+from ..i18n import _t
 
 
 class GCodeViewModule(ThorModule):
@@ -46,10 +47,10 @@ class GCodeViewModule(ThorModule):
         self._t._btn_edit_gcode.style().polish(self._t._btn_edit_gcode)
 
         if is_edit:
-            self._t._status(self._t._t("G-CODE EDIT MODE ENABLED"))
+            self._t._status(_t("G-CODE EDIT MODE ENABLED"))
             self._on_gcode_modification_changed(gcode_view.document().isModified())
         else:
-            self._t._status(self._t._t("G-CODE EDIT MODE DISABLED"))
+            self._t._status(_t("G-CODE EDIT MODE DISABLED"))
             self._t._btn_save_gcode.setEnabled(False)
 
     @Slot(bool)
@@ -71,7 +72,7 @@ class GCodeViewModule(ThorModule):
         """Save edited G-Code back to file."""
         gcode_view = self._t.gcode_view
         if not self._t._user_program or not os.path.exists(self._t._user_program):
-            self._t._status(self._t._t("SAVE FAILED: NO FILE LOADED"))
+            self._t._status(_t("SAVE FAILED: NO FILE LOADED"))
             return
 
         try:
@@ -130,7 +131,7 @@ class GCodeViewModule(ThorModule):
             gcode_view.set_current_line(found_idx + 1, move_cursor=True)
             self._t._status(f"M6 gefunden in Zeile {found_idx + 1}")
         else:
-            self._t._status(self._t._t("Kein M6 im Programm gefunden."))
+            self._t._status(_t("Kein M6 im Programm gefunden."))
 
     # ── GCode/MCode Display ───────────────────────────────────────────────────
 

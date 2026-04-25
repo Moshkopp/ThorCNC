@@ -7,7 +7,7 @@ Usage:
 
 Options:
     --ini INI_FILE   Path to LinuxCNC INI file (default: $INI_FILE_NAME)
-    --theme THEME    Theme name: dark | light | dark_green | dark_orange
+    --theme THEME    Theme name: dark | light
                      [default: dark]
 """
 import os
@@ -51,7 +51,7 @@ def main():
     parser = argparse.ArgumentParser(description="ThorCNC – LinuxCNC VCP")
     parser.add_argument("--ini",   default="", help="Pfad zur INI-Datei")
     parser.add_argument("--theme", default="",
-                        choices=["dark", "light", "dark_green", "dark_orange", ""],
+                        choices=["dark", "light", ""],
                         help="UI-Theme")
     # parse_known_args: LinuxCNC übergibt ggf. extra Argumente (z.B. -ini, Pfad),
     # die wir ignorieren – INI_FILE_NAME aus der Umgebung reicht.
