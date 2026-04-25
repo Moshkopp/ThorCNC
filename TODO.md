@@ -148,3 +148,15 @@ MainWindow.py (5000+ Zeilen) in ein modulares System umwandeln, wo jede Funktion
 *Gesamt-Einsparung: 3672 Zeilen (73% der Original-MainWindow)*  
 *Module count: 13 Spezialisierte Module + 1 Base-Modul = **14 insgesamt***  
 *Nächste Optionen: Status Display Module, File Loading Module, oder andere Utility-Module*
+
+---
+
+## 🛠️ Laufende Aufgaben & Fixes
+
+### Probing Script Robustheit (G-Code)
+- [ ] outside_edge_left.ngc auf Absolute-Surface-Logik umstellen
+  - [ ] G92.1 am Anfang einfügen (Löschen von Geister-Offsets)
+  - [ ] Z-Oberfläche nach Tastvorgang in Variable speichern: #<z_surface> = #5063
+  - [ ] Alle Z-Bewegungen (Eintauchen/Anheben) auf G90 (Absolut) basierend auf #<z_surface> umstellen
+  - [ ] Validierung: Sicherstellen, dass das Skript auch bei manuell verschobenen Offsets (G54/G92) nicht mehr tief eintaucht
+  - [ ] (Optional) Übertragung dieser Logik auf alle anderen Probing-Subroutines (outside_corner_tl.ngc, etc.)
