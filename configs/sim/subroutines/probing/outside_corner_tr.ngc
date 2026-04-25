@@ -78,7 +78,15 @@ O<outside_corner_tr> sub
         G10 L20 P0 X0 Y0
     O102 endif
 
-    ( 8. Cleanup )
+    ( Publish results to GUI )
+    #1000 = 13
+    #1010 = #<x_hit>
+    #1011 = #<y_hit>
+    #1012 = #<z_surface>
+    #1020 = #<x_corner>
+    #1021 = #<y_corner>
+    #1001 = [#1001 + 1] ( counter - last )
+
     M50 P1 ( Re-enable Feed Override )
 
 O<outside_corner_tr> endsub

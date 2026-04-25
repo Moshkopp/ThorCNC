@@ -74,7 +74,16 @@ O<center_rect_y> sub
         G10 L20 P0 Y0
     O102 endif
 
-    ( 7. Cleanup )
+    ( Compute measured Y width - boss probe touches outside )
+    #<meas_width_y> = [#<y2> - #<y1> - #<dia>]
+
+    ( Publish results to GUI )
+    #1000 = 52
+    #1012 = #<z_surface>
+    #1021 = #<y_center>
+    #1031 = #<meas_width_y>
+    #1001 = [#1001 + 1] ( counter - last )
+
     M50 P1 ( Re-enable Feed Override )
 
 O<center_rect_y> endsub

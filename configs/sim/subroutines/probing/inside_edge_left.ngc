@@ -65,7 +65,13 @@ O<inside_edge_left> sub
         G10 L20 P0 X0
     O102 endif
 
-    ( 8. Cleanup )
+    ( Publish results to GUI )
+    #1000 = 20
+    #1010 = #<x_hit>
+    #1012 = #<z_surface>
+    #1020 = #<x_wall>
+    #1001 = [#1001 + 1] ( counter - last )
+
     M50 P1 ( Re-enable Feed Override )
 
 O<inside_edge_left> endsub

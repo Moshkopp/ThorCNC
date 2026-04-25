@@ -97,7 +97,19 @@ O<inside_round> sub
     O102 endif
     G1 Z#<z_clearance> F#<rapid> ( Absolute raise to clearance )
 
-    ( 9. Cleanup )
+    ( Compute measured diameters - pocket probe touches inside )
+    #<meas_dia_x> = [#<x2> - #<x1> + #<dia>]
+    #<meas_dia_y> = [#<y2> - #<y1> + #<dia>]
+
+    ( Publish results to GUI )
+    #1000 = 60
+    #1012 = #<z_surface>
+    #1020 = #<x_center>
+    #1021 = #<y_center>
+    #1030 = #<meas_dia_x>
+    #1031 = #<meas_dia_y>
+    #1001 = [#1001 + 1] ( counter - last )
+
     M50 P1 ( Re-enable Feed Override )
 
 O<inside_round> endsub

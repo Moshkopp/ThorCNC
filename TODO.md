@@ -153,10 +153,81 @@ MainWindow.py (5000+ Zeilen) in ein modulares System umwandeln, wo jede Funktion
 
 ## 🛠️ Laufende Aufgaben & Fixes
 
-### Probing Script Robustheit (G-Code)
-- [ ] outside_edge_left.ngc auf Absolute-Surface-Logik umstellen
-  - [ ] G92.1 am Anfang einfügen (Löschen von Geister-Offsets)
-  - [ ] Z-Oberfläche nach Tastvorgang in Variable speichern: #<z_surface> = #5063
-  - [ ] Alle Z-Bewegungen (Eintauchen/Anheben) auf G90 (Absolut) basierend auf #<z_surface> umstellen
-  - [ ] Validierung: Sicherstellen, dass das Skript auch bei manuell verschobenen Offsets (G54/G92) nicht mehr tief eintaucht
-  - [ ] (Optional) Übertragung dieser Logik auf alle anderen Probing-Subroutines (outside_corner_tl.ngc, etc.)
+### Probing Script Robustheit (G-Code) — Umsetzung läuft
+- [x] Pattern auf `outside_corner_bl.ngc` umgesetzt und an Maschine validiert
+  - G92.1 (Geister-Offsets killen)
+  - M50 P0/P1 (Feed Override aus während Probe)
+  - `#<z_surface> = #5063` + absolute Z-Logik (`#<z_clearance>`, `#<z_plunge>`)
+  - Auto-Zero ON/OFF beide getestet, Feed Override greift während Probe nicht ein
+- [x] Pattern auf alle übrigen 27 Subs übertragen (siehe Liste unten)
+- [x] **Maschinen-Test der 27 übertragenen Subs** — alle erfolgreich validiert (2026-04-25)
+
+---
+
+## 🆕 Probe Result Panel + History (geplant)
+
+**Ziel:** Mess-Modus ohne WCS-Veränderung. Auto-Zero OFF = nur messen, Werte anzeigen. Z.B. Passungs-Check (Tasche/Bohrung).
+
+### Layout-Änderungen Probing-Tab
+- [ ] Kasten 1 (Pattern-Grid + Before/After Probing) **höher** machen — mehr Stretch-Factor im vertikalen Layout
+- [ ] Kasten 2 (neu) **unter** dem Pattern-Grid: Probe Result Panel
+
+### Probe Result Panel (minimal)
+- [ ] QGroupBox "PROBE RESULT" mit:
+  - Aktives WCS als Pill/Label oben (z.B. `[G54]`)
+  - Probe-Typ + Zeitstempel
+  - Result-Werte (X/Y Corner/Wall/Center, Z Surface, ggf. Diameter, Angle)
+  - Auto-Zero Status-Zeile (nur sichtbar wenn OFF)
+  - Δ-Anzeige bei Round/Rect mit Expected-Wert (rot/grün, Toleranz fix ±0.05mm initial)
+- [ ] Buttons rechts oben: `[History]` `[Clear]`
+- [ ] Polling-Mechanismus: pro Sekunde `linuxcnc.stat.parameters[1001]` checken, wenn 1 → Werte lesen, Reset via MDI `#1001=0`
+
+### History-Dialog (separates Fenster)
+- [ ] Modaler/freier QDialog mit Tabelle (Time, Type, Result-Summary, WCS, AZ)
+- [ ] Klick auf Zeile → Detail-Expansion (alle Roh-Werte: Hit-Punkte, Surface, Probe-Dia)
+- [ ] Buttons: `[Clear All]` `[Export CSV]` (CSV als Future)
+- [ ] **Persistenz: nein** — leer bei Programmstart, in-memory deque
+- [ ] Aufruf via History-Button im Result Panel (rechts oben)
+
+### G-Code Communication Block (`#1000-#1099`)
+**Reserviert in `probe_run.ngc`** mit Header-Kommentar als Dokumentation.
+
+| Param | Bedeutung |
+|---|---|
+| #1000 | Probe-Type-Code (numerisch, Mapping in Python) |
+| #1001 | Valid-Flag (1 = neue Daten, GUI setzt zurück auf 0) |
+| #1010 | X Hit (letzter Tref) |
+| #1011 | Y Hit |
+| #1012 | Z Surface |
+| #1020 | X Result (Wall/Corner/Center) |
+| #1021 | Y Result |
+| #1030 | Gemessener Durchmesser |
+| #1031 | Gemessene Breite Y (für Rect) |
+| #1040 | Winkel (Grad) |
+
+- [ ] Header in `probe_run.ngc` mit Param-Tabelle einfügen
+- [ ] In jeder Sub am Ende (vor `M50 P1`) Result-Publishing einfügen:
+  ```ngc
+  ( Publish results to GUI )
+  #1000 = <type_code>
+  #1010 = #<x_hit>
+  ...
+  #1001 = 1  ( valid flag, last )
+  ```
+- [ ] Type-Code-Mapping festlegen (1=outside_edge_left, 2=outside_edge_right, ...) — in beiden Seiten dokumentieren
+
+### Implementation-Reihenfolge
+1. ~~Erst Maschinen-Test der 27 Subs abwarten~~ ✅ erledigt
+2. Type-Code-Mapping definieren (G-Code + Python)
+3. `probe_run.ngc` Header schreiben
+4. Result-Publishing in alle 28 Subs einfügen
+5. Python: `ProbeResultPanel` Widget erstellen
+6. Python: `ProbeHistoryDialog` erstellen
+7. `probing_tab.py` Layout anpassen (Kasten 1 höher, Panel einfügen)
+8. Polling im StatusPoller hooken oder eigener QTimer
+9. Tests an Maschine
+
+### Offene Punkte für später
+- [ ] Toleranz für Δ-Anzeige konfigurierbar machen (initial fix ±0.05mm)
+- [ ] CSV-Export aus History
+- [ ] Optional: Banner-Warnung "MEASURE ONLY MODE" bei Auto-Zero OFF

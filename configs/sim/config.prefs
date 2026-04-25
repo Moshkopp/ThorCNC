@@ -25,6 +25,9 @@
     "ts_search_vel": 300.0,
     "ts_probe_vel": 10.0,
     "mdi_history": [
+        "T99 M6 G43",
+        "G53 G0 Z0",
+        "T99 M6 G43",
         "O<goto_zero_xy> call",
         "G53 G0 X0 Y0",
         "G53 G0 Z0",
@@ -71,10 +74,7 @@
         "T99 M6 G43",
         "G53 G0 Z0",
         "M61 Q99",
-        "G53 G0 Z0",
-        "T7 M6 G43",
-        "T99 M6 G43",
-        "T9 M6 G43"
+        "G53 G0 Z0"
     ],
     "theme": "dark",
     "backplot_msaa_samples": 4,

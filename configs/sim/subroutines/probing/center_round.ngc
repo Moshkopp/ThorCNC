@@ -103,7 +103,19 @@ O<center_round> sub
         G10 L20 P0 X0 Y0
     O102 endif
 
-    ( 8. Cleanup )
+    ( Compute measured diameters - boss probe touches outside )
+    #<meas_dia_x> = [#<x2> - #<x1> - #<dia>]
+    #<meas_dia_y> = [#<y2> - #<y1> - #<dia>]
+
+    ( Publish results to GUI )
+    #1000 = 50
+    #1012 = #<z_surface>
+    #1020 = #<x_center>
+    #1021 = #<y_center>
+    #1030 = #<meas_dia_x>
+    #1031 = #<meas_dia_y>
+    #1001 = [#1001 + 1] ( counter - last )
+
     M50 P1 ( Re-enable Feed Override )
 
 O<center_round> endsub

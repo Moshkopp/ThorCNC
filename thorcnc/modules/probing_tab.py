@@ -1,6 +1,7 @@
 """Probing tab module for ThorCNC — UI setup, probe sequences, preferences."""
 
 import os
+import time
 import linuxcnc
 from PySide6.QtCore import Qt, QSize, QTimer, QPoint
 from PySide6.QtWidgets import (
@@ -12,6 +13,10 @@ from PySide6.QtGui import QIcon
 
 from .base import ThorModule
 from ..i18n import _t
+from ..widgets.probe_result import (
+    ProbeResultPanel, ProbeHistoryDialog, ProbeResult,
+    PROBE_TYPES, WCS_NAMES,
+)
 
 _DIR = os.path.dirname(os.path.dirname(__file__))
 
@@ -46,6 +51,15 @@ class ProbingTabModule(ThorModule):
         self._probe_center_inside = False
         self._probe_dro_work = {}
         self._probe_dro_machine = {}
+
+        # ── Probe Result Panel state ─────────────────────────────────────────
+        self._probe_result_panel = None
+        self._probe_history = []                # list[ProbeResult] - session only
+        self._probe_history_dialog = None
+        self._probe_last_counter = 0            # last seen #1001 value
+        self._probe_pending_expected = None     # expected dim, captured at probe-start
+        self._probe_stat = None                 # linuxcnc.stat() for param polling
+        self._probe_poll_timer = None
 
         # ── Probe Warning State (from ProbingManager) ────────────────────────
         self._probe_warning_enabled = thorc.settings.get("probe_warning_enabled", True)
@@ -379,6 +393,154 @@ class ProbingTabModule(ThorModule):
 
         # ── Setup Probe DRO ────────────────────────────────────────────────
         self._setup_probe_dro()
+
+        # ── Setup Result Panel + Polling ───────────────────────────────────
+        self._setup_probe_result_panel()
+
+    def _setup_probe_result_panel(self):
+        """Build Probe Result Panel, insert into vl_probing_main, start polling."""
+        # Allow Kasten 1 (pattern + before/after) to grow vertically
+        if frm := self._t._w(QFrame, "frm_probe_grid"):
+            frm.setMaximumSize(QSize(600, 16777215))
+        if frm := self._t._w(QFrame, "frm_probe_pre_post"):
+            frm.setMaximumSize(QSize(280, 16777215))
+
+        self._probe_result_panel = ProbeResultPanel()
+        self._probe_result_panel.history_clicked.connect(self._show_probe_history)
+
+        layout = self._t.ui.tab_probing.layout()
+        if layout is not None:
+            # Insert as second item (after hl_probe_main)
+            try:
+                layout.insertWidget(1, self._probe_result_panel)
+            except Exception:
+                layout.addWidget(self._probe_result_panel)
+
+        # Set up polling for #1001 counter via .var file
+        try:
+            self._probe_stat = linuxcnc.stat()
+        except Exception:
+            self._probe_stat = None
+        self._probe_var_mtime: float = 0.0
+        try:
+            params = self._read_probe_var_file()
+            self._probe_last_counter = int(params.get(1001, 0))
+        except Exception:
+            self._probe_last_counter = 0
+
+        self._probe_poll_timer = QTimer(self._t)
+        self._probe_poll_timer.setInterval(200)  # 5Hz
+        self._probe_poll_timer.timeout.connect(self._poll_probe_results)
+        self._probe_poll_timer.start()
+
+    def _var_file_path(self) -> str | None:
+        if not self._t.ini or not self._t.ini_path:
+            return None
+        name = self._t.ini.find("RS274NGC", "PARAMETER_FILE")
+        if not name:
+            return None
+        p = os.path.join(os.path.dirname(self._t.ini_path), name)
+        return p if os.path.exists(p) else None
+
+    def _read_probe_var_file(self) -> dict[int, float]:
+        path = self._var_file_path()
+        if not path:
+            return {}
+        params: dict[int, float] = {}
+        try:
+            with open(path, "r") as f:
+                for line in f:
+                    parts = line.split()
+                    if len(parts) >= 2:
+                        try:
+                            params[int(parts[0])] = float(parts[1])
+                        except ValueError:
+                            pass
+        except OSError:
+            pass
+        return params
+
+    def _poll_probe_results(self):
+        """Check #1001 counter; if changed, build ProbeResult and update UI."""
+        path = self._var_file_path()
+        if not path:
+            return
+        try:
+            mtime = os.path.getmtime(path)
+        except OSError:
+            return
+        if mtime == self._probe_var_mtime:
+            return
+        self._probe_var_mtime = mtime
+
+        params = self._read_probe_var_file()
+        if not params or 1040 not in params:
+            return
+
+        counter = int(params.get(1001, 0))
+        if counter == self._probe_last_counter:
+            return
+        self._probe_last_counter = counter
+
+        type_code = int(params[1000])
+        if type_code not in PROBE_TYPES:
+            return
+        type_name, kind = PROBE_TYPES[type_code]
+
+        try:
+            self._probe_stat.poll()
+            g5x_idx = int(self._probe_stat.g5x_index)
+            wcs = WCS_NAMES[g5x_idx - 1] if 1 <= g5x_idx <= len(WCS_NAMES) else "?"
+        except Exception:
+            wcs = "?"
+
+        auto_zero = True
+        if btn := getattr(self, "_btn_probe_auto_zero", None):
+            auto_zero = bool(btn.isChecked())
+
+        r = ProbeResult(
+            timestamp=time.time(),
+            type_code=type_code,
+            type_name=type_name,
+            kind=kind,
+            wcs=wcs,
+            auto_zero=auto_zero,
+            x_hit=float(params[1010]),
+            y_hit=float(params[1011]),
+            z_surface=float(params[1012]),
+            p2_x=float(params[1013]),
+            p2_y=float(params[1014]),
+            x_result=float(params[1020]),
+            y_result=float(params[1021]),
+            measured_x=float(params[1030]),
+            measured_y=float(params[1031]),
+            angle=float(params[1040]),
+            expected=self._probe_pending_expected,
+        )
+        self._probe_pending_expected = None
+
+        self._probe_history.append(r)
+        if len(self._probe_history) > 50:
+            self._probe_history.pop(0)
+
+        if self._probe_result_panel is not None:
+            self._probe_result_panel.set_result(r)
+
+        if self._probe_history_dialog is not None and self._probe_history_dialog.isVisible():
+            self._probe_history_dialog.set_history(self._probe_history)
+
+    def _show_probe_history(self):
+        """Open the history dialog (or raise if already open)."""
+        if self._probe_history_dialog is None or not self._probe_history_dialog.isVisible():
+            self._probe_history_dialog = ProbeHistoryDialog(self._probe_history, self._t.ui)
+            self._probe_history_dialog.cleared.connect(self._on_probe_history_cleared)
+            self._probe_history_dialog.show()
+        else:
+            self._probe_history_dialog.raise_()
+            self._probe_history_dialog.activateWindow()
+
+    def _on_probe_history_cleared(self):
+        self._probe_history.clear()
 
     def _on_probe_center_mode_toggled(self, inside: bool):
         """Umschaltung zwischen OUTSIDE und INSIDE."""
@@ -769,14 +931,29 @@ class ProbingTabModule(ThorModule):
             xy_cl  = val("dsb_probe_xy_clearance")
             step_off = val("dsb_probe_step_off")
 
+            # Reset pending expected dim before each probe run
+            self._probe_pending_expected = None
+
             if ngc_name in ("center_rect", "center_rect_x", "center_rect_y",
                             "inside_rect", "inside_rect_x", "inside_rect_y"):
                 lx = val("le_probe_center_x")
                 ly = val("le_probe_center_y")
                 params = f" [{lx}] [{ly}] [{max_xy}] [{max_z}] [{s_vel}] [{p_vel}] [{z_cl}] [{dep}] [{auto_zero}] [{dia}] [{rapid}] [{xy_cl}] [{step_off}]"
+                # Capture expected dim per axis variant
+                try:
+                    if ngc_name.endswith("_x"):
+                        self._probe_pending_expected = float(lx) if lx else None
+                    elif ngc_name.endswith("_y"):
+                        self._probe_pending_expected = float(ly) if ly else None
+                except (ValueError, TypeError):
+                    self._probe_pending_expected = None
             elif ngc_name in ("center_round", "inside_round"):
                 cdia = val("le_probe_center_diam")
                 params = f" [{cdia}] [0] [{max_xy}] [{max_z}] [{s_vel}] [{p_vel}] [{z_cl}] [{dep}] [{auto_zero}] [{dia}] [{rapid}] [{xy_cl}] [{step_off}]"
+                try:
+                    self._probe_pending_expected = float(cdia) if cdia else None
+                except (ValueError, TypeError):
+                    self._probe_pending_expected = None
             elif is_corner_edge:
                 # For corners and edges: #1 Width, #2-9 as usual, #10 Dia, #11 Rapid, #12 XY_Cl, #13 Step_Off
                 ew = val("dsb_probe_edge_width")

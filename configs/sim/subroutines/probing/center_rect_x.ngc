@@ -74,7 +74,16 @@ O<center_rect_x> sub
         G10 L20 P0 X0
     O102 endif
 
-    ( 7. Cleanup )
+    ( Compute measured X width - boss probe touches outside )
+    #<meas_width_x> = [#<x2> - #<x1> - #<dia>]
+
+    ( Publish results to GUI )
+    #1000 = 51
+    #1012 = #<z_surface>
+    #1020 = #<x_center>
+    #1030 = #<meas_width_x>
+    #1001 = [#1001 + 1] ( counter - last )
+
     M50 P1 ( Re-enable Feed Override )
 
 O<center_rect_x> endsub
