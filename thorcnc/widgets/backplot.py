@@ -25,11 +25,12 @@ from PySide6.QtGui import QSurfaceFormat
 pg = None
 gl = None
 _HAS_GL = False
+_GL_ERROR = ""
 
 try:
     import pyqtgraph as _pg
     import pyqtgraph.opengl as _gl
-    
+
     # Compatibility fix for PySide6: QOpenGLWidget moved to QtOpenGLWidgets.
     # We patch it back to where pyqtgraph expects it if necessary.
     try:
@@ -43,8 +44,9 @@ try:
     pg = _pg
     gl = _gl
     _HAS_GL = True
-except Exception:
+except Exception as _e:
     _HAS_GL = False
+    _GL_ERROR = str(_e)
 
 from ..gcode_parser import Segment, RAPID, FEED, ARC, bounding_box
 from ..i18n import _t
@@ -554,12 +556,14 @@ class BackplotWidget(QFrame):
             self._impl = _BackplotGL(self, samples=msaa_samples)
             outer.addWidget(self._impl)
         else:
+            _err_detail = f"\n\nFehler: {_GL_ERROR}" if _GL_ERROR else ""
             lbl = QLabel(
                 _t("pyqtgraph / OpenGL nicht verfügbar.\n\n"
                 "Mögliche Lösungen:\n"
                 "1. In VM: '3D-Beschleunigung' aktivieren\n"
-                "2. Debian/Ubuntu: sudo apt install python3-pyqtgraph python3-opengl\n"
-                "3. Pip: pip install pyqtgraph PyOpenGL"),
+                "2. Debian/Ubuntu: sudo apt install python3-pyqtgraph python3-opengl libgl1-mesa-dri\n"
+                "3. Pip: pip install pyqtgraph PyOpenGL\n"
+                "4. Software-Renderer: LIBGL_ALWAYS_SOFTWARE=1 thorcnc") + _err_detail,
                 self,
             )
             lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
