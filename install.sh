@@ -68,8 +68,11 @@ install_deps() {
             info "Installiere System-Pakete (apt)..."
             sudo apt-get update -qq || true
             # Installiere PySide6 + OpenGL Support via apt (Debian 12+ benötigt oft qtopenglwidgets separat)
+            # python3-pyqtgraph intentionally NOT installed via apt — the Debian package
+            # ships an older version that defaults to PyQt5 and lacks proper PySide6 support.
+            # pyqtgraph is installed via pip (see [backplot] extras below).
             sudo apt-get install -y python3-pyside6 python3-pyside6.qtopenglwidgets \
-                                   python3-pyqtgraph python3-opengl \
+                                   python3-opengl \
                                    libopengl0 libegl1 2>/dev/null || \
                 warn "Einige System-Pakete konnten nicht via apt installiert werden. Wird später via pip versucht."
             
@@ -92,11 +95,11 @@ install_thorcnc() {
     
     if $DEV_MODE; then
         info "Editable Install (Entwicklungsmodus) mit Extras $EXTRAS..."
-        pip install $PIP_BREAK_FLAG -e ".$EXTRAS"
+        pip install $PIP_BREAK_FLAG --upgrade -e ".$EXTRAS"
         ok "thorcnc im Entwicklungsmodus installiert."
     else
         info "Installiere thorcnc mit Extras $EXTRAS..."
-        pip install $PIP_BREAK_FLAG ".$EXTRAS"
+        pip install $PIP_BREAK_FLAG --upgrade ".$EXTRAS"
         ok "thorcnc installiert."
     fi
 }
