@@ -142,6 +142,31 @@ EOF
     fi
 }
 
+# ── Simulation-Shortcut auf Schreibtisch ──────────────────────────────────────
+install_sim_shortcut() {
+    DESKTOP_PATH="$HOME/Desktop"
+    if [ ! -d "$DESKTOP_PATH" ] && [ -d "$HOME/Schreibtisch" ]; then
+        DESKTOP_PATH="$HOME/Schreibtisch"
+    fi
+
+    if [ -d "$DESKTOP_PATH" ]; then
+        SHORTCUT="$DESKTOP_PATH/ThorCNC-Sim.desktop"
+        cat > "$SHORTCUT" <<EOF
+[Desktop Entry]
+Type=Application
+Name=ThorCNC Sim
+Comment=Startet ThorCNC in der Simulation
+Exec=bash -c "cd '\$SCRIPT_DIR' && ./start.sh"
+Icon=applications-engineering
+Terminal=false
+Categories=Engineering;
+EOF
+        chmod +x "$SHORTCUT"
+        ok "Simulation-Verknüpfung auf Schreibtisch erstellt."
+    fi
+}
+
+
 # ── Subroutines kopieren ──────────────────────────────────────────────────────
 install_subroutines() {
     SRC="$SCRIPT_DIR/configs/sim/subroutines"
@@ -197,6 +222,7 @@ install_thorcnc
 install_subroutines
 install_desktop_entry
 install_update_shortcut
+install_sim_shortcut
 
 echo ""
 echo -e "${BOLD}Installation abgeschlossen.${NC}"

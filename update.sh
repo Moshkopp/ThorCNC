@@ -193,6 +193,22 @@ EOD
     
     chmod +x "$SHORTCUT"
     ok "Verknüpfung erstellt: ThorCNC-Update.desktop"
+
+    SIM_SHORTCUT="$DESKTOP_PATH/ThorCNC-Sim.desktop"
+    
+    cat > "$SIM_SHORTCUT" <<EOD
+[Desktop Entry]
+Type=Application
+Name=ThorCNC Sim
+Comment=Startet ThorCNC in der Simulation
+Exec=bash -c "cd '$SCRIPT_DIR' && ./start.sh"
+Icon=applications-engineering
+Terminal=false
+Categories=Engineering;
+EOD
+    
+    chmod +x "$SIM_SHORTCUT"
+    ok "Verknüpfung erstellt: ThorCNC-Sim.desktop"
 fi
 
 echo ""
