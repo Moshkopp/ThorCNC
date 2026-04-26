@@ -321,14 +321,10 @@ class FileManagerModule(ThorModule):
         tp = parse_file(path)
         self._t._last_toolpath = tp
         self._t.backplot.load_toolpath(tp)
-        if not self._t._view_restored:
-            self._t.backplot.fit_view(tp)
 
         sv = self._t.simple_view_mod.simple_view
-        if sv:
-            if sv.backplot:
-                sv.backplot.load_toolpath(tp)
-                sv.backplot.fit_view(tp)
+        if sv and sv.backplot:
+            sv.backplot.load_toolpath(tp)
             sv.load_gcode(path)
 
         self._t._update_run_buttons()

@@ -8,7 +8,7 @@ Handles:
 """
 
 from PySide6.QtWidgets import QPushButton
-from PySide6.QtCore import Slot, Qt
+from PySide6.QtCore import Slot, Qt, QTimer
 
 from thorcnc.widgets.backplot import BackplotWidget
 from thorcnc.i18n import _t
@@ -83,6 +83,13 @@ class BackplotModule(ThorModule):
     def connect_signals(self):
         """Connect backplot signals from poller."""
         self._t.poller.program_line.connect(self._on_program_line)
+        self._t.poller.homed_changed.connect(self._on_homed)
+
+    @Slot(list)
+    def _on_homed(self, homed: list):
+        if all(i < len(homed) and homed[i] for i in range(3)):
+            if self.backplot:
+                self.backplot.hide_splash()
 
     @Slot(int)
     def _on_program_line(self, line: int):
@@ -120,6 +127,7 @@ class BackplotModule(ThorModule):
         self._t.backplot = self.backplot
         if self._view_restored:
             QTimer.singleShot(1500, self.clear_view_restored_flag)
+        QTimer.singleShot(800, lambda: self.backplot.start_splash("ThorCNC"))
 
     def clear_view_restored_flag(self):
         """Reset the view restored flag."""

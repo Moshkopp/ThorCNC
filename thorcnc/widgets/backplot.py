@@ -18,7 +18,7 @@ os.environ['PYQTGRAPH_QT_LIB'] = 'PySide6'
 import numpy as np
 import math
 from PySide6.QtWidgets import QWidget, QFrame, QVBoxLayout, QHBoxLayout, QLabel
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QSurfaceFormat
 
 # Global references for the backplot implementation
@@ -57,6 +57,36 @@ _COLOR_ARC     = (0.2, 0.9, 0.9, 1.0)    # cyan
 _COLOR_TOOL    = (1.0, 0.9, 0.0, 1.0)    # gelb
 
 _CROSS_LEN = 40.0   # Length of axis cross arms (mm)
+
+
+def _text_to_strokes(text: str, size: float = 80.0) -> list:
+    """Convert text to a list of (N,2) numpy arrays (one per continuous stroke)."""
+    try:
+        from matplotlib.textpath import TextPath
+        from matplotlib.font_manager import FontProperties
+        from matplotlib.path import Path as MPath
+        fp = FontProperties(family='sans-serif', weight='bold')
+        tp = TextPath((0, 0), text, size=size, prop=fp)
+        interp = MPath(tp.vertices, tp.codes).interpolated(steps=6)
+        strokes, cur = [], []
+        for v, c in zip(interp.vertices, interp.codes):
+            if c == MPath.MOVETO:
+                if len(cur) > 1:
+                    strokes.append(np.array(cur, dtype=np.float32))
+                cur = [v.tolist()]
+            elif c == MPath.LINETO:
+                cur.append(v.tolist())
+            elif c == MPath.CLOSEPOLY:
+                if cur:
+                    cur.append(cur[0])
+                if len(cur) > 1:
+                    strokes.append(np.array(cur, dtype=np.float32))
+                cur = []
+        if len(cur) > 1:
+            strokes.append(np.array(cur, dtype=np.float32))
+        return strokes
+    except Exception:
+        return []
 
 
 def _segments_to_array(segments: list[Segment], kind: int) -> np.ndarray | None:
@@ -174,6 +204,79 @@ if _HAS_GL:
                 glOptions='opaque'
             )
             self._view.addItem(self._trail_item)
+
+            # Splash animation state
+            self._splash_item = None
+            self._splash_pts = None
+            self._splash_idx = 0
+            self._splash_timer = QTimer()
+            self._splash_timer.timeout.connect(self._splash_tick)
+            self._env_cx = 300.0
+            self._env_cy = 250.0
+            self._env_cz = 0.0
+
+        def start_splash(self, text: str = "ThorCNC"):
+            strokes = _text_to_strokes(text, size=90.0)
+            sub_lines = ["by Moshy", "for CNCchanges"]
+            if not strokes:
+                return
+            all_xy = np.vstack(strokes)
+            bx = (all_xy[:, 0].min() + all_xy[:, 0].max()) / 2
+            by = (all_xy[:, 1].min() + all_xy[:, 1].max()) / 2
+            text_h = all_xy[:, 1].max() - all_xy[:, 1].min()
+            ox, oy, z = self._env_cx - bx, self._env_cy - by, self._env_cz
+            pts = []
+            for stroke in strokes:
+                for xy in stroke:
+                    pts.append([xy[0] + ox, xy[1] + oy, z])
+                pts.append([np.nan, np.nan, np.nan])
+            line_y = oy - text_h * 0.18
+            for line_text in sub_lines:
+                sub_strokes = _text_to_strokes(line_text, size=35.0)
+                if not sub_strokes:
+                    continue
+                sub_xy = np.vstack(sub_strokes)
+                sbx = (sub_xy[:, 0].min() + sub_xy[:, 0].max()) / 2
+                sub_h = sub_xy[:, 1].max() - sub_xy[:, 1].min()
+                sox = self._env_cx - sbx
+                soy = line_y - sub_xy[:, 1].max()
+                for stroke in sub_strokes:
+                    for xy in stroke:
+                        pts.append([xy[0] + sox, xy[1] + soy, z])
+                    pts.append([np.nan, np.nan, np.nan])
+                line_y = soy - sub_h * 0.3
+            self._splash_pts = np.array(pts, dtype=np.float32)
+            self._splash_idx = 0
+            if self._splash_item is not None:
+                self._view.removeItem(self._splash_item)
+            self._splash_item = gl.GLLinePlotItem(
+                pos=np.empty((0, 3), dtype=np.float32),
+                color=(0.25, 0.75, 1.0, 0.9),
+                width=3,
+                antialias=True,
+                mode='line_strip',
+                glOptions='opaque'
+            )
+            self._view.addItem(self._splash_item)
+            self._splash_timer.start(16)
+
+        def _splash_tick(self):
+            if self._splash_pts is None or self._splash_item is None:
+                self._splash_timer.stop()
+                return
+            step = max(1, len(self._splash_pts) // 100)
+            self._splash_idx = min(self._splash_idx + step, len(self._splash_pts))
+            self._splash_item.setData(pos=self._splash_pts[:self._splash_idx])
+            if self._splash_idx >= len(self._splash_pts):
+                self._splash_timer.stop()
+
+        def hide_splash(self):
+            self._splash_timer.stop()
+            if self._splash_item is not None:
+                self._view.removeItem(self._splash_item)
+                self._splash_item = None
+            self._splash_pts = None
+            self._splash_idx = 0
 
         def _setup_static_items(self):
             # ── Machine Zero (Fixed at 0,0,0) ─────────────────────────
@@ -334,6 +437,9 @@ if _HAS_GL:
                                  y_min: float, y_max: float,
                                  z_min: float, z_max: float):
             """Draws the machine work area as a wireframe."""
+            self._env_cx = (x_min + x_max) / 2
+            self._env_cy = (y_min + y_max) / 2
+            self._env_cz = z_max
             if hasattr(self, "_envelope_item") and self._envelope_item:
                 self._view.removeItem(self._envelope_item)
 
@@ -490,6 +596,14 @@ class BackplotWidget(QFrame):
     def set_machine_envelope(self, x_min, x_max, y_min, y_max, z_min, z_max):
         if self._impl:
             self._impl.set_machine_envelope(x_min, x_max, y_min, y_max, z_min, z_max)
+
+    def start_splash(self, text: str = "ThorCNC"):
+        if self._impl:
+            self._impl.start_splash(text)
+
+    def hide_splash(self):
+        if self._impl:
+            self._impl.hide_splash()
 
     def set_view_iso(self):
         if self._impl:

@@ -242,15 +242,9 @@ class DROModule(ThorModule):
             self._t._last_wcs_origin = new_origin
             self._wcs_initialized = True
             
-            if not getattr(self._t, "_has_file", False) and changed:
-                if not getattr(self._t, "_view_restored", False):
-                    self._t.backplot.fit_view(None)
-
             sv = self._t.simple_view_mod.simple_view
             if sv and sv.backplot:
                 sv.backplot.set_wcs_origin(g5x[0], g5x[1], g5x[2])
-                if not getattr(self._t, "_has_file", False):
-                    sv.backplot.fit_view(None)
 
     @Slot(int)
     def _on_g5x_index(self, g5x_index: int):
