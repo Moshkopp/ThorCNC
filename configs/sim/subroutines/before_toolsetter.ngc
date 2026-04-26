@@ -1,5 +1,5 @@
 O<before_toolsetter> sub
   M64 P0
-(DEBUG, M64 AN)
+(DEBUG, M64 AN test)
 O<before_toolsetter> endsub
 M2

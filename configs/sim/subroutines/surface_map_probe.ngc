@@ -1,0 +1,99 @@
+( ThorCNC - Surface Map Probe Subroutine )
+( #1=x_start  #2=x_end  #3=y_start  #4=y_end )
+( #5=cols  #6=rows  #7=probe_feed  #8=clearance_z  #9=probe_depth )
+
+O<surface_map_probe> sub
+
+G90 G21
+
+#<x_start>     = #1
+#<x_end>       = #2
+#<y_start>     = #3
+#<y_end>       = #4
+#<cols>        = #5
+#<rows>        = #6
+#<feed>        = #7
+#<clearance>   = #8
+#<probe_depth> = #9
+
+( Store metadata )
+#1990 = #<cols>
+#1991 = #<rows>
+#1992 = #<x_start>
+#1993 = #<x_end>
+#1994 = #<y_start>
+#1995 = #<y_end>
+#1998 = 0
+#1999 = 0
+
+( Step sizes )
+#<x_step> = 0
+O10 if [#<cols> GT 1]
+    #<x_step> = [[#<x_end> - #<x_start>] / [#<cols> - 1]]
+O10 endif
+
+#<y_step> = 0
+O11 if [#<rows> GT 1]
+    #<y_step> = [[#<y_end> - #<y_start>] / [#<rows> - 1]]
+O11 endif
+
+M50 P0
+
+G0 Z[#<clearance>]
+
+#<row_idx> = 0
+O100 while [#<row_idx> LT #<rows>]
+
+    #<y_pos> = [#<y_start> + [#<row_idx> * #<y_step>]]
+    #<row_base> = [#<row_idx> * #<cols>]
+
+    ( Snake: even row L→R, odd row R→L )
+    ( Use separate while-loops per direction — no MOD needed )
+    #<is_odd> = 0
+    #<tmp_row> = #<row_idx>
+    O120 while [#<tmp_row> GE 2]
+        #<tmp_row> = [#<tmp_row> - 2]
+    O120 endwhile
+    O121 if [#<tmp_row> EQ 1]
+        #<is_odd> = 1
+    O121 endif
+
+    O200 if [#<is_odd> EQ 0]
+        ( Left to right )
+        #<col_idx> = 0
+        O201 while [#<col_idx> LT #<cols>]
+            #<x_pos> = [#<x_start> + [#<col_idx> * #<x_step>]]
+            G0 X[#<x_pos>] Y[#<y_pos>]
+            G38.2 Z[#<probe_depth>] F[#<feed>]
+            G0 Z[#<clearance>]
+            #<_pidx> = [2000 + #<row_base> + #<col_idx>]
+            #[#<_pidx>] = #5063
+            #1998 = [#1998 + 1]
+            #<col_idx> = [#<col_idx> + 1]
+        O201 endwhile
+    O200 else
+        ( Right to left )
+        #<col_idx> = [#<cols> - 1]
+        O202 while [#<col_idx> GE 0]
+            #<x_pos> = [#<x_start> + [#<col_idx> * #<x_step>]]
+            G0 X[#<x_pos>] Y[#<y_pos>]
+            G38.2 Z[#<probe_depth>] F[#<feed>]
+            G0 Z[#<clearance>]
+            #<_pidx> = [2000 + #<row_base> + #<col_idx>]
+            #[#<_pidx>] = #5063
+            #1998 = [#1998 + 1]
+            #<col_idx> = [#<col_idx> - 1]
+        O202 endwhile
+    O200 endif
+
+    #<row_idx> = [#<row_idx> + 1]
+O100 endwhile
+
+G0 Z[#<clearance>]
+
+#1999 = 1
+
+M50 P1
+
+O<surface_map_probe> endsub
+M2

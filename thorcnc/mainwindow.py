@@ -10,7 +10,7 @@ from .status_poller import StatusPoller
 from .i18n import TranslationManager, _t
 from .modules import (FileManagerModule, ToolTableModule, OffsetsModule,
                         MotionModule, ProbingTabModule, NavigationModule, SettingsTabModule, DROModule, SpindleModule, SimpleViewModule, GCodeViewModule, MDIModule, HALModule, ControlPanelModule, BackplotModule,
-                        ProgramControlModule, StatusModule)
+                        ProgramControlModule, StatusModule, SurfaceMapModule)
 # from .widgets.opt_options import OptOptionsDialog
 
 _DIR = os.path.dirname(__file__)
@@ -63,6 +63,7 @@ class ThorCNC(QObject):
         self.backplot_mod = BackplotModule(self)
         self.program_control = ProgramControlModule(self)
         self.status_mod = StatusModule(self)
+        self.surface_map = SurfaceMapModule(self)
         
         # i18n
         self.i18n = TranslationManager(self.settings.get("language", "Deutsch"))
@@ -257,6 +258,7 @@ class ThorCNC(QObject):
         self.motion._update_goto_home_style(all_homed=False)
         self.navigation.setup_flyouts()
         self.backplot_mod.replace_vtk_placeholder()
+        self.surface_map.setup_widget()
 
 
 

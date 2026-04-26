@@ -391,7 +391,6 @@ class ProbingTabModule(ThorModule):
         # ── Load and Connect Prefs ───────────────────────────────────────────
         self._probe_prefs_load()
         self._probe_prefs_connect()
-        self._write_probe_before_after() # Synchronize NGC files at startup
 
         # ── Setup Probe DRO ────────────────────────────────────────────────
         self._setup_probe_dro()
@@ -432,48 +431,8 @@ class ProbingTabModule(ThorModule):
             
             frm_grid.setFixedSize(432, 432)
 
-        # 4. Setup Before/After Frame under the grid
-        if vl_probe_right and te_before and te_after:
-            # Create a compact frame for Before/After
-            frm_bottom = QFrame()
-            frm_bottom.setObjectName("frm_probe_bottom_macros")
-            frm_bottom.setStyleSheet("QFrame#frm_probe_bottom_macros { background: #1a1a1a; border-radius: 6px; padding: 6px; border: 1px solid #333; }")
-            frm_bottom.setFixedWidth(432) # Match grid width
-            frm_bottom.setMaximumHeight(130)
-            
-            hl_bottom = QHBoxLayout(frm_bottom)
-            hl_bottom.setContentsMargins(12, 6, 12, 6)
-            hl_bottom.setSpacing(16)
-            
-            # Set larger font for G-Code input
-            te_before.setStyleSheet("font-size: 16pt; font-family: Monospace;")
-            te_after.setStyleSheet("font-size: 16pt; font-family: Monospace;")
-
-            # Before
-            vl_before = QVBoxLayout()
-            lbl_before = QLabel(_t("BEFORE PROBING"))
-            lbl_before.setStyleSheet("font-weight: bold; color: #aaa; font-size: 12pt;")
-            vl_before.addWidget(lbl_before)
-            vl_before.addWidget(te_before)
-            te_before.setMaximumHeight(80)
-            hl_bottom.addLayout(vl_before)
-            
-            # After
-            vl_after = QVBoxLayout()
-            lbl_after = QLabel(_t("AFTER PROBING"))
-            lbl_after.setStyleSheet("font-weight: bold; color: #aaa; font-size: 12pt;")
-            vl_after.addWidget(lbl_after)
-            vl_after.addWidget(te_after)
-            te_after.setMaximumHeight(80)
-            hl_bottom.addLayout(vl_after)
-            
-            # Center the frame in the column
-            hl_wrap = QHBoxLayout()
-            hl_wrap.addStretch()
-            hl_wrap.addWidget(frm_bottom)
-            hl_wrap.addStretch()
-            
-            vl_probe_right.addLayout(hl_wrap)
+        # 4. Setup Before/After Frame under the grid - REMOVED (moved to settings)
+        pass
 
         # 5. Setup Right Column (Probe Results)
         if hl_probe_main:
@@ -896,39 +855,8 @@ class ProbingTabModule(ThorModule):
     def _probe_pref_save(self, key: str, value):
         self._t.settings.set(key, value)
         self._t.settings.save()
-        if key in ("probe_before", "probe_after"):
-            self._write_probe_before_after()
 
-    def _write_probe_before_after(self):
-        """Schreibt before_probe.ngc und after_probe.ngc ins Probing-Verzeichnis."""
-        ngc_dir = self._probe_ngc_dir()
-        before_code = ""
-        after_code = ""
-        if te := self._t._w(QTextEdit, "te_probe_before"):
-            before_code = te.toPlainText().strip()
-        if te := self._t._w(QTextEdit, "te_probe_after"):
-            after_code = te.toPlainText().strip()
-        
-        try:
-            # before_probe.ngc schreiben
-            before_path = os.path.join(ngc_dir, "before_probe.ngc")
-            with open(before_path, "w", encoding="utf-8") as f:
-                f.write("O<before_probe> sub\n")
-                if before_code:
-                    f.write(f"  {before_code}\n")
-                f.write("O<before_probe> endsub\n")
-                f.write("M2\n")
 
-            # after_probe.ngc schreiben
-            after_path = os.path.join(ngc_dir, "after_probe.ngc")
-            with open(after_path, "w", encoding="utf-8") as f:
-                f.write("O<after_probe> sub\n")
-                if after_code:
-                    f.write(f"  {after_code}\n")
-                f.write("O<after_probe> endsub\n")
-                f.write("M2\n")
-        except Exception as e:
-            self._t._status(f"Could not write probe NGC files: {e}", error=True)
 
     def _probe_clear_fields(self, field_names: list):
         for name in field_names:
@@ -971,8 +899,8 @@ class ProbingTabModule(ThorModule):
         """
         Gibt das NGC-Verzeichnis für Probing zurück.
         Priorität:
-        1. 'subroutines/probing' relativ zur INI
-        2. 'subroutines/probing' im PROGRAM_PREFIX
+        1. 'subroutines' relativ zur INI
+        2. 'subroutines' im PROGRAM_PREFIX
         3. PROGRAM_PREFIX aus der INI
         """
         search_dirs = []
@@ -990,7 +918,7 @@ class ProbingTabModule(ThorModule):
         search_dirs.append(os.path.expanduser("~/linuxcnc/nc_files"))
         
         for base in search_dirs:
-            sub = os.path.join(base, "subroutines", "probing")
+            sub = os.path.join(base, "subroutines")
             if os.path.isdir(sub):
                 return sub
                 

@@ -36,7 +36,7 @@ class NavigationModule(ThorModule):
         self._t.nav_group = QButtonGroup(self._t)
         self._t.nav_group.setExclusive(True)
         nav_names = ["nav_main", "nav_file", "nav_tool", "nav_offsets",
-                     "nav_probing", "nav_html", "nav_settings", "nav_status", "nav_quit"]
+                     "nav_probing", "nav_surface_map", "nav_settings", "nav_status", "nav_quit"]
         for idx, name in enumerate(nav_names):
             b = ui.findChild(QPushButton, name)
             if not b:

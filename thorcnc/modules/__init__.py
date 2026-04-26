@@ -22,6 +22,7 @@ from .control_panel import ControlPanelModule
 from .backplot import BackplotModule
 from .program_control import ProgramControlModule
 from .status import StatusModule
+from .surface_map import SurfaceMapModule
 
 __all__ = [
     "ThorModule",
@@ -42,4 +43,5 @@ __all__ = [
     "BackplotModule",
     "ProgramControlModule",
     "StatusModule",
+    "SurfaceMapModule",
 ]

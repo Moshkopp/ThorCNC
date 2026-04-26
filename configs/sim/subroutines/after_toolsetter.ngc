@@ -1,5 +1,5 @@
 O<after_toolsetter> sub
   M64 P0
-(DEBUG, M65 AUS)
+(DEBUG, M65 AUS test )
 O<after_toolsetter> endsub
 M2

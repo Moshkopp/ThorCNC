@@ -139,6 +139,9 @@ class SettingsTabModule(ThorModule):
             main_layout.setContentsMargins(10, 10, 10, 10)
             main_layout.setSpacing(15)
             
+            if gb_old_ts := self._t._w(QGroupBox, "groupBoxTsBeforeAfter"):
+                gb_old_ts.hide()
+            
             # --- Column 1: Machine Safety / Warnings (Left) ---
             col_safety = QVBoxLayout()
             f_safety = QFrame()
@@ -188,16 +191,6 @@ class SettingsTabModule(ThorModule):
             gl_safety.addWidget(sep2)
             gl_safety.addSpacing(5)
 
-            self._cb_homing_g53 = QCheckBox(_t("Homing-Buttons umfunktionieren (Ref -> G53 X0)"))
-            self._cb_homing_g53.setToolTip(_t("Ersetzt den REF-Button durch G53 X0, sobald die Achse homed ist."))
-            self._cb_homing_g53.setChecked(self._t.settings.get("homing_g53_conversion", False))
-            self._cb_homing_g53.toggled.connect(
-                lambda checked: (self._t.settings.set("homing_g53_conversion", checked),
-                                 self._t.settings.save(),
-                                 self._t.motion._on_homed(getattr(self._t.poller, "_homed", [])))
-            )
-            gl_safety.addWidget(self._cb_homing_g53)
-            
             fl_safety.addWidget(gb_safety)
             fl_safety.addStretch()
             col_safety.addWidget(f_safety)
@@ -230,29 +223,123 @@ class SettingsTabModule(ThorModule):
             col_abort.addWidget(gb_abort)
             main_layout.addLayout(col_abort, 2)
             
-            # --- Column 3: Diagnostics & Components (Right) ---
-            col_diag = QVBoxLayout()
-            gb_diag = QGroupBox(_t("Diagnose & Komponenten"))
-            gl_diag = QVBoxLayout(gb_diag)
+            # --- Column 3: Macros (Right) ---
+            col_macros = QVBoxLayout()
             
-            diag_tools = [
+            # --- Toolsetter Macros ---
+            gb_ts = QGroupBox(_t("Toolsetter Makros (Before/After)"))
+            gb_ts.setMinimumHeight(220)
+            gl_ts = QVBoxLayout(gb_ts)
+            
+            self._te_ts_before = QTextEdit()
+            self._te_ts_after = QTextEdit()
+            
+            gl_ts.addWidget(QLabel(_t("BEFORE TOOLSETTER (z.B. Freiblasen an):")))
+            gl_ts.addWidget(self._te_ts_before)
+            gl_ts.addWidget(QLabel(_t("AFTER TOOLSETTER (z.B. Freiblasen aus):")))
+            gl_ts.addWidget(self._te_ts_after)
+            
+            self._te_ts_before.setMaximumHeight(60)
+            self._te_ts_after.setMaximumHeight(60)
+            
+            # Connect saving for Toolsetter
+            for key, widget in (("ts_before", self._te_ts_before), ("ts_after", self._te_ts_after)):
+                val = self._t.settings.get(key, "")
+                widget.blockSignals(True)
+                widget.setPlainText(str(val) if val else "")
+                widget.blockSignals(False)
+                widget.textChanged.connect(
+                    lambda k=key, w=widget: self._on_ts_text_save(k, w)
+                )
+            col_macros.addWidget(gb_ts)
+            
+            # --- 3D Probe Macros ---
+            gb_probe = QGroupBox(_t("3D Taster Makros (Before/After)"))
+            gb_probe.setMinimumHeight(220)
+            gl_probe = QVBoxLayout(gb_probe)
+            
+            self._te_probe_before = QTextEdit()
+            self._te_probe_after = QTextEdit()
+            
+            gl_probe.addWidget(QLabel(_t("BEFORE PROBING (z.B. M64 P2):")))
+            gl_probe.addWidget(self._te_probe_before)
+            gl_probe.addWidget(QLabel(_t("AFTER PROBING (z.B. M65 P2):")))
+            gl_probe.addWidget(self._te_probe_after)
+            
+            self._te_probe_before.setMaximumHeight(60)
+            self._te_probe_after.setMaximumHeight(60)
+            
+            # Connect saving for Probe
+            for key, widget in (("probe_before", self._te_probe_before), ("probe_after", self._te_probe_after)):
+                val = self._t.settings.get(key, "")
+                widget.blockSignals(True)
+                widget.setPlainText(str(val) if val else "")
+                widget.blockSignals(False)
+                widget.textChanged.connect(
+                    lambda k=key, w=widget: self._on_probe_text_save(k, w)
+                )
+            col_macros.addWidget(gb_probe)
+            
+            col_macros.addStretch()
+            main_layout.addLayout(col_macros, 1)
+
+        # ── Advanced Tab ──────────────────────────────────────────────────────
+        if adv_tab := self._t._w(QWidget, "settings_tab_advanced"):
+            # Clear existing
+            if old_layout := adv_tab.layout():
+                while old_layout.count():
+                    item = old_layout.takeAt(0)
+                    if w := item.widget():
+                        w.setParent(None)
+                        w.deleteLater()
+                QWidget().setLayout(old_layout)
+            
+            adv_layout = QHBoxLayout(adv_tab)
+            adv_layout.setContentsMargins(10, 10, 10, 10)
+            adv_layout.setSpacing(15)
+
+            # Col 1: Diagnostics
+            col_diag_adv = QVBoxLayout()
+            gb_diag_adv = QGroupBox(_t("Diagnose & Komponenten"))
+            gl_diag_adv = QVBoxLayout(gb_diag_adv)
+            
+            for text, func in [
                 (_t("HAL Show (Pins & Signale)"), self.run_halshow),
                 (_t("HAL Scope (Oszilloskop)"), self.run_halscope),
                 (_t("LinuxCNC Status (Detail-Infos)"), self.run_linuxcnc_status)
-            ]
-            
-            for text, func in diag_tools:
+            ]:
                 b = QPushButton(text)
                 b.setMinimumHeight(45)
                 b.clicked.connect(func)
-                gl_diag.addWidget(b)
+                gl_diag_adv.addWidget(b)
             
             if b_sim := self._t._w(QPushButton, "btn_probe_sim"):
-                gl_diag.addWidget(b_sim)
+                gl_diag_adv.addWidget(b_sim)
+                
+            gl_diag_adv.addStretch()
+            col_diag_adv.addWidget(gb_diag_adv)
+            adv_layout.addLayout(col_diag_adv, 1)
+
+            # Col 2: Machine Behavior
+            col_behavior = QVBoxLayout()
+            gb_behavior = QGroupBox(_t("Maschinen-Verhalten"))
+            gl_behavior = QVBoxLayout(gb_behavior)
             
-            gl_diag.addStretch()
-            col_diag.addWidget(gb_diag)
-            main_layout.addLayout(col_diag, 1)
+            # Repurpose Homing Buttons
+            self._cb_homing_g53 = QCheckBox(_t("Homing-Buttons umfunktionieren (Ref -> G53 X0)"))
+            self._cb_homing_g53.setToolTip(_t("Ersetzt den REF-Button durch G53 X0, sobald die Achse homed ist."))
+            self._cb_homing_g53.setChecked(self._t.settings.get("homing_g53_conversion", False))
+            self._cb_homing_g53.toggled.connect(
+                lambda checked: (self._t.settings.set("homing_g53_conversion", checked),
+                                 self._t.settings.save(),
+                                 self._t.motion._on_homed(getattr(self._t.poller, "_homed", [])))
+            )
+            gl_behavior.addWidget(self._cb_homing_g53)
+            gl_behavior.addStretch()
+            col_behavior.addWidget(gb_behavior)
+            adv_layout.addLayout(col_behavior, 1)
+            
+            adv_layout.addStretch()
 
         # ── Abort Handler & Toolsetter Initialization ────────────────────────
         self._write_on_abort_ngc()
@@ -279,15 +366,7 @@ class SettingsTabModule(ThorModule):
         if b := self._t._w(QPushButton, "btn_set_taster_pos"):
             b.clicked.connect(self._set_taster_pos_from_machine)
 
-        for key, wname in (("ts_before", "te_ts_before"), ("ts_after", "te_ts_after")):
-            if te := self._t._w(QTextEdit, wname):
-                val = self._t.settings.get(key, "")
-                te.blockSignals(True)
-                te.setPlainText(str(val) if val else "")
-                te.blockSignals(False)
-                te.textChanged.connect(
-                    lambda k=key, widget=te: self._on_ts_text_save(k, widget)
-                )
+
         self._write_ts_before_after()
 
     def _save_abort_handler(self):
@@ -380,18 +459,14 @@ class SettingsTabModule(ThorModule):
         search_dirs.append(os.path.expanduser("~/linuxcnc/nc_files"))
         
         for base in search_dirs:
-            sub = os.path.join(base, "subroutines", "tools")
+            sub = os.path.join(base, "subroutines")
             if os.path.isdir(sub): return sub
         return search_dirs[1] if len(search_dirs) > 1 else search_dirs[0]
 
     def _write_ts_before_after(self):
         ngc_dir = self._ts_ngc_dir()
-        before_code = ""
-        after_code = ""
-        if te := self._t._w(QTextEdit, "te_ts_before"):
-            before_code = te.toPlainText().strip()
-        if te := self._t._w(QTextEdit, "te_ts_after"):
-            after_code = te.toPlainText().strip()
+        before_code = self._te_ts_before.toPlainText().strip() if hasattr(self, "_te_ts_before") else ""
+        after_code = self._te_ts_after.toPlainText().strip() if hasattr(self, "_te_ts_after") else ""
         try:
             os.makedirs(ngc_dir, exist_ok=True)
             with open(os.path.join(ngc_dir, "before_toolsetter.ngc"), "w") as f:
@@ -404,6 +479,32 @@ class SettingsTabModule(ThorModule):
                 f.write("O<after_toolsetter> endsub\nM2\n")
         except Exception as e:
             self._t._status(f"Could not write toolsetter NGC files: {e}", error=True)
+
+    def _on_probe_text_save(self, key: str, widget):
+        self._t.settings.set(key, widget.toPlainText())
+        self._t.settings.save()
+        self._write_probe_before_after()
+        before = self._t.settings.get("probe_before", "") or ""
+        after  = self._t.settings.get("probe_after", "") or ""
+        self._t._status(f"3D Probe  BEFORE: [{before.strip() or '—'}]  |  AFTER: [{after.strip() or '—'}]")
+
+    def _write_probe_before_after(self):
+        # We reuse the ts_ngc_dir as it resolves to `subroutines`
+        ngc_dir = self._ts_ngc_dir()
+        before_code = self._te_probe_before.toPlainText().strip() if hasattr(self, "_te_probe_before") else ""
+        after_code = self._te_probe_after.toPlainText().strip() if hasattr(self, "_te_probe_after") else ""
+        try:
+            os.makedirs(ngc_dir, exist_ok=True)
+            with open(os.path.join(ngc_dir, "before_probe.ngc"), "w") as f:
+                f.write("O<before_probe> sub\n")
+                if before_code: f.write(f"  {before_code}\n")
+                f.write("O<before_probe> endsub\n")
+            with open(os.path.join(ngc_dir, "after_probe.ngc"), "w") as f:
+                f.write("O<after_probe> sub\n")
+                if after_code: f.write(f"  {after_code}\n")
+                f.write("O<after_probe> endsub\n")
+        except Exception as e:
+            self._t._status(f"Could not write probe NGC files: {e}", error=True)
 
     def _on_aa_toggled(self, enabled: bool):
         self._t.settings.set("backplot_antialiasing", enabled)

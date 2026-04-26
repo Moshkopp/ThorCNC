@@ -9,6 +9,6 @@ o<on_abort> sub
   G4 P0.1
   G54
   G4 P0.1
-  M65 P2
+  M65 P0
 o<on_abort> endsub
 M2
