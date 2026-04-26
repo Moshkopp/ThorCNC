@@ -352,11 +352,18 @@ class SurfaceMapModule(ThorModule):
             f"M2\n"
         )
         cfg_dir = os.path.dirname(self._t.ini_path) if self._t.ini_path else "/tmp"
-        sub_dir = os.path.join(cfg_dir, "subroutines")
-        if os.path.isdir(sub_dir):
-            wrapper_path = os.path.join(sub_dir, "_surface_map_run.ngc")
-        else:
-            wrapper_path = os.path.join(cfg_dir, "_surface_map_run.ngc")
+        sub_dir = None
+        if self._t.ini:
+            raw = self._t.ini.find("RS274NGC", "SUBROUTINE_PATH") or ""
+            for candidate in raw.split(":"):
+                candidate = os.path.expanduser(candidate.strip())
+                if candidate and os.path.isdir(candidate):
+                    sub_dir = candidate
+                    break
+        if sub_dir is None:
+            fallback = os.path.join(cfg_dir, "subroutines")
+            sub_dir = fallback if os.path.isdir(fallback) else cfg_dir
+        wrapper_path = os.path.join(sub_dir, "_surface_map_run.ngc")
         try:
             with open(wrapper_path, "w") as fh:
                 fh.write(wrapper)
