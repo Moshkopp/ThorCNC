@@ -1,3 +1,4 @@
 O<before_probe> sub
+  M64 P0
+(DEBUG, M64 AUS test )
 O<before_probe> endsub
-M2

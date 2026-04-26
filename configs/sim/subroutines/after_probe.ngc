@@ -1,3 +1,4 @@
 O<after_probe> sub
+  M65 P0
+(DEBUG, M65 AUS test )
 O<after_probe> endsub
-M2

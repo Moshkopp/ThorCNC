@@ -102,7 +102,7 @@
     "probe_extra_dep": 0.0,
     "probe_dia": 3.0,
     "probe_warning_color": "#ff00ff",
-    "probe_warning_pins": "0,2,3",
+    "probe_warning_pins": "0",
     "hlight_gc_warn_list": "G49,  G59.3, G20",
     "hlight_gc_warn_color": "#ff0000",
     "hlight_mc_list": "M1, M0,  M3,M5,",

@@ -368,6 +368,7 @@ class SettingsTabModule(ThorModule):
 
 
         self._write_ts_before_after()
+        self._write_probe_before_after()
 
     def _save_abort_handler(self):
         """Speichert den G-Code für den Abort-Handler und aktualisiert die .ngc Datei."""
@@ -465,8 +466,8 @@ class SettingsTabModule(ThorModule):
 
     def _write_ts_before_after(self):
         ngc_dir = self._ts_ngc_dir()
-        before_code = self._te_ts_before.toPlainText().strip() if hasattr(self, "_te_ts_before") else ""
-        after_code = self._te_ts_after.toPlainText().strip() if hasattr(self, "_te_ts_after") else ""
+        before_code = self._t.settings.get("ts_before", "").strip()
+        after_code  = self._t.settings.get("ts_after", "").strip()
         try:
             os.makedirs(ngc_dir, exist_ok=True)
             with open(os.path.join(ngc_dir, "before_toolsetter.ngc"), "w") as f:
@@ -491,8 +492,8 @@ class SettingsTabModule(ThorModule):
     def _write_probe_before_after(self):
         # We reuse the ts_ngc_dir as it resolves to `subroutines`
         ngc_dir = self._ts_ngc_dir()
-        before_code = self._te_probe_before.toPlainText().strip() if hasattr(self, "_te_probe_before") else ""
-        after_code = self._te_probe_after.toPlainText().strip() if hasattr(self, "_te_probe_after") else ""
+        before_code = self._t.settings.get("probe_before", "").strip()
+        after_code  = self._t.settings.get("probe_after", "").strip()
         try:
             os.makedirs(ngc_dir, exist_ok=True)
             with open(os.path.join(ngc_dir, "before_probe.ngc"), "w") as f:

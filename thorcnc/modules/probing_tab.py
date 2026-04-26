@@ -948,28 +948,7 @@ class ProbingTabModule(ThorModule):
             self._t._status(f"Probing canceled: Tool T{current_tool} is not the configured probe tool T{target_probe_tool}!", error=True)
             return
 
-        before_te = self._t._w(QTextEdit, "te_probe_before")
-        after_te  = self._t._w(QTextEdit, "te_probe_after")
-        before_code = before_te.toPlainText().strip() if before_te else ""
-        after_code  = after_te.toPlainText().strip()  if after_te  else ""
-
-        # before_probe.ngc schreiben
-        before_path = os.path.join(ngc_dir, "before_probe.ngc")
-        with open(before_path, "w") as f:
-            f.write("O<before_probe> sub\n")
-            if before_code:
-                f.write(f"  {before_code}\n")
-            f.write("O<before_probe> endsub\n")
-            f.write("M2\n")
-
-        # after_probe.ngc schreiben
-        after_path = os.path.join(ngc_dir, "after_probe.ngc")
-        with open(after_path, "w") as f:
-            f.write("O<after_probe> sub\n")
-            if after_code:
-                f.write(f"  {after_code}\n")
-            f.write("O<after_probe> endsub\n")
-            f.write("M2\n")
+        # Before/After NGC files are managed by settings_tab.py
 
         # Probe-NGC prüfen
         probe_path = os.path.join(ngc_dir, f"{ngc_name}.ngc")
