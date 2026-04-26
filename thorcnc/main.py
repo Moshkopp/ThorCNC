@@ -57,9 +57,9 @@ def main():
     # die wir ignorieren – INI_FILE_NAME aus der Umgebung reicht.
     args, _ = parser.parse_known_args()
 
-    # Theme: CLI > Env > INI-Datei > Fallback "dark"
+    # Theme: CLI > Env > Prefs-JSON > INI-Datei > Fallback "dark"
     ini_path = args.ini or os.environ.get("INI_FILE_NAME", "")
-    
+
     # Anti-Aliasing (MSAA) Setting laden (muss VOR QApplication passieren!)
     msaa_samples = _get_msaa_setting(ini_path)
     if msaa_samples > 0:
@@ -69,6 +69,7 @@ def main():
 
     theme = (args.theme
              or os.environ.get("THORCNC_THEME", "")
+             or _theme_from_prefs(ini_path)
              or _theme_from_ini(ini_path)
              or "dark")
 
@@ -86,6 +87,32 @@ def main():
     win.start()
 
     sys.exit(app.exec())
+
+
+def _theme_from_prefs(ini_path: str) -> str:
+    """Liest das gespeicherte Theme aus der JSON-Prefs-Datei."""
+    try:
+        prefs_file = "thorcnc.prefs"
+        ini_dir = os.path.dirname(ini_path) if ini_path else os.path.expanduser("~")
+        if ini_path and os.path.isfile(ini_path):
+            import linuxcnc
+            ini = linuxcnc.ini(ini_path)
+            p = ini.find("DISPLAY", "PREFS_FILE")
+            if p:
+                prefs_file = p
+        prefs_path = os.path.expanduser(prefs_file)
+        if not os.path.isabs(prefs_path):
+            prefs_path = os.path.join(ini_dir, prefs_file)
+        if os.path.isfile(prefs_path):
+            import json
+            with open(prefs_path, "r", encoding="utf-8") as f:
+                prefs = json.load(f)
+            t = prefs.get("theme", "")
+            if t in ("dark", "light"):
+                return t
+    except Exception:
+        pass
+    return ""
 
 
 def _theme_from_ini(ini_path: str) -> str:

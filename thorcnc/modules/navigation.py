@@ -202,7 +202,7 @@ class NavigationModule(ThorModule):
             self._flyout_anim.setDuration(350)
             self._flyout_anim.setEasingCurve(QEasingCurve.OutQuart)
             self._flyout_anim.setStartValue(QPoint(sidebar_edge - target_width, target_y))
-            self._flyout_anim.setEndValue(QPoint(sidebar_edge, target_y))
+            self._flyout_anim.setEndValue(QPoint(sidebar_edge + 7, target_y))
             self._flyout_anim.start()
             self._current_flyout = name
         else:

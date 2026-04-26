@@ -12,7 +12,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SIM_INI="$SCRIPT_DIR/configs/sim/thorcnc_sim.ini"
-THEME="dark"
+THEME=""
 CUSTOM_INI=""
 
 # ── PIP Flags (Debian 12+ / PEP 668) ──────────────────────────────────────────
@@ -62,7 +62,7 @@ if ! python3 -c "import pyqtgraph.opengl" &>/dev/null 2>&1; then
 fi
 
 # ── Umgebungsvariablen setzen ────────────────────────────────────────────────
-export THORCNC_THEME="$THEME"
+[ -n "$THEME" ] && export THORCNC_THEME="$THEME"
 export PYTHONPATH="$SCRIPT_DIR${PYTHONPATH:+:$PYTHONPATH}"
 
 # Falls wir nicht im venv sind, stellen wir sicher, dass ~/.local/bin ganz vorne ist
