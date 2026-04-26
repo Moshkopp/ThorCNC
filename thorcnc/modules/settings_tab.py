@@ -335,6 +335,16 @@ class SettingsTabModule(ThorModule):
                                  self._t.motion._on_homed(getattr(self._t.poller, "_homed", [])))
             )
             gl_behavior.addWidget(self._cb_homing_g53)
+
+            # Arrow-key jogging
+            self._cb_arrow_jog = QCheckBox(_t("Pfeiltasten-Joggen (←→ X, ↑↓ Y, PgUp/Dn Z)"))
+            self._cb_arrow_jog.setToolTip(_t("Ermöglicht Joggen per Tastatur: Pfeiltasten für X/Y, Bild↑↓ für Z."))
+            self._cb_arrow_jog.setChecked(self._t.settings.get("arrow_key_jog", False))
+            self._cb_arrow_jog.toggled.connect(
+                lambda checked: (self._t.settings.set("arrow_key_jog", checked),
+                                 self._t.settings.save())
+            )
+            gl_behavior.addWidget(self._cb_arrow_jog)
             gl_behavior.addStretch()
             col_behavior.addWidget(gb_behavior)
             adv_layout.addLayout(col_behavior, 1)

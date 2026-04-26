@@ -119,6 +119,8 @@ class ProgramControlModule(ThorModule):
             b.setEnabled(running or paused)
         if b := self._t._w(QPushButton, "btn_pause_mdi"):
             b.setEnabled(running)
+        if b := self._t._w(QPushButton, "nav_quit"):
+            b.setEnabled(not running and not paused)
 
         idle = state == linuxcnc.INTERP_IDLE
         if hasattr(self._t, "_btn_edit_gcode") and self._t._btn_edit_gcode:

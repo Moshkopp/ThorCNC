@@ -287,6 +287,14 @@ class ThorCNC(QObject):
         if hasattr(self, "ui") and not shiboken6.isValid(self.ui):
             return False
 
+        # Arrow-key jog — intercept before any focused widget consumes the event
+        if event.type() == QEvent.Type.KeyPress:
+            if self._handle_arrow_jog_key(event, pressed=True):
+                return True
+        elif event.type() == QEvent.Type.KeyRelease:
+            if self._handle_arrow_jog_key(event, pressed=False):
+                return True
+
         # Delegate to NavigationManager for light-dismiss
         if self.navigation.handle_event(event):
             return True
@@ -330,6 +338,36 @@ class ThorCNC(QObject):
                     return True
 
         return super().eventFilter(watched, event)
+
+    # ── Arrow-key jog ──────────────────────────────────────────────────────
+    _ARROW_JOG_MAP = {
+        Qt.Key.Key_Right:    (0, +1),
+        Qt.Key.Key_Left:     (0, -1),
+        Qt.Key.Key_Up:       (1, +1),
+        Qt.Key.Key_Down:     (1, -1),
+        Qt.Key.Key_PageUp:   (2, +1),
+        Qt.Key.Key_PageDown: (2, -1),
+    }
+
+    def _handle_arrow_jog_key(self, event, pressed: bool) -> bool:
+        if not self.settings.get("arrow_key_jog", False):
+            return False
+        mapping = self._ARROW_JOG_MAP.get(event.key())
+        if mapping is None:
+            return False
+        if event.isAutoRepeat():
+            return True
+        if not self._is_machine_on:
+            return True
+        import linuxcnc as _lc
+        if self._interp_state not in (_lc.INTERP_IDLE,):
+            return True
+        joint, direction = mapping
+        if pressed:
+            self.motion._jog_start(joint, direction)
+        else:
+            self.motion._jog_stop(joint)
+        return True
 
 
 

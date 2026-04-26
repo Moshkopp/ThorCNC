@@ -4,11 +4,11 @@
     "window_state": "000000ff00000000fd00000000000007800000041c00000004000000040000000800000008fc00000000",
     "backplot_view": {
         "distance": 890.8279502385055,
-        "elevation": -6.0,
-        "azimuth": -80.0,
+        "elevation": 33.0,
+        "azimuth": -78.0,
         "center": [
-            274.5559997558594,
-            221.66265869140625,
+            326.2640686035156,
+            248.00924682617188,
             -71.12916564941406
         ]
     },
@@ -112,7 +112,7 @@
     "abort_gcode": "G90\nG80\nM5 \nM9\nG4 P0.1\nG54\nG4 P0.1\nM65 P0\n",
     "homing_g53_conversion": true,
     "show_pocket_column": true,
-    "language": "German",
+    "language": "English",
     "surface_map_tool": 99,
     "surface_map_feed": 80.0,
     "surface_map_clearance": 5.0,
@@ -122,5 +122,6 @@
     "surface_map_y_start": 10.0,
     "surface_map_y_end": 40.0,
     "surface_map_cols": 3,
-    "surface_map_rows": 3
+    "surface_map_rows": 3,
+    "arrow_key_jog": true
 }
