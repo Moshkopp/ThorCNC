@@ -20,6 +20,8 @@ from .mdi import MDIModule
 from .hal import HALModule
 from .control_panel import ControlPanelModule
 from .backplot import BackplotModule
+from .program_control import ProgramControlModule
+from .status import StatusModule
 
 __all__ = [
     "ThorModule",
@@ -37,5 +39,7 @@ __all__ = [
     "MDIModule",
     "HALModule",
     "ControlPanelModule",
-    "BackplotModule"
+    "BackplotModule",
+    "ProgramControlModule",
+    "StatusModule",
 ]

@@ -101,6 +101,26 @@ class BackplotModule(ThorModule):
             view_opts = self.backplot.get_view_opts()
             self._t.settings.set("backplot_view", view_opts)
 
+    def replace_vtk_placeholder(self):
+        """Replace the vtk placeholder widget with the backplot widget."""
+        from PySide6.QtWidgets import QSplitter, QWidget
+        from PySide6.QtCore import QTimer
+        old_vtk = self._t.ui.findChild(QWidget, "vtk")
+        parent_vtk = old_vtk.parent() if old_vtk else None
+        if parent_vtk:
+            if isinstance(parent_vtk, QSplitter):
+                idx = parent_vtk.indexOf(old_vtk)
+                parent_vtk.replaceWidget(idx, self.backplot)
+            elif parent_vtk.layout():
+                lay = parent_vtk.layout()
+                idx = lay.indexOf(old_vtk)
+                lay.removeWidget(old_vtk)
+                lay.insertWidget(idx, self.backplot)
+            old_vtk.deleteLater()
+        self._t.backplot = self.backplot
+        if self._view_restored:
+            QTimer.singleShot(1500, self.clear_view_restored_flag)
+
     def clear_view_restored_flag(self):
         """Reset the view restored flag."""
         self._view_restored = False

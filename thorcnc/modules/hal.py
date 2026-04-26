@@ -20,15 +20,11 @@ class HALModule(ThorModule):
 
     def _setup_hal(self):
         """Initialize HAL component with all pins (called early for timing)."""
-        print("[HAL] _setup_hal() called")
         try:
             import hal
-            print("[HAL] Importing hal module... SUCCESS")
 
-            print("[HAL] Creating component 'thorcnc'...")
             hal_comp = hal.component("thorcnc")
             self._t._hal_comp = hal_comp
-            print("[HAL] Component created, storing reference")
 
             # Tool Sensor Pins (from SettingsTabModule config)
             if hasattr(self._t, 'settings_tab'):
@@ -39,7 +35,6 @@ class HALModule(ThorModule):
             # Standard Pins
             hal_comp.newpin("probe-sim", hal.HAL_BIT, hal.HAL_OUT)
             hal_comp.newpin("spindle-atspeed", hal.HAL_BIT, hal.HAL_IN)
-            print(f"[HAL] Erzeuge Pins für Komponente 'thorcnc'...")
             hal_comp.newpin("spindle-speed-actual", hal.HAL_FLOAT, hal.HAL_IN)
             hal_comp.newpin("spindle-load", hal.HAL_FLOAT, hal.HAL_IN)
 
@@ -52,7 +47,6 @@ class HALModule(ThorModule):
             hal_comp.newpin("jog-vel-final", hal.HAL_FLOAT, hal.HAL_OUT)
 
             hal_comp.ready()
-            print(f"[HAL] Komponente 'thorcnc' ist READY.")
             from thorcnc.i18n import _t
             self._t._status(_t("HAL component 'thorcnc' ready."))
 
@@ -64,7 +58,7 @@ class HALModule(ThorModule):
                 self._setup_sim_hal()
 
         except Exception as e:
-            print(f"[ThorCNC] HAL-Initialisierung übersprungen: {e}")
+            print(f"[HAL] Initialisierung übersprungen: {e}")
             self._t._hal_comp = None
 
     def _load_postgui_hal(self):
@@ -82,9 +76,7 @@ class HALModule(ThorModule):
 
         for pfile in postgui_files:
             hal_path = os.path.join(ini_dir, pfile)
-            print(f"[HAL] Lade Post-GUI Datei: {hal_path}")
             if os.path.exists(hal_path):
-                # Use -i flag to pass INI to halcmd (for [ ] variable substitution)
                 res = subprocess.run(
                     ["halcmd", "-i", self._t.ini_path, "-f", hal_path],
                     capture_output=True,
@@ -92,8 +84,6 @@ class HALModule(ThorModule):
                 )
                 if res.returncode != 0:
                     print(f"[HAL] Fehler beim Laden von {pfile}:\n{res.stderr}")
-                else:
-                    print(f"[HAL] {pfile} erfolgreich geladen.")
             else:
                 print(f"[HAL] FEHLER: Post-GUI Datei nicht gefunden: {hal_path}")
 
@@ -103,13 +93,9 @@ class HALModule(ThorModule):
             result = subprocess.run(["halcmd"] + list(args), capture_output=True, text=True)
             if result.returncode != 0:
                 print(f"[HAL ERROR] halcmd {' '.join(args)} failed: {result.stderr}")
-            else:
-                print(f"[HAL OK] halcmd {' '.join(args)}")
             return result
 
-        print("[HAL] Starting simulation HAL setup...")
         _hc("setp", "limit_speed.maxv", "600.0")
         _hc("setp", "spindle_mass.gain", "0.002")
         _hc("net", "spindle-at-speed", "thorcnc.spindle-atspeed")
         _hc("net", "spindle-rpm-filtered", "thorcnc.spindle-speed-actual")
-        print("[HAL] Simulation HAL setup complete")

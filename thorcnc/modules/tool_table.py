@@ -79,7 +79,6 @@ class ToolTableModule(ThorModule):
                 else:
                     self._tbl_path = tbl_name
 
-        print(f"[ToolTable] Path: {self._tbl_path}, Exists: {os.path.exists(self._tbl_path) if self._tbl_path else False}")
 
         # Button connections (within setup, not in connect_signals)
         if self._btn_add:
@@ -88,9 +87,6 @@ class ToolTableModule(ThorModule):
             self._btn_delete.clicked.connect(self._delete_tool)
         if self._btn_reload:
             self._btn_reload.clicked.connect(self._load_tool_table)
-            print("[ToolTable] Reload button connected")
-        else:
-            print("[ToolTable] WARNING: Reload button not found!")
         if self._btn_save:
             self._btn_save.clicked.connect(self._save_tool_table)
 
@@ -260,10 +256,7 @@ class ToolTableModule(ThorModule):
         try:
             with open(self._tbl_path, "w", encoding="utf-8", errors="ignore") as f:
                 f.write("\n".join(lines) + "\n")
-            print(f"[ToolTable] Saved {len(lines)} tools to {self._tbl_path}")
-
             self._t.cmd.load_tool_table()
-            print("[ToolTable] cmd.load_tool_table() called")
             self._t._status(_t("Tool table saved and reloaded!"))
         except Exception as e:
             self._t._status(_t("Error saving tool table: ") + str(e), error=True)

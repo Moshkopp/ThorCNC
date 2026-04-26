@@ -101,6 +101,28 @@ MainWindow.py (5000+ Zeilen) in ein modulares System umwandeln, wo jede Funktion
   - Program Line Tracking Integration
   - ~105 Zeilen extrahiert
 
+### Schritt 13: ProgramControlModule ✅
+- [x] `thorcnc/modules/program_control.py` - Maschinensteuerung & Programmausführung
+  - Estop/Power/Mode State Handling (`_on_estop`, `_on_machine_on`, `_on_mode`)
+  - Interpreter State Tracking (`_on_interp`, `_update_run_buttons`)
+  - Position Updates mit Performance-Throttling
+  - Program Line Tracking + Single Block Auto-Pause
+  - Run/Pause/Stop/Step Logik inkl. Queued-Start und Preamble
+  - ~298 Zeilen extrahiert
+
+### Schritt 14: StatusModule ✅
+- [x] `thorcnc/modules/status.py` - Status-Anzeige & Logging
+  - Status Bar Label mit Auto-Clear Timer
+  - Status Log (QListWidget, timestamped, theme-aware)
+  - Error/Info Signal Routing
+  - Startup Error Channel Drain
+  - ~85 Zeilen extrahiert
+
+### Schritt 15: HighlightSettings in GCodeViewModule ✅
+- [x] `thorcnc/modules/gcode_view.py` erweitert
+  - `_setup_highlight_settings`, Farb-Callbacks und `_is_light` Helfer
+  - ~50 Zeilen hinzugefügt
+
 ---
 
 ## 📊 Extraction Progress
@@ -122,14 +144,26 @@ MainWindow.py (5000+ Zeilen) in ein modulares System umwandeln, wo jede Funktion
 | HALModule | ✅ | ~102 | thorcnc/modules/hal.py |
 | ControlPanelModule | ✅ | ~130 | thorcnc/modules/control_panel.py |
 | BackplotModule | ✅ | ~105 | thorcnc/modules/backplot.py |
-| **Gesamt (Modularisiert)** | - | **~3.963** | - |
+| ProgramControlModule | ✅ | ~298 | thorcnc/modules/program_control.py |
+| StatusModule | ✅ | ~85 | thorcnc/modules/status.py |
+| GCodeViewModule (Highlights) | ✅ | +~50 | thorcnc/modules/gcode_view.py |
+| **Gesamt (Modularisiert)** | - | **~4.396** | - |
+
+### Schritt 16: Final Cleanup ✅
+- [x] Nav-Button-Wiring in `NavigationModule.connect_signals()` verschoben
+- [x] `_sync_nav_buttons` aus MainWindow entfernt (jetzt in `NavigationModule`)
+- [x] `_on_digital_out_changed` aus MainWindow entfernt (jetzt in `ProbingTabModule`)
+- [x] `_on_language_changed` aus MainWindow entfernt (dead code, in `SettingsTabModule`)
+- [x] `setup_widget()` für GCode/MDI Stack in `GCodeViewModule` / `MDIModule`
+- [x] `setup_flyouts()` in `NavigationModule`, `replace_vtk_placeholder()` in `BackplotModule`
+- [x] Unused imports bereinigt (`QStackedWidget`, `QLineEdit`, `QListWidget`, `QSpinBox`, `QTimer`, `Slot`, `GCodeView`, `QHBoxLayout`)
 
 ---
 
 ## 🏗️ Struktur-Status (MainWindow)
 *   **Original:** ~5.027 Zeilen
-*   **Aktuell:** **1.355 Zeilen** (↓ 38 Zeilen seit Schritt 11)
-*   **Status:** Backplot/3D View Module abgeschlossen. MainWindow ist jetzt ~73% kleiner. 13 spezialisierte Module + 1 Base-Modul. Verbleibende Kandidaten: File Loading, Status Display, oder weitere Utility-Module.
+*   **Aktuell:** **564 Zeilen** ✅ ZIEL ERREICHT (Ziel: ~600 Zeilen)
+*   **Status:** Modularisierung vollständig abgeschlossen. MainWindow enthält nur noch Infrastruktur & Initialisierung. 17 spezialisierte Module + 1 Base-Modul.
 
 ---
 
@@ -143,11 +177,11 @@ MainWindow.py (5000+ Zeilen) in ein modulares System umwandeln, wo jede Funktion
 
 ---
 
-*Letztes Update: 24.04.2026 nach Backplot/3D View Modul-Extraktion*  
-*Status: Schritt 12 ✅ abgeschlossen (MainWindow 1355 Zeilen, ↓ 38 Zeilen seit Schritt 11)*  
-*Gesamt-Einsparung: 3672 Zeilen (73% der Original-MainWindow)*  
-*Module count: 13 Spezialisierte Module + 1 Base-Modul = **14 insgesamt***  
-*Nächste Optionen: Status Display Module, File Loading Module, oder andere Utility-Module*
+*Letztes Update: 26.04.2026 nach Schritt 16 (Final Cleanup)*  
+*Status: **Modularisierung vollständig abgeschlossen** ✅*  
+*MainWindow: **564 Zeilen** (Ziel ~600 erreicht, ↓ 4463 Zeilen gegenüber Original)*  
+*Gesamt-Einsparung: 4463 Zeilen (88% der Original-MainWindow)*  
+*Module count: 17 Spezialisierte Module + 1 Base-Modul = **18 insgesamt***
 
 ---
 
@@ -235,7 +269,7 @@ MainWindow.py (5000+ Zeilen) in ein modulares System umwandeln, wo jede Funktion
 - [x] `update.sh`: `-n` Flag bei `cp` entfernt → Subroutines werden jetzt korrekt überschrieben
 
 ### Offene Punkte
-- [ ] **Probe Result Panel: Layout & Style überarbeiten** — aktuelle Darstellung unfertig, Anordnung und visuelle Gestaltung müssen angepasst werden
+- [x] **Probe Result Panel: Layout & Style überarbeiten** — aktuelle Darstellung unfertig, Anordnung und visuelle Gestaltung müssen angepasst werden
 - [ ] Toleranz für Δ-Anzeige konfigurierbar machen (initial fix ±0.05mm)
 - [ ] CSV-Export aus History
 - [ ] Optional: Banner-Warnung "MEASURE ONLY MODE" bei Auto-Zero OFF

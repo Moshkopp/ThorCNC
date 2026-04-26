@@ -16,12 +16,35 @@ class MDIModule(ThorModule):
     """Manages MDI input, history, and execution."""
 
     def setup(self):
-        """Called after MainWindow initialization."""
         pass
 
     def connect_signals(self):
-        """Connect MDI-related signals from MainWindow."""
         pass
+
+    def setup_widget(self, stack):
+        """Create MDI page and insert into stack as page 1."""
+        from PySide6.QtWidgets import QWidget, QVBoxLayout, QLineEdit, QListWidget
+        from ..i18n import _t
+        t = self._t
+        mdi_page = QWidget()
+        mdi_page_lay = QVBoxLayout(mdi_page)
+        mdi_page_lay.setContentsMargins(4, 4, 4, 4)
+        mdi_page_lay.setSpacing(6)
+        t._mdi_input = QLineEdit()
+        t._mdi_input.setObjectName("mdiEntry")
+        t._mdi_input.setPlaceholderText(_t("MDI COMMAND..."))
+        t._mdi_input.setMinimumHeight(40)
+        t._mdi_input.returnPressed.connect(
+            lambda: self._send_mdi(t._mdi_input.text(), t._mdi_input))
+        t._mdi_history_widget = QListWidget()
+        t._mdi_history_widget.setObjectName("mdiHistory")
+        t._mdi_history_widget.itemDoubleClicked.connect(
+            lambda item: t._mdi_input.setText(item.text()))
+        t._mdi_history_widget.itemDoubleClicked.connect(
+            lambda item: self._send_mdi(item.text()))
+        mdi_page_lay.addWidget(t._mdi_input)
+        mdi_page_lay.addWidget(t._mdi_history_widget)
+        stack.addWidget(mdi_page)
 
     # ── Panel Switching ───────────────────────────────────────────────────────
 

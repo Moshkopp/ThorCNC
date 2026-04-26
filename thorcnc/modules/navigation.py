@@ -25,6 +25,120 @@ class NavigationModule(ThorModule):
         if self._t.poller:
             self._t.poller.periodic.connect(self._periodic_nav_update)
 
+    def connect_signals(self):
+        """Wire nav tab buttons and tab-change sync."""
+        from PySide6.QtWidgets import QTabWidget, QButtonGroup
+        from PySide6.QtCore import QTimer
+        ui = self._t.ui
+        tab = ui.findChild(QTabWidget, "tabWidget")
+        if not tab:
+            return
+        self._t.nav_group = QButtonGroup(self._t)
+        self._t.nav_group.setExclusive(True)
+        nav_names = ["nav_main", "nav_file", "nav_tool", "nav_offsets",
+                     "nav_probing", "nav_html", "nav_settings", "nav_status", "nav_quit"]
+        for idx, name in enumerate(nav_names):
+            b = ui.findChild(QPushButton, name)
+            if not b:
+                continue
+            b.setMinimumHeight(38)
+            b.setCursor(Qt.CursorShape.PointingHandCursor)
+            b.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+            if name == "nav_quit":
+                b.setCheckable(False)
+                b.clicked.connect(self._t.ui.close)
+            else:
+                b.setCheckable(True)
+                self._t.nav_group.addButton(b, idx)
+                b.clicked.connect(lambda _, i=idx, t=tab: t.setCurrentIndex(i))
+        tab.currentChanged.connect(self._sync_nav_buttons)
+        QTimer.singleShot(500, lambda: self._sync_nav_buttons(tab.currentIndex()))
+
+    def setup_flyouts(self):
+        """Create flyout button groups and overlay panels in the sidebar."""
+        t = self._t
+        ui = t.ui
+
+        # Remove legacy widgets
+        for name in ("combo_machine_mode", "btn_opt", "optExpandPanel"):
+            if w := ui.findChild(QWidget, name):
+                w.hide()
+                if w.parent() and w.parent().layout():
+                    w.parent().layout().removeWidget(w)
+
+        t.cmd.set_block_delete(0)
+        t.cmd.set_optional_stop(0)
+
+        t.flyout_btn_group = QWidget()
+        t.flyout_btn_group.setObjectName("flyout_btn_group")
+        group_lay = QVBoxLayout(t.flyout_btn_group)
+        group_lay.setContentsMargins(0, 50, 0, 0)
+        group_lay.setSpacing(6)
+
+        flyout_configs = [
+            ("MODE",   ["MANUAL", "AUTO", "MDI"]),
+            ("SHORTS", ["GO TO HOME", "GOTO ZERO XY"]),
+            ("OPT",    ["COOLANT", "M1 STOP", "SINGLE BLOCK", "BLOCK DELETE"]),
+        ]
+
+        for name, items in flyout_configs:
+            btn = QPushButton(name)
+            btn.setObjectName(f"btn_flyout_toggle_{name.lower()}")
+            btn.setProperty("is_flyout_toggle", True)
+            btn.setMinimumHeight(60)
+            btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+            group_lay.addWidget(btn)
+
+            panel = QFrame(ui.centralwidget)
+            panel.setWindowFlags(Qt.WindowType.FramelessWindowHint)
+            panel.setObjectName(f"flyout_panel_{name.lower()}")
+            panel.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+            panel.stackUnder(ui.leftPanel)
+            panel.hide()
+
+            p_lay = QVBoxLayout(panel)
+            p_lay.setContentsMargins(5, 5, 5, 5)
+            p_lay.setSpacing(5)
+
+            for item_text in items:
+                i_btn = QPushButton(_t(item_text))
+                i_btn.setObjectName("btn_flyout_item")
+                i_btn.setMinimumHeight(60)
+                i_btn.setMinimumWidth(180)
+                i_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+                p_lay.addWidget(i_btn)
+                self._flyout_item_buttons[f"{name}_{item_text}"] = i_btn
+                i_btn.clicked.connect(
+                    lambda checked=False, tt=item_text, nn=name: self.handle_flyout_action(nn, tt))
+
+            p_lay.addStretch()
+            self._flyout_panels[name] = panel
+            btn.clicked.connect(
+                lambda checked=False, n=name, b=btn: self.toggle_flyout(n, b))
+
+        sidebar_lay = ui.leftPanel.layout()
+        if sidebar_lay:
+            sidebar_lay.insertWidget(9, t.flyout_btn_group)
+
+        t.btn_mode_toggle = ui.findChild(QPushButton, "btn_flyout_toggle_mode")
+        t._queued_start_line = None
+
+    def _sync_nav_buttons(self, index: int):
+        """Sync nav button checked state and auto-switch LinuxCNC mode."""
+        if hasattr(self._t, "nav_group"):
+            if b := self._t.nav_group.button(index):
+                b.blockSignals(True)
+                b.setChecked(True)
+                b.blockSignals(False)
+        try:
+            current_mode = self._t.poller.stat.task_mode
+            target_mode = linuxcnc.MODE_AUTO if index in (0, 1) else linuxcnc.MODE_MANUAL
+            if current_mode != target_mode and self._t._interp_state == linuxcnc.INTERP_IDLE:
+                self._t.cmd.mode(target_mode)
+                self._t.cmd.wait_complete()
+        except Exception:
+            pass
+
     def handle_event(self, event):
         """Processes events for light-dismiss and sidebar logic."""
         import shiboken6
@@ -129,8 +243,6 @@ class NavigationModule(ThorModule):
 
     def handle_flyout_action(self, flyout_name, action_text):
         """Routes actions from flyout buttons to machine commands."""
-        print(f"[ThorCNC] Flyout Action: {flyout_name} -> {action_text}")
-
         if flyout_name == "MODE":
             mode_map = {"MANUAL": linuxcnc.MODE_MANUAL, "AUTO": linuxcnc.MODE_AUTO, "MDI": linuxcnc.MODE_MDI}
             if m := mode_map.get(action_text):
@@ -153,8 +265,7 @@ class NavigationModule(ThorModule):
 
         elif flyout_name == "OPT":
             if action_text == "COOLANT":
-                if hasattr(self._t, "_toggle_coolant_internal"):
-                    self._t._toggle_coolant_internal()
+                self._t.spindle.toggle_coolant()
             elif action_text == "M1 STOP":
                 curr = getattr(self._t.poller.stat, "optional_stop", False)
                 self._t.cmd.set_optional_stop(not curr)
@@ -238,10 +349,10 @@ class NavigationModule(ThorModule):
         # Check if all axes are homed
         all_homed = all(s.homed[i] for i in range(s.joints))
 
-        set_btn_state("OPT_COOLANT", active=(getattr(s, "flood", 0) > 0), enabled=(can_mdi and all_homed))
-        set_btn_state("OPT_M1 STOP", active=getattr(s, "optional_stop", False), enabled=(can_mdi and all_homed))
-        set_btn_state("OPT_BLOCK DELETE", active=getattr(s, "block_delete", False), enabled=(can_mdi and all_homed))
-        set_btn_state("OPT_SINGLE BLOCK", active=getattr(self._t, "is_single_block", False), enabled=(can_mdi and all_homed))
+        set_btn_state("OPT_COOLANT", active=(getattr(s, "flood", 0) > 0), enabled=is_on)
+        set_btn_state("OPT_M1 STOP", active=getattr(s, "optional_stop", False), enabled=is_on)
+        set_btn_state("OPT_BLOCK DELETE", active=getattr(s, "block_delete", False), enabled=is_on)
+        set_btn_state("OPT_SINGLE BLOCK", active=getattr(self._t, "is_single_block", False), enabled=is_on)
 
         # Disable SHORTS buttons if not idle or not all homed
         set_btn_state("SHORTS_GO TO HOME", enabled=(can_mdi and all_homed))

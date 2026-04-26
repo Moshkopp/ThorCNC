@@ -69,14 +69,16 @@ class ProbingTabModule(ThorModule):
         self._last_probe_warning_state = None
         self._probe_active = False
         self._parse_probe_warning_pins(self._probe_warning_pins_str)
-        
-        print(f"[ThorCNC] Probe Warning: {'ENABLED' if self._probe_warning_enabled else 'DISABLED'} on pins {self._probe_warning_pins}")
 
     def setup(self):
         self._setup_probing_tab()
 
     def connect_signals(self):
-        pass  # All signals connected in _setup_probing_tab
+        self._t.poller.digital_outputs_changed.connect(self._on_digital_out_changed)
+
+    def _on_digital_out_changed(self, dout):
+        self._t._last_dout = dout
+        self.update_probe_warning(dout)
 
     def update_marker_pos(self):
         """Public API for eventFilter delegation."""
@@ -572,9 +574,8 @@ class ProbingTabModule(ThorModule):
             with open(path, "w") as f:
                 for key in sorted(params):
                     f.write(params[key])
-            print(f"[ThorCNC] Probe var params added: {missing}")
-        except OSError as e:
-            print(f"[ThorCNC] Could not seed probe var params: {e}")
+        except OSError:
+            pass
 
     def _var_file_path(self) -> str | None:
         if not self._t.ini or not self._t.ini_path:
@@ -607,32 +608,25 @@ class ProbingTabModule(ThorModule):
         """Check #1001 counter; if changed, build ProbeResult and update UI."""
         path = self._var_file_path()
         if not path:
-            print("[ProbeDBG] var file path not found")
             return
         try:
             mtime = os.path.getmtime(path)
         except OSError:
-            print(f"[ProbeDBG] cannot stat {path}")
             return
         if mtime == self._probe_var_mtime:
             return
-        print(f"[ProbeDBG] var file changed: {path}  mtime={mtime}")
         self._probe_var_mtime = mtime
 
         params = self._read_probe_var_file()
-        print(f"[ProbeDBG] params with keys 999-1042: { {k:v for k,v in params.items() if 999<=k<=1042} }")
         if 1001 not in params:
-            print("[ProbeDBG] #1001 not in params → skip")
             return
 
         counter = int(params.get(1001, 0))
-        print(f"[ProbeDBG] counter={counter}  last={self._probe_last_counter}")
         if counter == self._probe_last_counter:
             return
         self._probe_last_counter = counter
 
         type_code = int(params.get(1000, -1))
-        print(f"[ProbeDBG] type_code={type_code}  known={type_code in PROBE_TYPES}")
         if type_code not in PROBE_TYPES:
             return
         type_name, kind = PROBE_TYPES[type_code]
@@ -1154,10 +1148,8 @@ class ProbingTabModule(ThorModule):
                         break
 
             if self._last_probe_warning_state != is_active:
-                print(f"[DEBUG] Probe Warning state changed: {is_active} (Pins: {self._probe_warning_pins})")
                 self._last_probe_warning_state = is_active
-        except Exception as e:
-            print(f"[DEBUG] Error in update_probe_warning: {e}")
+        except Exception:
             return
 
         self._probe_active = is_active

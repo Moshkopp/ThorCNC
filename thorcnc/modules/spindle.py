@@ -152,18 +152,11 @@ class SpindleModule(ThorModule):
         curr_stat = self._t.poller.stat.flood
         new_state = 1 if curr_stat == 0 else 0
         
-        # Fresh command object often helps in sim/remote environments
-        import linuxcnc
         c = linuxcnc.command()
         
         # If we are in AUTO and running, we MUST use flood()
         # If we are IDLE, we can also try MDI as a fallback
-        if self._t.poller.stat.interp_state == linuxcnc.INTERP_IDLE:
-            c.mode(linuxcnc.MODE_MDI)
-            c.wait_complete()
-            c.mdi("M8" if new_state == 1 else "M9")
-        else:
-            c.flood(new_state)
+        c.flood(new_state)
         
         # Update UI immediately
         self._t.gcode_view_mod._update_active_codes_display()

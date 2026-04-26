@@ -44,13 +44,13 @@ class SimpleViewModule(ThorModule):
 
         # Machine control buttons - delegate to MainWindow or other modules
         if self.simple_view.btn_start:
-            self.simple_view.btn_start.clicked.connect(self._t._run_program)
+            self.simple_view.btn_start.clicked.connect(self._t.program_control.run_program)
         if self.simple_view.btn_pause:
-            self.simple_view.btn_pause.clicked.connect(self._t._pause_program)
+            self.simple_view.btn_pause.clicked.connect(self._t.program_control.pause_program)
         if self.simple_view.btn_stop:
-            self.simple_view.btn_stop.clicked.connect(self._t._stop_program)
+            self.simple_view.btn_stop.clicked.connect(self._t.program_control.stop_program)
         if self.simple_view.btn_estop:
-            self.simple_view.btn_estop.clicked.connect(self._t._toggle_estop)
+            self.simple_view.btn_estop.clicked.connect(self._t.program_control.toggle_estop)
 
         # Sync initial backplot state
         self.refresh_backplot()
