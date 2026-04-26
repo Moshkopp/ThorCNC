@@ -29,17 +29,18 @@ _GL_ERROR = ""
 
 try:
     import pyqtgraph as _pg
-    import pyqtgraph.opengl as _gl
 
-    # Compatibility fix for PySide6: QOpenGLWidget moved to QtOpenGLWidgets.
-    # We patch it back to where pyqtgraph expects it if necessary.
+    # Patch QOpenGLWidget BEFORE importing pyqtgraph.opengl — newer pyqtgraph
+    # versions look it up at import time and crash if it's missing from QtWidgets.
     try:
-        from PySide6.QtOpenGLWidgets import QOpenGLWidget
+        from PySide6.QtOpenGLWidgets import QOpenGLWidget as _QOGLWidget
         if hasattr(_pg, 'Qt') and hasattr(_pg.Qt, 'QtWidgets'):
             if not hasattr(_pg.Qt.QtWidgets, 'QOpenGLWidget'):
-                _pg.Qt.QtWidgets.QOpenGLWidget = QOpenGLWidget
+                _pg.Qt.QtWidgets.QOpenGLWidget = _QOGLWidget
     except Exception:
         pass
+
+    import pyqtgraph.opengl as _gl
 
     pg = _pg
     gl = _gl
