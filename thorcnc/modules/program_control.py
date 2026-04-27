@@ -140,10 +140,25 @@ class ProgramControlModule(ThorModule):
     def _update_tab_locks(self, running: bool, paused: bool):
         locked = running or paused
 
-        # Fully disabled nav buttons while locked
-        for nav_name in ("nav_file", "nav_probing", "nav_surface_map"):
+        # Wenn eine Probe/Surface-Sub läuft (nicht das User-Programm),
+        # bleiben die zugehörigen Nav-Buttons und Tab-Redirect entsperrt.
+        import os as _os
+        user_prog = getattr(self._t, "_user_program", None)
+        stat_file = getattr(self._t.poller.stat, "file", "") or ""
+        user_prog_running = locked and bool(user_prog) and (
+            _os.path.normpath(stat_file) == _os.path.normpath(user_prog)
+        )
+
+        # nav_file nur bei User-Programm sperren; nav_probing/nav_surface_map
+        # nur wenn das User-Programm läuft, nicht bei eigenen Subs.
+        nav_locks = {
+            "nav_file":        locked,
+            "nav_probing":     user_prog_running,
+            "nav_surface_map": user_prog_running,
+        }
+        for nav_name, should_lock in nav_locks.items():
             if b := self._t._w(QPushButton, nav_name):
-                b.setEnabled(not locked)
+                b.setEnabled(not should_lock)
 
         # Tool table — disable all action buttons, make cells non-editable
         for btn_name in ("btn_add_tool", "btn_delete_tool", "btn_reload_tools", "btn_save_tools"):
@@ -208,8 +223,8 @@ class ProgramControlModule(ThorModule):
                 if nav._current_flyout == flyout_name.upper():
                     nav._close_flyout(flyout_name.upper(), immediate=True)
 
-        # Redirect to Main if on a fully-locked tab when running starts
-        if running:
+        # Redirect to Main nur wenn das User-Programm startet, nicht bei Probe/Surface-Subs
+        if user_prog_running:
             if tab := self._t._w(QTabWidget, "tabWidget"):
                 if tab.currentIndex() in (1, 4, 5):  # file, probing, surface_map
                     tab.setCurrentIndex(0)

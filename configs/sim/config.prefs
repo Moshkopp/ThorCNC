@@ -27,6 +27,8 @@
     "mdi_history": [
         "G53 G0 Z0",
         "T99 M6 G43",
+        "G53 G0 Z0",
+        "T99 M6 G43",
         "T7 M6 G43",
         "T99 M6 G43",
         "O<goto_zero_xy> call",
@@ -72,9 +74,7 @@
         "G53 G0 Z0",
         "G53 G0 X0",
         "G53 G0 Y0",
-        "G53 G0 Z0",
-        "G53 G0 X0",
-        "G53 G0 Y0"
+        "G53 G0 Z0"
     ],
     "theme": "dark",
     "backplot_msaa_samples": 4,
