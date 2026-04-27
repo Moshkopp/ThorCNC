@@ -128,8 +128,8 @@ if dpkg -l python3-pyqtgraph &>/dev/null 2>&1; then
 fi
 
 # pyqtgraph + PyOpenGL explizit force-reinstall damit nicht die apt-Version aktiv bleibt
-info "Aktualisiere pyqtgraph + PyOpenGL via pip..."
-pip install $PIP_BREAK_FLAG --force-reinstall "pyqtgraph>=0.13" "PyOpenGL>=3.1" || \
+info "Aktualisiere pyqtgraph + PyOpenGL + matplotlib via pip..."
+pip install $PIP_BREAK_FLAG --force-reinstall "pyqtgraph>=0.13" "PyOpenGL>=3.1" "matplotlib>=3.5" || \
     warn "pip force-reinstall fehlgeschlagen – Backplot funktioniert evtl. nicht."
 
 if $DEV_MODE; then

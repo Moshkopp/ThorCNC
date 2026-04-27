@@ -17,6 +17,7 @@ dependencies = [
 backplot = [
     "pyqtgraph>=0.13",
     "PyOpenGL>=3.1",
+    "matplotlib>=3.5",
 ]
 
 [project.scripts]

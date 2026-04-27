@@ -103,8 +103,8 @@ install_deps() {
 
             # pyqtgraph und PyOpenGL explizit via pip force-reinstall (stellt sicher dass
             # nicht das apt-Paket sondern die pip-Version aktiv ist)
-            info "Installiere pyqtgraph + PyOpenGL via pip (force-reinstall)..."
-            pip install $PIP_BREAK_FLAG --force-reinstall "pyqtgraph>=0.13" "PyOpenGL>=3.1" || \
+            info "Installiere pyqtgraph + PyOpenGL + matplotlib via pip (force-reinstall)..."
+            pip install $PIP_BREAK_FLAG --force-reinstall "pyqtgraph>=0.13" "PyOpenGL>=3.1" "matplotlib>=3.5" || \
                 warn "pip force-reinstall fehlgeschlagen – Backplot funktioniert evtl. nicht."
 
             ok "System-Checks abgeschlossen."
