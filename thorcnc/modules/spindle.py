@@ -167,13 +167,15 @@ class SpindleModule(ThorModule):
     def sync_buttons(self):
         """Syncs the coolant button highlight with machine status."""
         is_on = not self._t.poller.stat.estop and self._t.poller.stat.enabled
-        btn_coolant = self._t._w(QPushButton, "btn_opt_coolant")
+        if not hasattr(self, "_btn_coolant_cached"):
+            self._btn_coolant_cached = self._t._w(QPushButton, "btn_opt_coolant")
+        btn_coolant = self._btn_coolant_cached
         if btn_coolant:
             flood_active = (self._t.poller.stat.flood > 0)
             if btn_coolant.isChecked() != flood_active:
                 btn_coolant.blockSignals(True)
                 btn_coolant.setChecked(flood_active)
                 btn_coolant.blockSignals(False)
-                # Display ebenfalls aktualisieren
                 self._t.gcode_view_mod._update_active_codes_display()
-            btn_coolant.setEnabled(is_on)
+            if btn_coolant.isEnabled() != is_on:
+                btn_coolant.setEnabled(is_on)
