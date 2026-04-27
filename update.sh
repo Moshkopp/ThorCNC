@@ -121,13 +121,42 @@ fi
 # --- Paket neu installieren --------------------------------------------------
 EXTRAS="[backplot]"
 
-# python3-pyqtgraph vom apt entfernen falls vorhanden (inkompatibel mit PySide6)
-if dpkg -l python3-pyqtgraph &>/dev/null 2>&1; then
-    warn "python3-pyqtgraph (apt) gefunden – wird entfernt (inkompatibel mit PySide6)..."
-    sudo apt-get remove -y python3-pyqtgraph || true
+OS=$(. /etc/os-release 2>/dev/null && echo "${ID:-unknown}" || echo "unknown")
+
+if [ "$OS" = "debian" ] || [ "$OS" = "ubuntu" ]; then
+    # pip-PySide6 entfernen – apt-Version soll genutzt werden
+    info "Entferne pip-PySide6 falls vorhanden..."
+    pip uninstall -y PySide6 PySide6-Addons PySide6-Essentials shiboken6 2>/dev/null || true
+
+    if dpkg -l python3-pyqtgraph &>/dev/null 2>&1; then
+        warn "python3-pyqtgraph (apt) gefunden – wird entfernt..."
+        sudo apt-get remove -y python3-pyqtgraph || true
+    fi
+
+    # Sicherstellen dass alle Qt xcb Laufzeit-Bibliotheken installiert sind.
+    # Einzeln installieren damit ein fehlendes Paket nicht alle anderen blockiert.
+    info "Stelle Qt xcb Laufzeit-Bibliotheken sicher (apt)..."
+    for pkg in \
+        python3-pyside6 \
+        python3-pyside6.qtopenglwidgets \
+        python3-opengl \
+        libopengl0 \
+        libegl1 \
+        libxcb-cursor0 \
+        libxcb-icccm4 \
+        libxcb-image0 \
+        libxcb-keysyms1 \
+        libxcb-randr0 \
+        libxcb-render-util0 \
+        libxcb-xinerama0 \
+        libxcb-xkb1 \
+        libxkbcommon-x11-0
+    do
+        sudo apt-get install -y "$pkg" 2>/dev/null || warn "Paket nicht verfügbar: $pkg (wird übersprungen)"
+    done
 fi
 
-# pyqtgraph + PyOpenGL explizit force-reinstall damit nicht die apt-Version aktiv bleibt
+# pyqtgraph + PyOpenGL + matplotlib via pip (force-reinstall)
 info "Aktualisiere pyqtgraph + PyOpenGL + matplotlib via pip..."
 pip install $PIP_BREAK_FLAG --force-reinstall "pyqtgraph>=0.13" "PyOpenGL>=3.1" "matplotlib>=3.5" || \
     warn "pip force-reinstall fehlgeschlagen – Backplot funktioniert evtl. nicht."

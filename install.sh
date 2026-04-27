@@ -82,18 +82,29 @@ install_deps() {
             info "Installiere System-Pakete (apt)..."
             sudo apt-get update -qq || true
 
-            # python3-pyqtgraph vom apt entfernen falls vorhanden:
-            # Das Debian-Paket ist veraltet und defaultet zu PyQt5 – blockiert die pip-Version.
-            if dpkg -l python3-pyqtgraph &>/dev/null 2>&1; then
-                warn "python3-pyqtgraph (apt) gefunden – wird entfernt (inkompatibel mit PySide6)..."
-                sudo apt-get remove -y python3-pyqtgraph || true
-            fi
+            # Inkompatible apt-Pakete entfernen
+            for pkg in python3-pyqtgraph; do
+                if dpkg -l "$pkg" &>/dev/null 2>&1; then
+                    warn "$pkg (apt) wird entfernt (inkompatibel)..."
+                    sudo apt-get remove -y "$pkg" || true
+                fi
+            done
 
-            # Installiere PySide6 + OpenGL + alle Qt xcb Laufzeit-Bibliotheken
-            sudo apt-get install -y \
-                python3-pyside6 python3-pyside6.qtopenglwidgets \
+            # pip-PySide6 entfernen – auf Debian nutzen wir ausschließlich die apt-Version.
+            # pip-PySide6 bringt ein eigenes Qt6 mit das die System-xcb-Libs nicht findet.
+            info "Entferne pip-PySide6 falls vorhanden (apt-Version wird genutzt)..."
+            pip uninstall -y PySide6 PySide6-Addons PySide6-Essentials shiboken6 2>/dev/null || true
+
+            # PySide6 + OpenGL + alle Qt xcb Laufzeit-Bibliotheken via apt.
+            # Einzeln installieren: ein fehlendes Paket (z.B. auf Debian 12)
+            # blockiert sonst alle anderen.
+            info "Installiere Qt xcb Laufzeit-Bibliotheken (einzeln)..."
+            for pkg in \
+                python3-pyside6 \
+                python3-pyside6.qtopenglwidgets \
                 python3-opengl \
-                libopengl0 libegl1 \
+                libopengl0 \
+                libegl1 \
                 libxcb-cursor0 \
                 libxcb-icccm4 \
                 libxcb-image0 \
@@ -102,16 +113,17 @@ install_deps() {
                 libxcb-render-util0 \
                 libxcb-xinerama0 \
                 libxcb-xkb1 \
-                libxkbcommon-x11-0 || \
-                warn "Einige System-Pakete konnten nicht via apt installiert werden."
+                libxkbcommon-x11-0
+            do
+                sudo apt-get install -y "$pkg" 2>/dev/null || warn "Paket nicht verfügbar: $pkg (wird übersprungen)"
+            done
 
             sudo apt-get install -y python3-pip python3-hatchling || true
             sudo apt-get install -y linuxcnc-uspace 2>/dev/null || \
                 warn "linuxcnc-uspace nicht installierbar (kein LinuxCNC-Repo konfiguriert?)."
 
-            # pyqtgraph und PyOpenGL explizit via pip force-reinstall (stellt sicher dass
-            # nicht das apt-Paket sondern die pip-Version aktiv ist)
-            info "Installiere pyqtgraph + PyOpenGL + matplotlib via pip (force-reinstall)..."
+            # pip-exklusive Backplot-Deps (pyqtgraph muss pip-Version sein, nicht apt)
+            info "Installiere pyqtgraph + PyOpenGL + matplotlib via pip..."
             pip install $PIP_BREAK_FLAG --force-reinstall "pyqtgraph>=0.13" "PyOpenGL>=3.1" "matplotlib>=3.5" || \
                 warn "pip force-reinstall fehlgeschlagen – Backplot funktioniert evtl. nicht."
 
