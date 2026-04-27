@@ -11,7 +11,7 @@ Handles:
 
 import linuxcnc
 from PySide6.QtCore import Slot
-from PySide6.QtWidgets import QPushButton, QComboBox
+from PySide6.QtWidgets import QPushButton, QComboBox, QTableWidget, QTabWidget
 
 from .base import ThorModule
 from ..i18n import _t
@@ -134,7 +134,85 @@ class ProgramControlModule(ThorModule):
             is_modified = self._t.gcode_view.document().isModified() if self._t.gcode_view else False
             self._t._btn_save_gcode.setEnabled(idle and is_edit and is_modified)
 
+        self._update_tab_locks(running, paused)
         self._update_run_buttons()
+
+    def _update_tab_locks(self, running: bool, paused: bool):
+        locked = running or paused
+
+        # Fully disabled nav buttons while locked
+        for nav_name in ("nav_file", "nav_probing", "nav_surface_map"):
+            if b := self._t._w(QPushButton, nav_name):
+                b.setEnabled(not locked)
+
+        # Tool table — disable all action buttons, make cells non-editable
+        for btn_name in ("btn_add_tool", "btn_delete_tool", "btn_reload_tools", "btn_save_tools"):
+            if b := self._t._w(QPushButton, btn_name):
+                b.setEnabled(not locked)
+        if tw := self._t._w(QTableWidget, "toolTable"):
+            tw.setEditTriggers(
+                QTableWidget.EditTrigger.NoEditTriggers if locked
+                else QTableWidget.EditTrigger.DoubleClicked | QTableWidget.EditTrigger.EditKeyPressed
+            )
+
+        # Offsets — disable WCS clear buttons (cell widgets need manual style refresh)
+        for btn in self._t.ui.findChildren(QPushButton, "wcs_clear_btn"):
+            btn.setEnabled(not locked)
+            btn.style().unpolish(btn)
+            btn.style().polish(btn)
+
+        # Jog buttons
+        for name in ("x_plus_jogbutton_3", "x_minus_jogbutton_3",
+                     "y_plus_jogbutton_3", "y_minus_jogbutton_3",
+                     "z_plus_jogbutton_3", "z_minus_jogbutton_3"):
+            if b := self._t._w(QPushButton, name):
+                b.setEnabled(not locked)
+
+        # Jog increment + speed
+        for name in ("btn_jog_cont", "btn_jog_1_0", "btn_jog_0_1", "btn_jog_0_01"):
+            if b := self._t._w(QPushButton, name):
+                b.setEnabled(not locked)
+        from PySide6.QtWidgets import QSlider
+        if s := self._t._w(QSlider, "jog_vel_slider"):
+            s.setEnabled(not locked)
+
+        # Manual spindle control
+        for name in ("btn_spindle_fwd", "btn_spindle_rev", "btn_spindle_stop"):
+            if b := self._t._w(QPushButton, name):
+                b.setEnabled(not locked)
+
+        # MDI view button
+        if b := getattr(self._t, "_btn_show_mdi", None):
+            b.setEnabled(not locked)
+
+        # Load gcode button
+        if b := getattr(self._t, "_btn_load", None):
+            b.setEnabled(not locked)
+
+        # Load Tool (M6) button
+        if b := self._t._w(QPushButton, "btn_m6_change"):
+            b.setEnabled(not locked)
+
+        # DRO zero buttons (per-axis + zero-all)
+        for btn in self._t.ui.findChildren(QPushButton, "dro_zero_btn"):
+            btn.setEnabled(not locked)
+        if b := self._t._w(QPushButton, "dro_zero_all_btn"):
+            b.setEnabled(not locked)
+
+        # Mode + Shorts flyout toggle buttons — disable and close if open
+        for flyout_name in ("mode", "shorts"):
+            if b := self._t._w(QPushButton, f"btn_flyout_toggle_{flyout_name}"):
+                b.setEnabled(not locked)
+            if locked and hasattr(self._t, "navigation"):
+                nav = self._t.navigation
+                if nav._current_flyout == flyout_name.upper():
+                    nav._close_flyout(flyout_name.upper(), immediate=True)
+
+        # Redirect to Main if on a fully-locked tab when running starts
+        if running:
+            if tab := self._t._w(QTabWidget, "tabWidget"):
+                if tab.currentIndex() in (1, 4, 5):  # file, probing, surface_map
+                    tab.setCurrentIndex(0)
 
     def _update_run_buttons(self):
         btn_run   = self._t._w(QPushButton, "btn_run")

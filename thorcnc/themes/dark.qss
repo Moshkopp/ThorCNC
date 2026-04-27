@@ -96,9 +96,50 @@ QPushButton:pressed {
 }
 
 QPushButton:disabled {
-    background-color: #252525;
-    color: #666666;
-    border-color: #333333;
+    background-color: #1e1e1e;
+    color: #3a3a3a;
+    border-color: #272727;
+}
+
+/* ── Locked-during-run: type-specific dim styles ── */
+.btn-blue:disabled {
+    background-color: #1c2430;
+    color: #2d3d52;
+    border-color: #1a2030;
+}
+QPushButton[objectName^="nav_"]:disabled {
+    background-color: transparent;
+    color: #2e2e2e;
+    border-color: #282828;
+}
+QPushButton[objectName*="_jogbutton_"]:disabled {
+    background-color: #202020;
+    color: #2e2e2e;
+    border-color: #1a1a1a;
+}
+QPushButton[is_flyout_toggle="true"]:disabled {
+    background-color: #181818;
+    color: #2e2e2e;
+    border-color: #222222;
+}
+QPushButton#btn_spindle_fwd:disabled,
+QPushButton#btn_spindle_rev:disabled,
+QPushButton#btn_spindle_stop:disabled {
+    background-color: #1e1e1e;
+    color: #333333;
+    border-color: #272727;
+}
+QPushButton#btn_m6_change:disabled {
+    background-color: #1c2430;
+    color: #2d3d52;
+    border-color: #1a2030;
+}
+QSlider::groove:horizontal:disabled {
+    background: #242424;
+}
+QSlider::handle:horizontal:disabled {
+    background: #303030;
+    border-color: #282828;
 }
 
 QPushButton:checked {
@@ -863,11 +904,21 @@ QPushButton#btn_reload_tools {
     color: #ffffff;
     font-weight: bold;
 }
+QPushButton#btn_reload_tools:disabled {
+    background-color: #1e1e1e;
+    color: #3a3a3a;
+    border-color: #272727;
+}
 
 QPushButton#btn_save_tools {
     background-color: #27ae60;
     color: #ffffff;
     font-weight: bold;
+}
+QPushButton#btn_save_tools:disabled {
+    background-color: #1e1e1e;
+    color: #3a3a3a;
+    border-color: #272727;
 }
 
 QTableWidget#toolTable {
@@ -1243,6 +1294,11 @@ QPushButton#wcs_clear_btn {
     border: none;
     font-weight: bold;
     font-size: 10pt;
+}
+QPushButton#wcs_clear_btn:disabled {
+    background-color: #1e1a1a;
+    color: #2e2020;
+    border: none;
 }
 
 QPushButton#wcs_clear_btn:hover {

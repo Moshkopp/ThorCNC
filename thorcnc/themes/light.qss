@@ -95,9 +95,50 @@ QPushButton:pressed {
 }
 
 QPushButton:disabled {
-    background-color: #5e6e84;
-    color: #90a0b8;
-    border-color: #6a7a90;
+    background-color: #c8d0da;
+    color: #a0aab8;
+    border-color: #b8c2cc;
+}
+
+/* ── Locked-during-run: type-specific dim styles ── */
+.btn-blue:disabled {
+    background-color: #d0d8e8;
+    color: #a8b4c8;
+    border-color: #c0cad8;
+}
+QPushButton[objectName^="nav_"]:disabled {
+    background-color: transparent;
+    color: #b0bcc8;
+    border-color: #c0cad4;
+}
+QPushButton[objectName*="_jogbutton_"]:disabled {
+    background-color: #d0d8e0;
+    color: #a8b4c0;
+    border-color: #c0cad4;
+}
+QPushButton[is_flyout_toggle="true"]:disabled {
+    background-color: #d4dce4;
+    color: #a8b4c0;
+    border-color: #c0cad4;
+}
+QPushButton#btn_spindle_fwd:disabled,
+QPushButton#btn_spindle_rev:disabled,
+QPushButton#btn_spindle_stop:disabled {
+    background-color: #c8d0da;
+    color: #a0aab8;
+    border-color: #b8c2cc;
+}
+QPushButton#btn_m6_change:disabled {
+    background-color: #d0d8e8;
+    color: #a8b4c8;
+    border-color: #c0cad8;
+}
+QSlider::groove:horizontal:disabled {
+    background: #d0d8e0;
+}
+QSlider::handle:horizontal:disabled {
+    background: #b0bcc8;
+    border-color: #c0cad4;
 }
 
 QPushButton:checked {
@@ -858,11 +899,21 @@ QPushButton#btn_reload_tools {
     color: #ffffff;
     font-weight: bold;
 }
+QPushButton#btn_reload_tools:disabled {
+    background-color: #c8d0da;
+    color: #a0aab8;
+    border-color: #b8c2cc;
+}
 
 QPushButton#btn_save_tools {
     background-color: #27ae60;
     color: #ffffff;
     font-weight: bold;
+}
+QPushButton#btn_save_tools:disabled {
+    background-color: #c8d0da;
+    color: #a0aab8;
+    border-color: #b8c2cc;
 }
 
 QTableWidget#toolTable {
@@ -1235,6 +1286,11 @@ QPushButton#wcs_clear_btn {
     border: 1px solid #cc3333;
     font-weight: bold;
     font-size: 10pt;
+}
+QPushButton#wcs_clear_btn:disabled {
+    background-color: #d0c8c8;
+    color: #b0a8a8;
+    border-color: #c0b8b8;
 }
 
 QPushButton#wcs_clear_btn:hover {

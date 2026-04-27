@@ -50,6 +50,7 @@ class DROModule(ThorModule):
 
         # ZERO ALL
         btn_zero_all = QPushButton(_t("ZERO\nALL"))
+        btn_zero_all.setObjectName("dro_zero_all_btn")
         btn_zero_all.setFixedSize(btn_width, 44)
         btn_zero_all.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self._t._add_class(btn_zero_all, "btn-blue")
