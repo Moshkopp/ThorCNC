@@ -53,7 +53,7 @@ class OffsetsModule(ThorModule):
         return params
 
     def _setup_offsets_tab(self):
-        from PySide6.QtWidgets import (QWidget, QVBoxLayout,
+        from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout,
                                        QTableWidget, QTableWidgetItem,
                                        QPushButton, QHeaderView, QLabel,
                                        QAbstractItemView)
@@ -90,7 +90,7 @@ class OffsetsModule(ThorModule):
         hdr.setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)
         hdr.setSectionResizeMode(5, QHeaderView.ResizeMode.Fixed)
         tbl.setColumnWidth(0, 100)
-        tbl.setColumnWidth(5, 110)
+        tbl.setColumnWidth(5, 185)
         tbl.verticalHeader().setDefaultSectionSize(48)
 
         _bold = QFont()
@@ -106,12 +106,26 @@ class OffsetsModule(ThorModule):
                 it = QTableWidgetItem("–")
                 it.setTextAlignment(_Qt.AlignmentFlag.AlignRight | _Qt.AlignmentFlag.AlignVCenter)
                 tbl.setItem(row, col, it)
-            btn = QPushButton(_t("CLEAR"))
-            btn.setObjectName("wcs_clear_btn")
-            btn.setFocusPolicy(_Qt.FocusPolicy.NoFocus)
-            btn.setFixedSize(80, 30)
-            btn.clicked.connect(lambda _=False, n=p_idx: self._clear_wcs(n))
-            tbl.setCellWidget(row, 5, btn)
+            cell = QWidget()
+            cell_lay = QHBoxLayout(cell)
+            cell_lay.setContentsMargins(4, 4, 4, 4)
+            cell_lay.setSpacing(4)
+
+            btn_clear = QPushButton(_t("CLEAR"))
+            btn_clear.setObjectName("wcs_clear_btn")
+            btn_clear.setFocusPolicy(_Qt.FocusPolicy.NoFocus)
+            btn_clear.setFixedSize(80, 34)
+            btn_clear.clicked.connect(lambda _=False, n=p_idx: self._clear_wcs(n))
+
+            btn_clr_r = QPushButton(_t("CLR R"))
+            btn_clr_r.setObjectName("wcs_clear_btn")
+            btn_clr_r.setFocusPolicy(_Qt.FocusPolicy.NoFocus)
+            btn_clr_r.setFixedSize(72, 34)
+            btn_clr_r.clicked.connect(lambda _=False, n=p_idx: self._clear_wcs_r(n))
+
+            cell_lay.addWidget(btn_clear)
+            cell_lay.addWidget(btn_clr_r)
+            tbl.setCellWidget(row, 5, cell)
 
         outer.addWidget(tbl)
 
@@ -167,6 +181,19 @@ class OffsetsModule(ThorModule):
             self._t.cmd.wait_complete()
             self._t.cmd.mode(linuxcnc.MODE_MANUAL)
             self._t._status(_t("WCS G{}{} → X0 Y0 Z0 R0").format(53 + p_idx if p_idx <= 6 else '59.', p_idx - 6 if p_idx > 6 else ""))
+            self._offset_var_mtime = 0.0
+        except Exception as e:
+            self._t._status(_t("Error:") + f" {e}")
+
+    def _clear_wcs_r(self, p_idx: int):
+        """Clears only the rotation (R) offset of the specified WCS via G10 L2."""
+        try:
+            self._t.cmd.mode(linuxcnc.MODE_MDI)
+            self._t.cmd.wait_complete()
+            self._t.cmd.mdi(f"G10 L2 P{p_idx} R0")
+            self._t.cmd.wait_complete()
+            self._t.cmd.mode(linuxcnc.MODE_MANUAL)
+            self._t._status(_t("WCS G{}{} → R0").format(53 + p_idx if p_idx <= 6 else '59.', p_idx - 6 if p_idx > 6 else ""))
             self._offset_var_mtime = 0.0
         except Exception as e:
             self._t._status(_t("Error:") + f" {e}")
