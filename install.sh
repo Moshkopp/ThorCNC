@@ -89,12 +89,20 @@ install_deps() {
                 sudo apt-get remove -y python3-pyqtgraph || true
             fi
 
-            # Installiere PySide6 + OpenGL + Qt xcb Support via apt
+            # Installiere PySide6 + OpenGL + alle Qt xcb Laufzeit-Bibliotheken
             sudo apt-get install -y \
                 python3-pyside6 python3-pyside6.qtopenglwidgets \
                 python3-opengl \
                 libopengl0 libegl1 \
-                libxcb-cursor0 || \
+                libxcb-cursor0 \
+                libxcb-icccm4 \
+                libxcb-image0 \
+                libxcb-keysyms1 \
+                libxcb-randr0 \
+                libxcb-render-util0 \
+                libxcb-xinerama0 \
+                libxcb-xkb1 \
+                libxkbcommon-x11-0 || \
                 warn "Einige System-Pakete konnten nicht via apt installiert werden."
 
             sudo apt-get install -y python3-pip python3-hatchling || true
