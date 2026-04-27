@@ -161,6 +161,10 @@ class NavigationModule(ThorModule):
 
                     local_pt = panel.mapFromGlobal(global_pt)
                     if not panel.rect().contains(local_pt):
+                        # OPT flyout only closes via its toggle button, not by clicking outside
+                        if self._current_flyout == "OPT":
+                            return False
+
                         if hasattr(self._t, "_line_queue_panel") and self._t._line_queue_panel.isVisible():
                             lq_local_pt = self._t._line_queue_panel.mapFromGlobal(global_pt)
                             if self._t._line_queue_panel.rect().contains(lq_local_pt):
