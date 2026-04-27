@@ -89,14 +89,17 @@ install_deps() {
                 sudo apt-get remove -y python3-pyqtgraph || true
             fi
 
-            # Installiere PySide6 + OpenGL Support via apt
-            sudo apt-get install -y python3-pyside6 python3-pyside6.qtopenglwidgets \
-                                   python3-opengl \
-                                   libopengl0 libegl1 \
-                                   libxcb-cursor0 2>/dev/null || \
-                warn "Einige System-Pakete konnten nicht via apt installiert werden. Wird später via pip versucht."
+            # Installiere PySide6 + OpenGL + Qt xcb Support via apt
+            sudo apt-get install -y \
+                python3-pyside6 python3-pyside6.qtopenglwidgets \
+                python3-opengl \
+                libopengl0 libegl1 \
+                libxcb-cursor0 || \
+                warn "Einige System-Pakete konnten nicht via apt installiert werden."
 
-            sudo apt-get install -y python3-pip python3-hatchling linuxcnc-uspace 2>/dev/null || true
+            sudo apt-get install -y python3-pip python3-hatchling || true
+            sudo apt-get install -y linuxcnc-uspace 2>/dev/null || \
+                warn "linuxcnc-uspace nicht installierbar (kein LinuxCNC-Repo konfiguriert?)."
 
             # pyqtgraph und PyOpenGL explizit via pip force-reinstall (stellt sicher dass
             # nicht das apt-Paket sondern die pip-Version aktiv ist)
