@@ -87,7 +87,7 @@ QPushButton {
 
 QPushButton:hover {
     background-color: #6a7e96;
-    border-color: #9ab4c8;
+    border-color: #6a92b8;
 }
 
 QPushButton:pressed {
@@ -156,7 +156,7 @@ QPushButton:checked {
     font-weight: bold;
     border: 1px solid #2d6099;
 }
-.btn-blue:hover { background-color: #4d9de0; }
+.btn-blue:hover { background-color: #4d9de0; border-color: #7ab8f0; }
 .btn-blue:pressed { background-color: #2d6099; }
 
 .btn-green {
@@ -167,7 +167,7 @@ QPushButton:checked {
     font-weight: bold;
     border: 1px solid #6a7e96;
 }
-.btn-green:hover { background-color: #6a7e96; border-color: #4ade80; }
+.btn-green:hover { background-color: #6a7e96; border-color: #6a92b8; }
 .btn-green.btn-homed { background-color: #4e9a06; border-color: #a4ef0a; color: white; }
 
 .btn-red {
@@ -264,8 +264,9 @@ QPushButton#btn_opt {
 }
 
 QPushButton#btn_opt:hover {
-    background-color: #4d9de0;
-    color: white;
+    background-color: #3e4f62;
+    border-color: #6a92b8;
+    color: #c8daea;
 }
 
 #nav_quit {
@@ -292,7 +293,7 @@ QPushButton[is_flyout_toggle="true"] {
 }
 QPushButton[is_flyout_toggle="true"]:hover {
     background-color: #3e4f62;
-    border-color: #4d9de0;
+    border-color: #6a92b8;
 }
 
 QFrame#flyout_panel_mode, QFrame#flyout_panel_shorts, QFrame#flyout_panel_opt {
@@ -311,8 +312,8 @@ QPushButton#btn_flyout_item {
     margin: 2px;
 }
 QPushButton#btn_flyout_item:hover {
-    background-color: #4d9de0;
-    border-color: #7ab8f0;
+    background-color: #3a4a60;
+    border-color: #6a92b8;
 }
 QPushButton#btn_flyout_item[active="true"] {
     background-color: #4d9de0;
@@ -367,8 +368,9 @@ QPushButton#btn_simple_back {
 }
 
 QPushButton#btn_simple_back:hover {
-    background-color: #4d9de0;
-    color: white;
+    background-color: #3e4f62;
+    border-color: #6a92b8;
+    color: #c8daea;
 }
 
 QPushButton#btn_simple_toggle {
@@ -384,8 +386,9 @@ QPushButton#btn_simple_toggle {
 }
 
 QPushButton#btn_simple_toggle:hover {
-    background-color: #2ecc71;
-    color: white;
+    background-color: #3e4f62;
+    border-color: #6a92b8;
+    color: #a0e0b8;
 }
 
 QPushButton#btn_simple_start[status="running"] {
@@ -433,7 +436,7 @@ QPushButton[objectName^="nav_"] {
 
 QPushButton[objectName^="nav_"]:hover {
     background-color: #566a80;
-    border-color: #9ab4c8;
+    border-color: #6a92b8;
     color: #ffffff;
 }
 
@@ -477,6 +480,7 @@ QPushButton#btn_opt_sb:hover,
 QPushButton#btn_opt_m1:hover,
 QPushButton#btn_opt_coolant:hover {
     background-color: #566a80;
+    border-color: #6a92b8;
 }
 
 /* Specific Machine Buttons */
@@ -604,8 +608,8 @@ QPushButton[objectName*="_jogbutton_"] {
 }
 
 QPushButton[objectName*="_jogbutton_"]:hover {
-    background-color: #6a7e96;
-    border-color: #2ecc71;
+    background-color: #566a80;
+    border-color: #6a92b8;
 }
 
 QLabel#lbl_dro_x,
@@ -657,9 +661,9 @@ QPushButton#btn_set_taster_pos {
 }
 QPushButton#btn_set_wechsel_pos:hover,
 QPushButton#btn_set_taster_pos:hover {
-    border-color: #7ab8f0;
-    color: #ffffff;
-    background-color: #2d6099;
+    background-color: #506070;
+    border-color: #6a92b8;
+    color: #ddeef8;
 }
 
 /* ── Backplot ── */
@@ -688,6 +692,7 @@ QPushButton#btn_backplot_view {
 
 QPushButton#btn_backplot_view:hover {
     background-color: #566a80;
+    border-color: #6a92b8;
     color: #eef2f7;
 }
 
@@ -764,6 +769,7 @@ QPushButton#load_gcode_button {
 
 QPushButton#load_gcode_button:hover {
     background-color: #4d9de0;
+    border-color: #7ab8f0;
 }
 
 QPushButton#btn_zoom_in,
@@ -851,8 +857,9 @@ QPushButton#breadcrumb_item {
 }
 
 QPushButton#breadcrumb_item:hover {
-    background-color: #4d9de0;
-    color: #ffffff;
+    background-color: #3e4a58;
+    border-color: #6a92b8;
+    color: #ddeef8;
 }
 
 QPushButton#btn_find_m6 {
@@ -865,8 +872,8 @@ QPushButton#btn_find_m6 {
 }
 
 QPushButton#btn_find_m6:hover {
-    background-color: #4d9de0;
-    border-color: #7ab8f0;
+    background-color: #506070;
+    border-color: #6a92b8;
 }
 
 QPushButton#btn_find_m6:disabled {
@@ -1016,8 +1023,8 @@ QFrame#frm_probe_grid QPushButton {
 }
 
 QFrame#frm_probe_grid QPushButton:hover {
-    border-color: #9ab4c8;
     background-color: #566a80;
+    border-color: #6a92b8;
 }
 
 QFrame#frm_probe_grid QPushButton:checked {
@@ -1086,6 +1093,7 @@ QPushButton#btn_spindle_rev {
 QPushButton#btn_spindle_fwd:hover,
 QPushButton#btn_spindle_rev:hover {
     background-color: #566a80;
+    border-color: #6a92b8;
 }
 
 QPushButton#btn_spindle_stop {
@@ -1306,8 +1314,8 @@ QPushButton#probe_grid_btn {
 }
 
 QPushButton#probe_grid_btn:hover {
-    border-color: #9ab4c8;
     background-color: #566a80;
+    border-color: #6a92b8;
 }
 
 QPushButton#probe_grid_btn:checked {
@@ -1421,8 +1429,8 @@ QPushButton#m6ConfirmBtn {
 }
 
 QPushButton#m6ConfirmBtn:hover {
-    background-color: #2ecc71;
-    border: 2px solid #ffffff;
+    background-color: #35b865;
+    border-color: #4d9a60;
 }
 
 QPushButton#m6ConfirmBtn:pressed {
@@ -1498,6 +1506,7 @@ QPushButton#btnToolCancel {
 
 QPushButton#btnToolCancel:hover {
     background-color: #566a80;
+    border-color: #6a92b8;
     color: #eef2f7;
 }
 
@@ -1612,9 +1621,9 @@ QPushButton#simple_backplot_btn {
 }
 
 QPushButton#simple_backplot_btn:hover {
-    background-color: #4d9de0;
-    color: white;
-    border-color: #7ab8f0;
+    background-color: #506070;
+    border-color: #6a92b8;
+    color: #eef2f7;
 }
 
 QPushButton#simple_backplot_btn:pressed {
