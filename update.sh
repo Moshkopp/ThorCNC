@@ -26,9 +26,13 @@ done
 
 # --- PIP Flags (Debian 12+ / PEP 668) ----------------------------------------
 PIP_BREAK_FLAG=""
-if pip install --help | grep -q 'break-system-packages'; then
-    PIP_BREAK_FLAG="--break-system-packages"
-fi
+detect_pip_flags() {
+    PIP_BREAK_FLAG=""
+    if pip install --help 2>/dev/null | grep -q 'break-system-packages'; then
+        PIP_BREAK_FLAG="--break-system-packages"
+    fi
+}
+detect_pip_flags
 
 # --- Farben ------------------------------------------------------------------
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
