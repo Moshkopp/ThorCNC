@@ -128,18 +128,32 @@ install_deps() {
 install_thorcnc() {
     cd "$SCRIPT_DIR"
 
-    # Extras [backplot] enthält PySide6, pyqtgraph, PyOpenGL
-    EXTRAS="[backplot]"
-    
-    if $DEV_MODE; then
-        info "Editable Install (Entwicklungsmodus) mit Extras $EXTRAS..."
-        pip install $PIP_BREAK_FLAG --upgrade -e ".$EXTRAS"
-        ok "thorcnc im Entwicklungsmodus installiert."
+    if [ "$OS" = "debian" ] || [ "$OS" = "ubuntu" ]; then
+        # Auf Debian/Ubuntu: PySide6 kommt von apt, NICHT von pip.
+        # --no-deps verhindert dass pip PySide6 überschreibt (pip-PySide6
+        # bringt eigenes Qt6 mit das die xcb-Systemlibs nicht findet).
+        # Abhängigkeiten (psutil, pyqtgraph, PyOpenGL, matplotlib) bereits
+        # durch install_deps via pip force-reinstall installiert.
+        if $DEV_MODE; then
+            info "Editable Install (Debian, ohne pip-PySide6)..."
+            pip install $PIP_BREAK_FLAG --no-deps -e .
+        else
+            info "Installiere thorcnc (Debian, ohne pip-PySide6)..."
+            pip install $PIP_BREAK_FLAG --no-deps .
+        fi
+        # Nur die pip-exklusiven Deps installieren (psutil ist noch nicht dabei)
+        pip install $PIP_BREAK_FLAG --upgrade psutil
     else
-        info "Installiere thorcnc mit Extras $EXTRAS..."
-        pip install $PIP_BREAK_FLAG --upgrade ".$EXTRAS"
-        ok "thorcnc installiert."
+        EXTRAS="[backplot]"
+        if $DEV_MODE; then
+            info "Editable Install mit Extras $EXTRAS..."
+            pip install $PIP_BREAK_FLAG --upgrade -e ".$EXTRAS"
+        else
+            info "Installiere thorcnc mit Extras $EXTRAS..."
+            pip install $PIP_BREAK_FLAG --upgrade ".$EXTRAS"
+        fi
     fi
+    ok "thorcnc installiert."
 }
 
 # ── Desktop-Entry ─────────────────────────────────────────────────────────────

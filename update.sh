@@ -132,15 +132,28 @@ info "Aktualisiere pyqtgraph + PyOpenGL + matplotlib via pip..."
 pip install $PIP_BREAK_FLAG --force-reinstall "pyqtgraph>=0.13" "PyOpenGL>=3.1" "matplotlib>=3.5" || \
     warn "pip force-reinstall fehlgeschlagen – Backplot funktioniert evtl. nicht."
 
-if $DEV_MODE; then
-    info "Editable Reinstall (--dev) mit Extras $EXTRAS..."
-    pip install $PIP_BREAK_FLAG --upgrade -e ".$EXTRAS"
-    ok "thorcnc (dev) aktualisiert."
+OS=$(. /etc/os-release 2>/dev/null && echo "${ID:-unknown}" || echo "unknown")
+
+if [ "$OS" = "debian" ] || [ "$OS" = "ubuntu" ]; then
+    # Auf Debian/Ubuntu: PySide6 von apt behalten, pip soll es nicht überschreiben
+    if $DEV_MODE; then
+        info "Editable Reinstall (Debian, ohne pip-PySide6)..."
+        pip install $PIP_BREAK_FLAG --no-deps -e .
+    else
+        info "Reinstalliere thorcnc (Debian, ohne pip-PySide6)..."
+        pip install $PIP_BREAK_FLAG --no-deps .
+    fi
+    pip install $PIP_BREAK_FLAG --upgrade psutil
 else
-    info "Reinstalliere thorcnc mit Extras $EXTRAS..."
-    pip install $PIP_BREAK_FLAG --upgrade ".$EXTRAS"
-    ok "thorcnc aktualisiert."
+    if $DEV_MODE; then
+        info "Editable Reinstall mit Extras $EXTRAS..."
+        pip install $PIP_BREAK_FLAG --upgrade -e ".$EXTRAS"
+    else
+        info "Reinstalliere thorcnc mit Extras $EXTRAS..."
+        pip install $PIP_BREAK_FLAG --upgrade ".$EXTRAS"
+    fi
 fi
+ok "thorcnc aktualisiert."
 
 # --- Subroutines synchronisieren ---------------------------------------------
 # Hinweis: Probe-Parameter (1000-1042) werden beim ThorCNC-Start automatisch
