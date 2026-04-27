@@ -111,6 +111,7 @@ class ThorCNC(QObject):
         # Setup navigation and install event filter (must be after all initialization)
         self.navigation.setup()
         QApplication.instance().installEventFilter(self)
+        self._setup_resource_monitor()
 
     def _add_class(self, widget, class_name: str):
         """Helper to add a QSS class and ensure it's applied."""
@@ -118,6 +119,48 @@ class ThorCNC(QObject):
         widget.setProperty("class", class_name)
         widget.style().unpolish(widget)
         widget.style().polish(widget)
+
+    # ── Resource Monitor (CPU/RAM) ────────────────────────────────────────────
+
+    def _setup_resource_monitor(self):
+        try:
+            import psutil as _psutil
+            self._psutil = _psutil
+            self._psutil_proc = _psutil.Process(os.getpid())
+            self._psutil_proc.cpu_percent(interval=None)  # prime the counter
+        except ImportError:
+            self._psutil = None
+            return
+
+        from PySide6.QtCore import QTimer
+
+        # _lbl_resource_monitor is placed inside the statusBar by SimpleViewModule
+        if not getattr(self, "_lbl_resource_monitor", None):
+            return
+
+        self._res_timer = QTimer()
+        self._res_timer.setInterval(2000)
+        self._res_timer.timeout.connect(self._update_resource_monitor)
+
+        enabled = self.settings.get("show_resource_monitor", False)
+        self._lbl_resource_monitor.setVisible(enabled)
+        if enabled:
+            self._update_resource_monitor()
+            self._res_timer.start()
+
+    def _update_resource_monitor(self):
+        if not getattr(self, "_psutil", None):
+            return
+        lbl = getattr(self, "_lbl_resource_monitor", None)
+        if not lbl:
+            return
+        try:
+            cpu = self._psutil_proc.cpu_percent(interval=None)
+            mem_mb = self._psutil_proc.memory_info().rss / 1048576
+            lbl.setText(f"CPU: {cpu:.1f}%   RAM: {mem_mb:.0f} MB")
+        except Exception:
+            pass
+
     # ── Settings & State ──────────────────────────────────────────────────────
     
     def _load_settings(self):

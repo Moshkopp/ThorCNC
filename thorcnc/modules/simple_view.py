@@ -57,37 +57,43 @@ class SimpleViewModule(ThorModule):
 
         # Status Bar integration
         if sb := self._t.ui.statusBar():
-            # 1. Custom Status Message Label (Left)
-            self._t._lbl_status_msg = QLabel("")
-            self._t._lbl_status_msg.setObjectName("persistent_status_msg")
-            self._t._lbl_status_msg.setMinimumWidth(300)
-            
-            # 2. Centered Simple View Indicator
-            self._lbl_simple_view_indicator = QLabel(" SIMPLE VIEW ")
-            self._lbl_simple_view_indicator.setObjectName("simple_view_indicator")
-            self._lbl_simple_view_indicator.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            
+            sb.setVisible(True)
+            sb.setMinimumHeight(28)
+            sb.clearMessage()
+
+            # Single container fills the whole bar — centers the Simple View indicator.
+            # showMessage() is never called (StatusModule uses the label directly),
+            # so this container is never hidden.
             container = QWidget()
             layout = QHBoxLayout(container)
             layout.setContentsMargins(0, 0, 0, 0)
             layout.setSpacing(0)
-            
+
+            # Left: status message
+            self._t._lbl_status_msg = QLabel("")
+            self._t._lbl_status_msg.setObjectName("persistent_status_msg")
+            self._t._lbl_status_msg.setMinimumWidth(300)
             layout.addWidget(self._t._lbl_status_msg)
+
+            # Center: Simple View indicator
             layout.addStretch()
+            self._lbl_simple_view_indicator = QLabel(" SIMPLE VIEW ")
+            self._lbl_simple_view_indicator.setObjectName("simple_view_indicator")
+            self._lbl_simple_view_indicator.setAlignment(Qt.AlignmentFlag.AlignCenter)
             layout.addWidget(self._lbl_simple_view_indicator)
             layout.addStretch()
-            
-            right_spacer = QLabel("")
-            right_spacer.setMinimumWidth(300)
-            layout.addWidget(right_spacer)
-            
-            sb.setVisible(True)
-            sb.setMinimumHeight(28)
-            sb.clearMessage()
+
+            # Right: CPU/RAM monitor
+            self._t._lbl_resource_monitor = QLabel("")
+            self._t._lbl_resource_monitor.setObjectName("resource_monitor_label")
+            self._t._lbl_resource_monitor.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+            self._t._lbl_resource_monitor.setMinimumWidth(160)
+            self._t._lbl_resource_monitor.setVisible(False)
+            layout.addWidget(self._t._lbl_resource_monitor)
+
             sb.addWidget(container, 1)
-            
+
             sb.setCursor(Qt.CursorShape.PointingHandCursor)
-            # We use ThorCNC's eventFilter which delegates to modules
             sb.installEventFilter(self._t)
             self._lbl_simple_view_indicator.installEventFilter(self._t)
             self._sb_for_filter = sb

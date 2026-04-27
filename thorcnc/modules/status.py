@@ -33,18 +33,21 @@ class StatusModule(ThorModule):
         self._t.poller.info_message.connect(self._on_info)
 
     def _clear_status(self):
-        if getattr(self, '_lbl_status_msg', None):
-            self._lbl_status_msg.setText("")
+        lbl = getattr(self._t, '_lbl_status_msg', None) or getattr(self, '_lbl_status_msg', None)
+        if lbl:
+            lbl.setText("")
 
     def status(self, msg: str, error: bool = False):
-        if getattr(self, '_lbl_status_msg', None):
-            self._lbl_status_msg.setText(msg)
-            self._lbl_status_msg.setStyleSheet(
+        # Prefer the persistent label created by SimpleViewModule; fall back to
+        # the one found at setup time. Never use showMessage() — it hides
+        # permanent widgets (simple_view_indicator, resource_monitor).
+        lbl = getattr(self._t, '_lbl_status_msg', None) or getattr(self, '_lbl_status_msg', None)
+        if lbl:
+            lbl.setText(msg)
+            lbl.setStyleSheet(
                 f"color: {'#ff5555' if error else '#cccccc'}; font-weight: bold; margin-left: 10px;"
             )
             self._status_timer.start(10000)
-        elif sb := self._t.ui.statusBar():
-            sb.showMessage(msg, 10000)
 
         self.append_log(msg, error=error)
 

@@ -39,6 +39,14 @@ info()    { echo -e "${BLUE}[INFO]${NC}  $*"; }
 ok()      { echo -e "${GREEN}[OK]${NC}    $*"; }
 warn()    { echo -e "${YELLOW}[WARN]${NC}  $*"; }
 err()     { echo -e "${RED}[FEHLER]${NC} $*" >&2; exit 1; }
+confirm() {
+    local msg="$1"
+    read -rp "$(echo -e "  ${YELLOW}?${NC} $msg [j/N]: ")" answer
+    case "${answer,,}" in
+        j|y|ja|yes) return 0 ;;
+        *) return 1 ;;
+    esac
+}
 
 # ── OS erkennen ───────────────────────────────────────────────────────────────
 detect_os() {
@@ -222,10 +230,21 @@ fi
 
 install_deps
 install_thorcnc
-install_subroutines
-install_desktop_entry
-install_update_shortcut
-install_sim_shortcut
+
+if confirm "nc_files/subroutines nach ~/linuxcnc/nc_files/ kopieren?"; then
+    install_subroutines
+else
+    info "nc_files übersprungen."
+fi
+
+echo ""
+if confirm "Desktop-Verknüpfungen erstellen (App, Update, Sim)?"; then
+    install_desktop_entry
+    install_update_shortcut
+    install_sim_shortcut
+else
+    info "Desktop-Verknüpfungen übersprungen."
+fi
 
 echo ""
 echo -e "${BOLD}Installation abgeschlossen.${NC}"

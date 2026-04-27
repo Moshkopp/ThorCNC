@@ -38,6 +38,14 @@ info() { echo -e "${BLUE}[INFO]${NC}  $*"; }
 ok()   { echo -e "${GREEN}[OK]${NC}    $*"; }
 warn() { echo -e "${YELLOW}[WARN]${NC}  $*"; }
 err()  { echo -e "${RED}[FEHLER]${NC} $*" >&2; exit 1; }
+confirm() {
+    local msg="$1"
+    read -rp "$(echo -e "  ${YELLOW}?${NC} $msg [j/N]: ")" answer
+    case "${answer,,}" in
+        j|y|ja|yes) return 0 ;;
+        *) return 1 ;;
+    esac
+}
 
 echo -e "${BOLD}ThorCNC Updater${NC}"
 echo "---------------------------------------"
@@ -137,7 +145,11 @@ install_subroutines() {
     fi
 }
 
-install_subroutines
+if confirm "nc_files/subroutines nach ~/linuxcnc/nc_files/ synchronisieren?"; then
+    install_subroutines
+else
+    info "nc_files übersprungen."
+fi
 
 # --- Probe-Parameter in var-Datei vorinitialisieren --------------------------
 seed_probe_params() {
@@ -176,10 +188,9 @@ if [ ! -d "$DESKTOP_PATH" ] && [ -d "$HOME/Schreibtisch" ]; then
     DESKTOP_PATH="$HOME/Schreibtisch"
 fi
 
-if [ -d "$DESKTOP_PATH" ]; then
-    info "Erstelle/Aktualisiere Desktop-Verknüpfung in $DESKTOP_PATH..."
+if [ -d "$DESKTOP_PATH" ] && confirm "Desktop-Verknüpfungen erstellen/aktualisieren (Update, Sim)?"; then
     SHORTCUT="$DESKTOP_PATH/ThorCNC-Update.desktop"
-    
+
     cat > "$SHORTCUT" <<EOD
 [Desktop Entry]
 Type=Application
@@ -190,12 +201,12 @@ Icon=system-software-update
 Terminal=true
 Categories=Utility;
 EOD
-    
+
     chmod +x "$SHORTCUT"
     ok "Verknüpfung erstellt: ThorCNC-Update.desktop"
 
     SIM_SHORTCUT="$DESKTOP_PATH/ThorCNC-Sim.desktop"
-    
+
     cat > "$SIM_SHORTCUT" <<EOD
 [Desktop Entry]
 Type=Application
@@ -206,9 +217,11 @@ Icon=applications-engineering
 Terminal=false
 Categories=Engineering;
 EOD
-    
+
     chmod +x "$SIM_SHORTCUT"
     ok "Verknüpfung erstellt: ThorCNC-Sim.desktop"
+else
+    info "Desktop-Verknüpfungen übersprungen."
 fi
 
 echo ""

@@ -103,6 +103,12 @@ class SettingsTabModule(ThorModule):
             lay_msaa.addWidget(self._cb_msaa)
             gl_gfx.addLayout(lay_msaa)
 
+            self._cb_resource_monitor = QCheckBox(_t("CPU/RAM Verbrauch anzeigen (Bottom Bar)"))
+            self._cb_resource_monitor.setToolTip(_t("Zeigt CPU- und RAM-Auslastung des Prozesses in der unteren Leiste."))
+            self._cb_resource_monitor.setChecked(self._t.settings.get("show_resource_monitor", False))
+            self._cb_resource_monitor.toggled.connect(self._on_resource_monitor_toggled)
+            gl_gfx.addWidget(self._cb_resource_monitor)
+
             layout.insertWidget(layout.count() - 1, gb_gfx)
 
             # ── Navigation / Tabs ──
@@ -530,6 +536,18 @@ class SettingsTabModule(ThorModule):
         self._t.settings.set("backplot_msaa_samples", val)
         self._t.settings.save()
         self._t._status(_t("MSAA auf {}x gesetzt. Ein Neustart ist nötig.").format(val))
+
+    def _on_resource_monitor_toggled(self, enabled: bool):
+        self._t.settings.set("show_resource_monitor", enabled)
+        self._t.settings.save()
+        if lbl := getattr(self._t, "_lbl_resource_monitor", None):
+            lbl.setVisible(enabled)
+        if timer := getattr(self._t, "_res_timer", None):
+            if enabled:
+                self._t._update_resource_monitor()
+                timer.start()
+            else:
+                timer.stop()
 
     def _on_show_pocket_column_changed(self, visible: bool):
         from PySide6.QtWidgets import QTableWidget
