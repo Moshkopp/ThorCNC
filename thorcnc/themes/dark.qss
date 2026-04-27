@@ -747,6 +747,7 @@ QPushButton#btn_nav_home {
     background-color: #333333;
     color: #ffffff;
     font-weight: bold;
+    font-size: 18pt;
     min-height: 30px;
 }
 
@@ -761,6 +762,12 @@ QPlainTextEdit#filePreviewArea {
     background-color: #111111;
     color: #00ff00;
     border: 1px solid #444444;
+}
+
+QPlainTextEdit#gcodeViewer {
+    background-color: #0d1117;
+    color: #c9d1d9;
+    border: 1px solid #30363d;
 }
 
 QPushButton#load_gcode_button {

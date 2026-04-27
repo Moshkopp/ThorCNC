@@ -74,6 +74,7 @@ class GCodeView(QPlainTextEdit):
 
     def __init__(self, parent=None, editable=False):
         super().__init__(parent)
+        self.setObjectName("gcodeViewer")
         self.setReadOnly(not editable)
         self.setLineWrapMode(QPlainTextEdit.LineWrapMode.NoWrap)
 

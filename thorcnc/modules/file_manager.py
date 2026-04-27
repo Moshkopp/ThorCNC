@@ -94,12 +94,12 @@ class FileManagerModule(ThorModule):
 
         # Nav button styling
         if self._t._btn_nav_up:
-            self._t._btn_nav_up.setText("")
+            self._t._btn_nav_up.setText("↑")
             self._t._btn_nav_up.setFixedWidth(60)
             self._t._btn_nav_up.setToolTip(_t("Übergeordnetes Verzeichnis"))
 
         if self._t._btn_nav_home:
-            self._t._btn_nav_home.setText("")
+            self._t._btn_nav_home.setText("⌂")
             self._t._btn_nav_home.setFixedWidth(60)
             self._t._btn_nav_home.setToolTip(_t("Home-Verzeichnis"))
 

@@ -169,7 +169,8 @@ if _HAS_GL:
 
             pg.setConfigOptions(antialias=True)
             self._view = _ThorGLView(samples=samples)
-            self._view.setBackgroundColor("#1a1a1a")
+            _bg = "#1a1f2e" if os.environ.get("THORCNC_THEME") == "light" else "#0d1117"
+            self._view.setBackgroundColor(_bg)
 
             # Standard-Werte setzen, damit es beim Start nicht winzig herangezoomt ist!
             self._view.opts['distance'] = 600.0

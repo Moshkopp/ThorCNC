@@ -77,7 +77,7 @@ QGroupBox::title {
 /* ── Standard Buttons ── */
 QPushButton {
     background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #566070, stop:1 #4a5a6e);
-    border: 1px solid #6a7e96;
+    border: 1px solid #346baf;
     border-radius: 6px;
     padding: 2px 10px;
     min-height: 28px;
@@ -95,43 +95,43 @@ QPushButton:pressed {
 }
 
 QPushButton:disabled {
-    background-color: #c8d0da;
-    color: #a0aab8;
-    border-color: #b8c2cc;
+    background-color: #3a4a5c;
+    color: #6a7e96;
+    border-color: #4a5a6e;
 }
 
 /* ── Locked-during-run: type-specific dim styles ── */
 .btn-blue:disabled {
-    background-color: #d0d8e8;
-    color: #a8b4c8;
-    border-color: #c0cad8;
+    background-color: #3a4a5c;
+    color: #6a7e96;
+    border-color: #4a5a6e;
 }
 QPushButton[objectName^="nav_"]:disabled {
     background-color: transparent;
-    color: #b0bcc8;
-    border-color: #c0cad4;
+    color: #5a6e84;
+    border-color: #4a5a6e;
 }
 QPushButton[objectName*="_jogbutton_"]:disabled {
-    background-color: #d0d8e0;
-    color: #a8b4c0;
-    border-color: #c0cad4;
+    background-color: #3a4a5c;
+    color: #6a7e96;
+    border-color: #4a5a6e;
 }
 QPushButton[is_flyout_toggle="true"]:disabled {
-    background-color: #d4dce4;
-    color: #a8b4c0;
-    border-color: #c0cad4;
+    background-color: #3a4a5c;
+    color: #6a7e96;
+    border-color: #4a5a6e;
 }
 QPushButton#btn_spindle_fwd:disabled,
 QPushButton#btn_spindle_rev:disabled,
 QPushButton#btn_spindle_stop:disabled {
-    background-color: #c8d0da;
-    color: #a0aab8;
-    border-color: #b8c2cc;
+    background-color: #3a4a5c;
+    color: #6a7e96;
+    border-color: #4a5a6e;
 }
 QPushButton#btn_m6_change:disabled {
-    background-color: #d0d8e8;
-    color: #a8b4c8;
-    border-color: #c0cad8;
+    background-color: #3a4a5c;
+    color: #6a7e96;
+    border-color: #4a5a6e;
 }
 QSlider::groove:horizontal:disabled {
     background: #d0d8e0;
@@ -271,13 +271,14 @@ QPushButton#btn_opt:hover {
 
 #nav_quit {
     border: 1px solid #c0392b;
-    color: #c0392b;
+    background-color: #c0392b;
+    color: #ffffff;
     font-weight: bold;
     font-size: 11pt;
     padding: 10px;
 }
 #nav_quit:hover {
-    background-color: #c0392b;
+    background-color: #f18f8f;
     color: white;
 }
 
@@ -742,6 +743,7 @@ QPushButton#btn_nav_home {
     background-color: #3e4f62;
     color: #eef2f7;
     font-weight: bold;
+    font-size: 18pt;
     min-height: 30px;
 }
 
@@ -755,6 +757,12 @@ QPlainTextEdit#filePreviewArea {
     font-size: 11pt;
     background-color: #3e4f62;
     color: #00ff00;
+    border: 1px solid #6a7e96;
+}
+
+QPlainTextEdit#gcodeViewer {
+    background-color: #1a1f2e;
+    color: #c9d1d9;
     border: 1px solid #6a7e96;
 }
 
@@ -907,9 +915,9 @@ QPushButton#btn_reload_tools {
     font-weight: bold;
 }
 QPushButton#btn_reload_tools:disabled {
-    background-color: #c8d0da;
-    color: #a0aab8;
-    border-color: #b8c2cc;
+    background-color: #3a4a5c;
+    color: #6a7e96;
+    border-color: #4a5a6e;
 }
 
 QPushButton#btn_save_tools {
@@ -918,9 +926,9 @@ QPushButton#btn_save_tools {
     font-weight: bold;
 }
 QPushButton#btn_save_tools:disabled {
-    background-color: #c8d0da;
-    color: #a0aab8;
-    border-color: #b8c2cc;
+    background-color: #3a4a5c;
+    color: #6a7e96;
+    border-color: #4a5a6e;
 }
 
 QTableWidget#toolTable {
@@ -1288,17 +1296,18 @@ QTableWidget#offsetsTable::item {
 }
 
 QPushButton#wcs_clear_btn {
-    background-color: #4a2a2a;
+    background-color: #912828;
     color: #eef2f7;
     border-radius: 3px;
+    padding-top: 5px;
     border: 1px solid #cc3333;
     font-weight: bold;
     font-size: 10pt;
 }
 QPushButton#wcs_clear_btn:disabled {
-    background-color: #d0c8c8;
-    color: #b0a8a8;
-    border-color: #c0b8b8;
+    background-color: #3a4a5c;
+    color: #6a7e96;
+    border-color: #4a5a6e;
 }
 
 QPushButton#wcs_clear_btn:hover {
@@ -1378,11 +1387,11 @@ QFrame#m6Container {
 
 QLabel#m6Header {
     color: #f0883e;
-    font-size: 14pt;
+    font-size: 18pt;
     font-weight: bold;
     letter-spacing: 2px;
     padding-bottom: 5px;
-    border-bottom: 1px solid #6a7e96;
+    border-bottom: 1px solid #4f5a67;
 }
 
 QFrame#m6ToolFrame {

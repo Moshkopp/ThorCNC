@@ -80,6 +80,7 @@ def main():
     app = QApplication.instance() or QApplication(sys.argv)
     app.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
 
+    os.environ.setdefault("THORCNC_THEME", theme)
     load_theme(app, theme)
 
     win = ThorCNC(ini_path=ini_path)
