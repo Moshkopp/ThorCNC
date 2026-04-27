@@ -233,6 +233,35 @@ if $UNINSTALL; then
     exit 0
 fi
 
+# sudo-Zugang prüfen (wird für apt benötigt)
+if command -v sudo &>/dev/null; then
+    if ! sudo -v 2>/dev/null; then
+        echo ""
+        echo -e "${RED}[FEHLER]${NC} Kein sudo-Zugriff für User '$(whoami)'."
+        echo ""
+        echo "Lösung – als root einmalig ausführen:"
+        echo "  su -"
+        echo "  usermod -aG sudo $(whoami)"
+        echo "  exit"
+        echo "  (neu einloggen, dann install.sh nochmal starten)"
+        echo ""
+        exit 1
+    fi
+    ok "sudo-Zugriff ✓"
+else
+    echo ""
+    echo -e "${RED}[FEHLER]${NC} 'sudo' ist nicht installiert."
+    echo ""
+    echo "Lösung – als root:"
+    echo "  su -"
+    echo "  apt install sudo"
+    echo "  usermod -aG sudo $(whoami)"
+    echo "  exit"
+    echo "  (neu einloggen, dann install.sh nochmal starten)"
+    echo ""
+    exit 1
+fi
+
 # Python-Version prüfen
 PYTHON_VER=$(python3 -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')")
 PYTHON_REQ="3.11"
