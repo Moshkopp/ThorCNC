@@ -117,13 +117,24 @@ fi
 # --- Paket neu installieren --------------------------------------------------
 EXTRAS="[backplot]"
 
+# python3-pyqtgraph vom apt entfernen falls vorhanden (inkompatibel mit PySide6)
+if dpkg -l python3-pyqtgraph &>/dev/null 2>&1; then
+    warn "python3-pyqtgraph (apt) gefunden – wird entfernt (inkompatibel mit PySide6)..."
+    sudo apt-get remove -y python3-pyqtgraph || true
+fi
+
+# pyqtgraph + PyOpenGL explizit force-reinstall damit nicht die apt-Version aktiv bleibt
+info "Aktualisiere pyqtgraph + PyOpenGL via pip..."
+pip install $PIP_BREAK_FLAG --force-reinstall "pyqtgraph>=0.13" "PyOpenGL>=3.1" || \
+    warn "pip force-reinstall fehlgeschlagen – Backplot funktioniert evtl. nicht."
+
 if $DEV_MODE; then
     info "Editable Reinstall (--dev) mit Extras $EXTRAS..."
-    pip install $PIP_BREAK_FLAG -e ".$EXTRAS"
+    pip install $PIP_BREAK_FLAG --upgrade -e ".$EXTRAS"
     ok "thorcnc (dev) aktualisiert."
 else
     info "Reinstalliere thorcnc mit Extras $EXTRAS..."
-    pip install $PIP_BREAK_FLAG ".$EXTRAS"
+    pip install $PIP_BREAK_FLAG --upgrade ".$EXTRAS"
     ok "thorcnc aktualisiert."
 fi
 

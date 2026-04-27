@@ -75,16 +75,28 @@ install_deps() {
         debian|ubuntu)
             info "Installiere System-Pakete (apt)..."
             sudo apt-get update -qq || true
-            # Installiere PySide6 + OpenGL Support via apt (Debian 12+ benötigt oft qtopenglwidgets separat)
-            # python3-pyqtgraph intentionally NOT installed via apt — the Debian package
-            # ships an older version that defaults to PyQt5 and lacks proper PySide6 support.
-            # pyqtgraph is installed via pip (see [backplot] extras below).
+
+            # python3-pyqtgraph vom apt entfernen falls vorhanden:
+            # Das Debian-Paket ist veraltet und defaultet zu PyQt5 – blockiert die pip-Version.
+            if dpkg -l python3-pyqtgraph &>/dev/null 2>&1; then
+                warn "python3-pyqtgraph (apt) gefunden – wird entfernt (inkompatibel mit PySide6)..."
+                sudo apt-get remove -y python3-pyqtgraph || true
+            fi
+
+            # Installiere PySide6 + OpenGL Support via apt
             sudo apt-get install -y python3-pyside6 python3-pyside6.qtopenglwidgets \
                                    python3-opengl \
                                    libopengl0 libegl1 2>/dev/null || \
                 warn "Einige System-Pakete konnten nicht via apt installiert werden. Wird später via pip versucht."
-            
+
             sudo apt-get install -y python3-pip python3-hatchling linuxcnc-uspace 2>/dev/null || true
+
+            # pyqtgraph und PyOpenGL explizit via pip force-reinstall (stellt sicher dass
+            # nicht das apt-Paket sondern die pip-Version aktiv ist)
+            info "Installiere pyqtgraph + PyOpenGL via pip (force-reinstall)..."
+            pip install $PIP_BREAK_FLAG --force-reinstall "pyqtgraph>=0.13" "PyOpenGL>=3.1" || \
+                warn "pip force-reinstall fehlgeschlagen – Backplot funktioniert evtl. nicht."
+
             ok "System-Checks abgeschlossen."
             ;;
         
@@ -121,7 +133,7 @@ install_desktop_entry() {
 Type=Application
 Name=ThorCNC
 Comment=LinuxCNC VCP – Fräse
-Exec=thorcnc --theme dark
+Exec=thorcnc
 Icon=applications-engineering
 Categories=Engineering;
 Terminal=false
@@ -258,3 +270,7 @@ fi
 echo ""
 echo "Themes: dark (Standard), light"
 echo "  thorcnc --theme light --ini ..."
+echo ""
+echo "Backplot funktioniert nicht? Schnellfix:"
+echo "  sudo apt remove python3-pyqtgraph"
+echo "  pip install --break-system-packages --force-reinstall pyqtgraph PyOpenGL"
