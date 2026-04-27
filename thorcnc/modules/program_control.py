@@ -319,6 +319,18 @@ class ProgramControlModule(ThorModule):
             self._t.cmd.mode(linuxcnc.MODE_AUTO)
             self._t.cmd.wait_complete()
 
+        # Cycle Start läuft ausschließlich das vom User geladene Programm.
+        # Probing/Surface öffnen eigene Dateien via program_open() – danach
+        # zeigt LinuxCNC auf die falsche Datei. Kein _user_program → kein Start.
+        user_prog = getattr(self._t, "_user_program", None)
+        if interp_state != linuxcnc.INTERP_PAUSED:
+            if not user_prog:
+                return
+            import os as _os
+            if _os.path.normpath(s.file or "") != _os.path.normpath(user_prog):
+                self._t.cmd.program_open(user_prog)
+                self._t.cmd.wait_complete()
+
         if interp_state == linuxcnc.INTERP_PAUSED:
             if is_sb:
                 self._t.cmd.auto(linuxcnc.AUTO_STEP)

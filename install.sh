@@ -96,8 +96,8 @@ install_deps() {
             pip uninstall -y PySide6 PySide6-Addons PySide6-Essentials shiboken6 2>/dev/null || true
 
             # PySide6 + OpenGL + alle Qt xcb Laufzeit-Bibliotheken via apt.
-            # Einzeln installieren: ein fehlendes Paket (z.B. auf Debian 12)
-            # blockiert sonst alle anderen.
+            # Einzeln installieren: ein fehlendes Paket blockiert sonst alle anderen.
+            # Debian 13 (Trixie) hat den t64-Übergang: viele lib*0 → lib*0t64.
             info "Installiere Qt xcb Laufzeit-Bibliotheken (einzeln)..."
             for pkg in \
                 python3-pyside6 \
@@ -105,7 +105,6 @@ install_deps() {
                 python3-opengl \
                 libopengl0 \
                 libegl1 \
-                libxcb-cursor0 \
                 libxcb-icccm4 \
                 libxcb-image0 \
                 libxcb-keysyms1 \
@@ -118,9 +117,24 @@ install_deps() {
                 sudo apt-get install -y "$pkg" 2>/dev/null || warn "Paket nicht verfügbar: $pkg (wird übersprungen)"
             done
 
+            # libxcb-cursor: Debian 13 (t64-Übergang) kann libxcb-cursor0t64 heißen
+            if ! sudo apt-get install -y libxcb-cursor0 2>/dev/null; then
+                sudo apt-get install -y libxcb-cursor0t64 2>/dev/null || \
+                    warn "libxcb-cursor0 (und libxcb-cursor0t64) nicht installierbar – Qt xcb Plugin kann fehlschlagen!"
+            fi
+
             sudo apt-get install -y python3-pip python3-hatchling || true
             sudo apt-get install -y linuxcnc-uspace 2>/dev/null || \
                 warn "linuxcnc-uspace nicht installierbar (kein LinuxCNC-Repo konfiguriert?)."
+
+            # brltty (Braille-Daemon) blockiert FT232/USB-Serial-Chips (z.B. Spindelsteuerung).
+            # Auf einer CNC-Maschine nicht benötigt.
+            if systemctl is-enabled brltty &>/dev/null 2>&1; then
+                info "Deaktiviere brltty (blockiert USB-Serial / FT232)..."
+                sudo systemctl stop brltty 2>/dev/null || true
+                sudo systemctl disable brltty 2>/dev/null || true
+                ok "brltty deaktiviert."
+            fi
 
             # pip-exklusive Backplot-Deps (pyqtgraph muss pip-Version sein, nicht apt)
             info "Installiere pyqtgraph + PyOpenGL + matplotlib via pip..."

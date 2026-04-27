@@ -135,6 +135,7 @@ if [ "$OS" = "debian" ] || [ "$OS" = "ubuntu" ]; then
 
     # Sicherstellen dass alle Qt xcb Laufzeit-Bibliotheken installiert sind.
     # Einzeln installieren damit ein fehlendes Paket nicht alle anderen blockiert.
+    # Debian 13 (Trixie) hat den t64-Übergang: viele lib*0 → lib*0t64.
     info "Stelle Qt xcb Laufzeit-Bibliotheken sicher (apt)..."
     for pkg in \
         python3-pyside6 \
@@ -142,7 +143,6 @@ if [ "$OS" = "debian" ] || [ "$OS" = "ubuntu" ]; then
         python3-opengl \
         libopengl0 \
         libegl1 \
-        libxcb-cursor0 \
         libxcb-icccm4 \
         libxcb-image0 \
         libxcb-keysyms1 \
@@ -154,6 +154,12 @@ if [ "$OS" = "debian" ] || [ "$OS" = "ubuntu" ]; then
     do
         sudo apt-get install -y "$pkg" 2>/dev/null || warn "Paket nicht verfügbar: $pkg (wird übersprungen)"
     done
+
+    # libxcb-cursor: Debian 13 (t64-Übergang) kann libxcb-cursor0t64 heißen
+    if ! sudo apt-get install -y libxcb-cursor0 2>/dev/null; then
+        sudo apt-get install -y libxcb-cursor0t64 2>/dev/null || \
+            warn "libxcb-cursor0 (und libxcb-cursor0t64) nicht installierbar – Qt xcb Plugin kann fehlschlagen!"
+    fi
 fi
 
 # pyqtgraph + PyOpenGL + matplotlib via pip (force-reinstall)
