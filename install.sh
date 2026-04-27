@@ -92,7 +92,8 @@ install_deps() {
             # Installiere PySide6 + OpenGL Support via apt
             sudo apt-get install -y python3-pyside6 python3-pyside6.qtopenglwidgets \
                                    python3-opengl \
-                                   libopengl0 libegl1 2>/dev/null || \
+                                   libopengl0 libegl1 \
+                                   libxcb-cursor0 2>/dev/null || \
                 warn "Einige System-Pakete konnten nicht via apt installiert werden. Wird später via pip versucht."
 
             sudo apt-get install -y python3-pip python3-hatchling linuxcnc-uspace 2>/dev/null || true
