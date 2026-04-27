@@ -1,34 +1,37 @@
 # ThorCNC
 
 > [!CAUTION]
-> **PRE-PRE-PRE-ALPHA VERSION — WORK IN PROGRESS**
+> **ALPHA VERSION — WORK IN PROGRESS**
 >
-> This project is a **pre-pre-pre-alpha** version and **not intended for productive or machine use** on real CNC machines. 
+> This project is a **alpha** version and **not intended for productive or machine use** on real CNC machines. 
 > 
 > **Use at your own risk.** The author takes no responsibility for any damage to hardware, software, or persons. This software should currently be used **only in simulation (Sim) for testing and experimentation**.
 
 ---
 
-A modern LinuxCNC graphical interface (VCP) for 3-axis milling machines, built with PySide6 and no additional framework overhead.
+A LinuxCNC graphical interface (VCP) for 3-axis milling machines, built with PySide6 and no additional framework overhead.
 
 ![License](https://img.shields.io/badge/license-GPL--2.0--or--later-blue)
 ![Python](https://img.shields.io/badge/python-3.11%2B-blue)
 ![LinuxCNC](https://img.shields.io/badge/LinuxCNC-2.9%2B-orange)
 
 ---
-
+### MainView
 ![ThorCNC Main Screen](thorcnc/images/screen_main.png)
+### Simple View
 ![Simple Dashboard](thorcnc/images/screen_simple.png)
+### Probing Tab
 ![Probing Tab](thorcnc/images/screen_probing.png)
+### Customized Tool Change Dialog
 ![Tool Change Dialog](thorcnc/images/screen_toolchange.png)
 
 ---
 
 ## Features
 
-- **Industrial M6 Dialog** — Premium, touch-optimized manual tool change interface with automatic tool data lookup (Comment, Diameter, Offset).
+- **Customized M6 Dialog** — Premium, touch-optimized manual tool change interface with automatic tool data lookup (Comment, Diameter, Offset).
 - **Dynamic G53 Shortcuts** — Optional conversion of homing buttons into G53 X0/Y0/Z0 navigation controls after homing, with a built-in Z-axis safety interlock (XY moves only active when Z is at 0).
-- **Industrial Abort Handler** — Integrated support for a custom `ON_ABORT_COMMAND` to safely retract and reset the machine on program interruption.
+- **Adjustable via Gui Abort Handler** — Integrated support for a custom `ON_ABORT_COMMAND` to safely retract and reset the machine on program interruption.
 - **Smart G-Code Editor** — Syntax-highlighted viewer with integrated "Find M6" search, "Edit" mode toggle, and state-aware "Save" button.
 - **Status Bar Highlights** — Customizable, color-coded G and M code display in the status bar for improved operator awareness.
 - **Probe Warning** — High-visibility visual feedback in the status bar when probe inputs or digital outputs (M64) are active.
@@ -40,7 +43,7 @@ A modern LinuxCNC graphical interface (VCP) for 3-axis milling machines, built w
 - **Tool Table** — Editable tool table with diameter and length, live-updated after M6 tool changes.
 - **Simple View** — High-visibility minimalist dashboard for distance monitoring, featuring oversized DROs and status indicators.
 - **Settings** — Organized sub-tabs for Toolsetter, UI (themes + font sizes), Machine (Abort logic + Homing), and Advanced.
-- **Themes** — Dark (default), light, dark_green, dark_orange — switchable at runtime.
+- **Themes** — Dark (default), light,  switchable at runtime.
 
 ---
 
@@ -105,15 +108,6 @@ pip install .
 
 ## Usage
 
-```bash
-thorcnc --ini /path/to/machine.ini
-```
-
-With theme:
-
-```bash
-thorcnc --theme dark_green --ini /path/to/machine.ini
-```
 
 For development against the simulation config included in this repo:
 
