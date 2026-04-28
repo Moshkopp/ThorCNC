@@ -563,12 +563,12 @@ QScrollBar::handle:vertical:hover {
 
 /* ── Sliders ── */
 QSlider:horizontal {
-    min-height: 28px;
+    min-height: 40px;
     background: transparent;
 }
 
 QSlider::groove:horizontal {
-    height: 24px;
+    height: 38px;
     background: #2c3d50;
     border: 1px solid #6a7a90;
     border-radius: 4px;
@@ -583,8 +583,8 @@ QSlider::sub-page:horizontal {
 QSlider::handle:horizontal {
     background: #c8daea;
     border: 1px solid #6a7e96;
-    width: 14px;
-    height: 24px;
+    width: 20px;
+    height: 38px;
     margin: 0px;
     border-radius: 4px;
 }
@@ -1187,6 +1187,8 @@ QLabel#v_override_status,
 QLabel#jog_vel_label {
     background: transparent;
     padding-left: 6px;
+    font-size: 14pt;
+    font-weight: bold;
 }
 
 /* ── Status Log ── */
