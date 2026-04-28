@@ -110,6 +110,16 @@ class SimpleViewModule(ThorModule):
         # Go fullscreen
         self._t.ui.showFullScreen()
         
+        # Hide the main backplot so it doesn't render while overlay is up
+        if hasattr(self._t, "backplot") and self._t.backplot:
+            self._t.backplot.hide()
+
+        # Hide underlying main UI widgets to prevent layout overhead
+        from PySide6.QtWidgets import QWidget
+        if tw := self._t._w(QWidget, "tabWidget"): tw.hide()
+        if rp := self._t._w(QWidget, "rightPanel"): rp.hide()
+        if lp := self._t._w(QWidget, "runControlsPanel"): lp.hide()
+        
         self.refresh_backplot()
         if self._t._user_program:
             self.simple_view.load_gcode(self._t._user_program)
@@ -125,6 +135,17 @@ class SimpleViewModule(ThorModule):
         """Hides the overlay and restores window state."""
         if self.simple_view:
             self.simple_view.hide()
+
+            # Restore the main backplot
+            if hasattr(self._t, "backplot") and self._t.backplot:
+                self._t.backplot.show()
+
+            # Restore underlying main UI widgets
+            from PySide6.QtWidgets import QWidget
+            if tw := self._t._w(QWidget, "tabWidget"): tw.show()
+            if rp := self._t._w(QWidget, "rightPanel"): rp.show()
+            if lp := self._t._w(QWidget, "runControlsPanel"): lp.show()
+
             # Optional: restore window state if desired, 
             # though usually F11 or the Back button handles this.
             if self._t.ui.isFullScreen():

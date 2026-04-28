@@ -1,15 +1,15 @@
 {
     "last_file_dir": "/home/moshy/Schreibtisch",
-    "window_geometry": "01d9d0cb0003000000000000000000000000077f00000437000000220000001c00000711000004240000000100040000078000000000000000000000077f00000437",
-    "window_state": "000000ff00000000fd00000000000007800000041c00000004000000040000000800000008fc00000000",
+    "window_geometry": "01d9d0cb0003000000000000000000000000077f0000043700000001000000190000077e0000043600000001020000000780000000000000001c0000077f00000437",
+    "window_state": "000000ff00000000fd00000000000007800000040000000004000000040000000800000008fc00000000",
     "backplot_view": {
-        "distance": 790.0460788510813,
-        "elevation": 52.0,
-        "azimuth": -80.0,
+        "distance": 700.6659440140561,
+        "elevation": 41.0,
+        "azimuth": -110.0,
         "center": [
-            332.3636474609375,
-            144.48712158203125,
-            -5.310741424560547
+            320.5821228027344,
+            185.90478515625,
+            -147.20709228515625
         ]
     },
     "main_splitter": "000000ff0000000100000003000002020000005a000002fd01ffffffff010000000100",
@@ -77,8 +77,8 @@
         "G53 G0 X0"
     ],
     "theme": "dark",
-    "backplot_msaa_samples": 4,
-    "backplot_antialiasing": false,
+    "backplot_msaa_samples": 16,
+    "backplot_antialiasing": true,
     "show_html_tab": false,
     "probe_before": "M64 P0\n(DEBUG, M64 AUS test )",
     "probe_after": "M65 P0\n(DEBUG, M65 AUS test )",
