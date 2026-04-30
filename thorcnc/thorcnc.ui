@@ -1586,7 +1586,7 @@
                    
                    <item>
                     <widget class="QGroupBox" name="groupBox_ts_wechsel">
-                     <property name="title"><string>Wechselposition</string></property>
+                     <property name="title"><string>Change Position</string></property>
                      <layout class="QGridLayout">
                       <property name="spacing"><number>5</number></property>
                       <item row="0" column="0">
@@ -1627,7 +1627,7 @@
                       </item>
                       <item row="3" column="0" colspan="2">
                        <widget class="QPushButton" name="btn_set_wechsel_pos">
-                        <property name="text"><string>Aktuelle Position übernehmen</string></property>
+                        <property name="text"><string>Set from current position</string></property>
                        </widget>
                       </item>
                      </layout>
@@ -1636,7 +1636,7 @@
                    
                    <item>
                     <widget class="QGroupBox" name="groupBox_ts_mess">
-                     <property name="title"><string>Messposition</string></property>
+                     <property name="title"><string>Probe Position</string></property>
                      <layout class="QGridLayout">
                       <property name="spacing"><number>5</number></property>
                       <item row="0" column="0">
@@ -1677,7 +1677,7 @@
                       </item>
                       <item row="3" column="0" colspan="2">
                        <widget class="QPushButton" name="btn_set_taster_pos">
-                        <property name="text"><string>Aktuelle Position übernehmen</string></property>
+                        <property name="text"><string>Set from current position</string></property>
                        </widget>
                       </item>
                      </layout>
@@ -1800,7 +1800,7 @@
                       <set>Qt::AlignmentFlag::AlignTop|Qt::AlignmentFlag::AlignLeft</set>
                      </property>
                      <property name="text">
-                      <string>&lt;b&gt;Wechselposition X / Y / Z&lt;/b&gt;&lt;br&gt;Sicherheitsposition für den manuellen Werkzeugwechsel (Maschinenkoordinaten). Die Maschine fährt diese Position an bevor M6 den Wechsel ausführt.&lt;br&gt;&lt;br&gt;&lt;b&gt;Messposition X / Y / Z&lt;/b&gt;&lt;br&gt;Exakte XY-Position des Werkzeugmessers sowie Z-Höhe der Tasteroberfläche (Maschinenkoordinaten).&lt;br&gt;&lt;br&gt;&lt;b&gt;Spindle Zero&lt;/b&gt;&lt;br&gt;Messwert des Referenzwerkzeugs am Taster (G59.3). Alle weiteren Werkzeuglängen werden relativ dazu berechnet.&lt;br&gt;&lt;br&gt;&lt;b&gt;MAX Probe&lt;/b&gt;&lt;br&gt;Maximaler Messweg ab Startposition (negativ = nach unten). Sicherheitslimit verhindert Kollision.&lt;br&gt;&lt;br&gt;&lt;b&gt;Retract&lt;/b&gt;&lt;br&gt;Rückzug nach erstem Kontakt vor der Feinmessung (mm).&lt;br&gt;&lt;br&gt;&lt;b&gt;Search Vel&lt;/b&gt;&lt;br&gt;Geschwindigkeit für die schnelle Vorpositionierung zum Taster (mm/min).&lt;br&gt;&lt;br&gt;&lt;b&gt;Probe Vel&lt;/b&gt;&lt;br&gt;Langsame Antastgeschwindigkeit für die genaue Längenmessung (mm/min).&lt;br&gt;&lt;br&gt;&lt;b&gt;Before / After&lt;/b&gt;&lt;br&gt;G-Code der vor bzw. nach der Messung ausgeführt wird (z.B. Digitalausgänge schalten).</string>
+                      <string>&lt;b&gt;Change Position X / Y / Z&lt;/b&gt;&lt;br&gt;Safety position for manual tool changes (machine coordinates). The machine moves to this position before M6 executes the change.&lt;br&gt;&lt;br&gt;&lt;b&gt;Probe Position X / Y / Z&lt;/b&gt;&lt;br&gt;Exact XY position of the tool sensor and Z height of the probe surface (machine coordinates).&lt;br&gt;&lt;br&gt;&lt;b&gt;Spindle Zero&lt;/b&gt;&lt;br&gt;Measurement of the reference tool at the sensor (G59.3). All further tool lengths are calculated relative to this.&lt;br&gt;&lt;br&gt;&lt;b&gt;MAX Probe&lt;/b&gt;&lt;br&gt;Maximum probing distance from start position (negative = downwards). Safety limit prevents collisions.&lt;br&gt;&lt;br&gt;&lt;b&gt;Retract&lt;/b&gt;&lt;br&gt;Retract distance after first contact before the fine measurement (mm).&lt;br&gt;&lt;br&gt;&lt;b&gt;Search Vel&lt;/b&gt;&lt;br&gt;Velocity for fast pre-positioning towards the sensor (mm/min).&lt;br&gt;&lt;br&gt;&lt;b&gt;Probe Vel&lt;/b&gt;&lt;br&gt;Slow probing velocity for accurate length measurement (mm/min).&lt;br&gt;&lt;br&gt;&lt;b&gt;Before / After&lt;/b&gt;&lt;br&gt;G-code executed before or after the measurement (e.g., switching digital outputs).</string>
                      </property>
                     </widget>
                    </item>

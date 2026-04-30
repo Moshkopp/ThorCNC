@@ -96,12 +96,12 @@ class FileManagerModule(ThorModule):
         if self._t._btn_nav_up:
             self._t._btn_nav_up.setText("↑")
             self._t._btn_nav_up.setFixedWidth(60)
-            self._t._btn_nav_up.setToolTip(_t("Übergeordnetes Verzeichnis"))
+            self._t._btn_nav_up.setToolTip(_t("Parent Directory"))
 
         if self._t._btn_nav_home:
             self._t._btn_nav_home.setText("⌂")
             self._t._btn_nav_home.setFixedWidth(60)
-            self._t._btn_nav_home.setToolTip(_t("Home-Verzeichnis"))
+            self._t._btn_nav_home.setToolTip(_t("Home Directory"))
 
         self._t.navigation.update_nav_icons()
 
@@ -241,7 +241,7 @@ class FileManagerModule(ThorModule):
             self._selected_filepath = None
             if self._t._btn_load:
                 self._t._btn_load.setEnabled(False)
-            self._t._file_preview.setPlainText(_t("[ORDNER AUSGEWÄHLT]"))
+            self._t._file_preview.setPlainText(_t("[FOLDER SELECTED]"))
         else:
             self._t.settings.set("last_file_dir", os.path.dirname(path))
             self._selected_filepath = path
@@ -270,7 +270,7 @@ class FileManagerModule(ThorModule):
             content = self._t._file_preview.toPlainText()
             with open(self._selected_filepath, "w", encoding="utf-8") as f:
                 f.write(content)
-            self._t._status(_t("Datei gespeichert: {}").format(os.path.basename(self._selected_filepath)))
+            self._t._status(_t("File saved: {}").format(os.path.basename(self._selected_filepath)))
         except Exception as e:
             self._t._status(f"Error saving file: {e}", error=True)
 
@@ -286,7 +286,7 @@ class FileManagerModule(ThorModule):
                 with open(path, "w", encoding="utf-8") as f:
                     f.write(content)
                 self._selected_filepath = path
-                self._t._status(_t("Datei gespeichert unter: {}").format(os.path.basename(path)))
+                self._t._status(_t("File saved as: {}").format(os.path.basename(path)))
             except Exception as e:
                 self._t._status(f"Error saving file: {e}", error=True)
 

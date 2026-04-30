@@ -162,7 +162,7 @@ class SpindleModule(ThorModule):
         self._t.gcode_view_mod._update_active_codes_display()
         
         state_text = _t("ON") if new_state == 1 else _t("OFF")
-        self._t._status(_t("Coolant: ") + state_text)
+        self._t._status("Coolant: " + state_text)
 
     def sync_buttons(self):
         """Syncs the coolant button highlight with machine status."""

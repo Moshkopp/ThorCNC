@@ -394,4 +394,4 @@ class ProgramControlModule(ThorModule):
         self._t.cmd.abort()
         self._t.cmd.wait_complete()
         self._t.cmd.mode(linuxcnc.MODE_MANUAL)
-        self._t._status(_t("PROGRAMM ABGEBROCHEN"))
+        self._t._status(_t("PROGRAM ABORTED"))

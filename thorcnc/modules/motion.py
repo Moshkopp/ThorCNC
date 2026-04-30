@@ -278,7 +278,7 @@ class MotionModule(ThorModule):
             start_t = time.time()
             timeout = 60.0
 
-            self._t._status(_t("Fahrt auf Home-Position (G53) läuft..."))
+            self._t._status(_t("Moving to Home position (G53)..."))
 
             while time.time() - start_t < timeout:
                 QApplication.processEvents()
@@ -289,7 +289,7 @@ class MotionModule(ThorModule):
 
             self._t.cmd.mode(old_mode)
             self._t.cmd.wait_complete()
-            self._t._status(_t("Home-Position erreicht."))
+            self._t._status(_t("Home position reached."))
         except Exception as e:
             self._t._status(f"Homing error: {e}", error=True)
 

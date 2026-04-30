@@ -260,12 +260,12 @@ class NavigationModule(ThorModule):
                 self._t.mdi_mod._send_mdi("G53 G0 Z0")
                 self._t.cmd.wait_complete()
                 self._t.mdi_mod._send_mdi("G53 G0 X0 Y0")
-                self._t._status(_t("Fahre zu Maschinen-Nullpunkt (G53 X0 Y0 Z0)"))
+                self._t._status(_t("Moving to machine zero (G53 X0 Y0 Z0)"))
 
             elif action_text == "GOTO ZERO XY":
                 # Go to WCS X0 Y0 via NGC subroutine
                 self._t.mdi_mod._send_mdi("O<goto_zero_xy> call")
-                self._t._status(_t("Fahre zu WCS X0 Y0 (via NGC)"))
+                self._t._status(_t("Moving to WCS X0 Y0 (via NGC)"))
 
         elif flyout_name == "OPT":
             if action_text == "COOLANT":
@@ -317,7 +317,7 @@ class NavigationModule(ThorModule):
         """Clears the queued line and resets the UI."""
         self._t._queued_start_line = None
         self._t._line_queue_panel.hide()
-        self._t._status(_t("Start-Vormerkung aufgehoben"))
+        self._t._status(_t("Start queue cleared"))
         self._update_run_from_line_visual(False)
 
     def _update_run_from_line_visual(self, active):

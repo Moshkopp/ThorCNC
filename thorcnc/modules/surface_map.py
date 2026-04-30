@@ -194,11 +194,11 @@ class SurfaceMapModule(ThorModule):
         self._dsb_y_end = dsb(50.0, -9999, 9999)
         grid.addWidget(self._dsb_y_end, 9, 1)
 
-        grid.addWidget(lbl(_t("Spalten")), 10, 0)
+        grid.addWidget(lbl(_t("Columns")), 10, 0)
         self._spb_cols = spb(5, 2, 30)
         grid.addWidget(self._spb_cols, 10, 1)
 
-        grid.addWidget(lbl(_t("Zeilen")), 11, 0)
+        grid.addWidget(lbl(_t("Rows")), 11, 0)
         self._spb_rows = spb(5, 2, 30)
         grid.addWidget(self._spb_rows, 11, 1)
 
@@ -222,7 +222,7 @@ class SurfaceMapModule(ThorModule):
         self._btn_start.clicked.connect(self._start_scan)
         hl.addWidget(self._btn_start)
 
-        self._btn_abort = QPushButton(_t("✕  ABBRUCH"))
+        self._btn_abort = QPushButton(_t("✕  CANCEL SCAN"))
         self._btn_abort.setMinimumHeight(45)
         self._btn_abort.setMinimumWidth(120)
         self._btn_abort.setFocusPolicy(Qt.FocusPolicy.NoFocus)
@@ -299,11 +299,11 @@ class SurfaceMapModule(ThorModule):
         target_probe_tool = self._spb_probe_tool.value()
 
         if current_tool == 0:
-            self._t._status(_t("Surface Map: Abgebrochen – Kein Werkzeug geladen (T0)"), error=True)
+            self._t._status(_t("Surface Map: Aborted – No tool loaded (T0)"), error=True)
             return
 
         if current_tool != target_probe_tool:
-            self._t._status(_t(f"Surface Map: Abgebrochen – T{current_tool} ist nicht das konfigurierte Taster-Werkzeug (T{target_probe_tool})"), error=True)
+            self._t._status(f"Surface Map: Aborted – T{current_tool} is not the configured probe tool (T{target_probe_tool})", error=True)
             return
 
         x0 = self._dsb_x_start.value()
@@ -317,10 +317,10 @@ class SurfaceMapModule(ThorModule):
         depth = self._dsb_depth.value()
 
         if x1 <= x0:
-            self._t._status(_t("Surface Map: X End muss größer als X Start sein"), error=True)
+            self._t._status(_t("Surface Map: X End must be greater than X Start"), error=True)
             return
         if y1 <= y0:
-            self._t._status(_t("Surface Map: Y End muss größer als Y Start sein"), error=True)
+            self._t._status(_t("Surface Map: Y End must be greater than Y Start"), error=True)
             return
 
         self._total_points = cols * rows
@@ -390,7 +390,7 @@ class SurfaceMapModule(ThorModule):
             self._reset_scan_state()
             return
 
-        self._t._status(_t(f"Surface Map: Scan gestartet ({cols}×{rows} = {self._total_points} Punkte)"))
+        self._t._status(f"Surface Map: Scan started ({cols}×{rows} = {self._total_points} points)")
 
         self._poll_timer = QTimer(self._t)
         self._poll_timer.timeout.connect(self._poll_progress)
@@ -404,7 +404,7 @@ class SurfaceMapModule(ThorModule):
             self._t.cmd.abort()
         except Exception:
             pass
-        self._t._status(_t("Surface Map: Scan abgebrochen"), error=True)
+        self._t._status(_t("Surface Map: Scan aborted"), error=True)
         self._reset_scan_state()
 
     def _reset_scan_state(self):
@@ -496,7 +496,7 @@ class SurfaceMapModule(ThorModule):
             f"Min Z: {z_min:.3f} mm    Max Z: {z_max:.3f} mm    Δ: {z_delta:.3f} mm"
         )
         self._progress.setValue(self._total_points)
-        self._t._status(_t(f"Surface Map: Scan abgeschlossen — Δ Z = {z_delta:.3f} mm"))
+        self._t._status(f"Surface Map: Scan complete — Δ Z = {z_delta:.3f} mm")
         self._reset_scan_state()
 
     # ── Var File ──────────────────────────────────────────────────────────────

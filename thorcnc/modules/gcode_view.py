@@ -79,7 +79,7 @@ class GCodeViewModule(ThorModule):
         lq_lay = QVBoxLayout(t._line_queue_panel)
         lq_lay.setContentsMargins(10, 10, 10, 10)
         lq_lay.setSpacing(8)
-        lq_title = QLabel(_t("STARTZEILE WÄHLEN:"))
+        lq_title = QLabel(_t("SELECT START LINE:"))
         lq_title.setStyleSheet("font-weight: bold; color: #3a7abf;")
         lq_lay.addWidget(lq_title)
         t._line_input = QSpinBox()
@@ -263,7 +263,7 @@ class GCodeViewModule(ThorModule):
             gcode_view.set_current_line(found_idx + 1, move_cursor=True)
             self._t._status(f"M6 gefunden in Zeile {found_idx + 1}")
         else:
-            self._t._status(_t("Kein M6 im Programm gefunden."))
+            self._t._status(_t("No M6 found in program."))
 
     # ── GCode/MCode Display ───────────────────────────────────────────────────
 
@@ -382,7 +382,7 @@ class GCodeViewModule(ThorModule):
         from PySide6.QtGui import QColor
 
         current = self._t.settings.get(f"{prefix}_color", "#ffffff")
-        color = QColorDialog.getColor(QColor(current), self._t.ui, "Farbe wählen")
+        color = QColorDialog.getColor(QColor(current), self._t.ui, _t("Choose Color"))
 
         if color.isValid():
             hex_color = color.name()
