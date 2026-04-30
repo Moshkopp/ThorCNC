@@ -56,6 +56,11 @@ class BackplotModule(ThorModule):
             self.backplot.set_view_opts(bpm)
             self._view_restored = True
 
+        # Apply saved backplot colors
+        saved_colors = self._t.settings.get("backplot_colors", {})
+        if saved_colors:
+            self.backplot.set_colors(saved_colors)
+
         # Set machine envelope (from HAL/INI config)
         self._set_machine_envelope()
 

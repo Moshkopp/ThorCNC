@@ -204,9 +204,10 @@ class ToolTableModule(ThorModule):
         row = self._widget.rowCount()
         self._widget.insertRow(row)
         self._widget.setItem(row, 0, NumericTableWidgetItem(str(next_tool)))
+        self._widget.setItem(row, 1, NumericTableWidgetItem(str(next_tool)))  # Pocket = Tool-Nr
         dia_item = QTableWidgetItem("")
         self._widget.setItem(row, 2, dia_item)
-        for c in [1, 3, 4]:
+        for c in [3, 4]:
             self._widget.setItem(row, c, QTableWidgetItem(""))
 
         # Focus on diameter field (keep sorting off to prevent data loss)
@@ -382,15 +383,26 @@ class ToolTableModule(ThorModule):
                 QTimer.singleShot(1000, lambda: self._t._set_hal_pin("tool-changed-confirm", False))
 
     def _on_tool_item_changed(self, item: QTableWidgetItem):
-        """Auto-populate description when diameter is entered."""
-        if item.column() == 2:  # Diameter column
-            dia_text = item.text().strip()
-            row = item.row()
-            comment_item = self._widget.item(row, 4)
-            if comment_item and dia_text:
-                self._widget.blockSignals(True)
-                comment_item.setText(f"Ø{dia_text}mm")
-                self._widget.blockSignals(False)
+        """Auto-fill pocket from tool number; auto-populate comment from diameter."""
+        row = item.row()
+        self._widget.blockSignals(True)
+        try:
+            if item.column() == 0:  # Tool-Nr geändert → Pocket mitziehen wenn leer
+                tool_nr = item.text().strip()
+                pocket_item = self._widget.item(row, 1)
+                if tool_nr and (pocket_item is None or not pocket_item.text().strip()):
+                    if pocket_item is None:
+                        self._widget.setItem(row, 1, NumericTableWidgetItem(tool_nr))
+                    else:
+                        pocket_item.setText(tool_nr)
+
+            if item.column() == 2:  # Durchmesser → Kommentar vorbelegen wenn leer
+                dia_text = item.text().strip()
+                comment_item = self._widget.item(row, 4)
+                if dia_text and comment_item is not None and not comment_item.text().strip():
+                    comment_item.setText(f"Ø{dia_text}mm")
+        finally:
+            self._widget.blockSignals(False)
 
     def _send_m6(self):
         """Send M6 tool change via MDI."""

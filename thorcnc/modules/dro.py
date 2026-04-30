@@ -1,6 +1,8 @@
 """DRO module for ThorCNC — Digital Read Out management."""
 
 import linuxcnc
+
+_TOOL_EPSILON = 0.001  # mm — minimum movement to trigger backplot redraw
 from PySide6.QtCore import Qt, Slot
 from PySide6.QtWidgets import (
     QHBoxLayout, QWidget, QGridLayout, QFrame, QPushButton, 
@@ -24,6 +26,7 @@ class DROModule(ThorModule):
         
         self._wcs_initialized = False
         self._last_wcs_origin = (0.0, 0.0, 0.0)
+        self._last_tool_pos = None  # None = unhomed/unknown
 
     def setup(self):
         self._setup_dro()
@@ -186,30 +189,46 @@ class DROModule(ThorModule):
                 dtg_val = 0.0
 
             if axis in self._dro_work:
-                self._dro_work[axis].setText(f"{work:+.3f}")
+                t = f"{work:+.3f}"
+                if self._dro_work[axis].text() != t:
+                    self._dro_work[axis].setText(t)
             if axis in self._dro_machine:
-                self._dro_machine[axis].setText(f"{mach:+.3f}")
+                t = f"{mach:+.3f}"
+                if self._dro_machine[axis].text() != t:
+                    self._dro_machine[axis].setText(t)
             if axis in self._dro_dtg:
-                self._dro_dtg[axis].setText(f"{dtg_val:+.3f}")
+                t = f"{dtg_val:+.3f}"
+                if self._dro_dtg[axis].text() != t:
+                    self._dro_dtg[axis].setText(t)
 
             # probe-DRO mitsyncen
             probe_dro_work = getattr(self._t.probing_tab, "_probe_dro_work", {})
             probe_dro_mach = getattr(self._t.probing_tab, "_probe_dro_machine", {})
             if axis in probe_dro_work:
-                probe_dro_work[axis].setText(f"{work:+.3f}")
+                t = f"{work:+.3f}"
+                if probe_dro_work[axis].text() != t:
+                    probe_dro_work[axis].setText(t)
             if axis in probe_dro_mach:
-                probe_dro_mach[axis].setText(f"{mach:+.3f}")
+                t = f"{mach:+.3f}"
+                if probe_dro_mach[axis].text() != t:
+                    probe_dro_mach[axis].setText(t)
 
         # Tool marker only visible if all axes are homed
         sv = self._t.simple_view_mod.simple_view
         if all_homed:
-            self._t.backplot.set_tool_position(pos[0] - t_off[0], pos[1] - t_off[1], pos[2] - t_off[2])
-            if sv and sv.backplot:
-                sv.backplot.set_tool_position(pos[0] - t_off[0], pos[1] - t_off[1], pos[2] - t_off[2])
+            new_tp = (pos[0] - t_off[0], pos[1] - t_off[1], pos[2] - t_off[2])
+            last = self._last_tool_pos
+            if last is None or any(abs(new_tp[i] - last[i]) > _TOOL_EPSILON for i in range(3)):
+                self._last_tool_pos = new_tp
+                self._t.backplot.set_tool_position(*new_tp)
+                if sv and sv.backplot:
+                    sv.backplot.set_tool_position(*new_tp)
         else:
-            self._t.backplot.set_tool_position(float('nan'), float('nan'), float('nan'))
-            if sv and sv.backplot:
-                sv.backplot.set_tool_position(float('nan'), float('nan'), float('nan'))
+            if self._last_tool_pos is not None:
+                self._last_tool_pos = None
+                self._t.backplot.set_tool_position(float('nan'), float('nan'), float('nan'))
+                if sv and sv.backplot:
+                    sv.backplot.set_tool_position(float('nan'), float('nan'), float('nan'))
 
         # Simple View overlay DRO sync
         if sv and sv.isVisible():

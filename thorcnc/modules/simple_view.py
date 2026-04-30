@@ -34,6 +34,11 @@ class SimpleViewModule(ThorModule):
         self.simple_view.setGeometry(cw.rect())
         self.simple_view.hide()
 
+        # Gespeicherte Backplot-Farben anwenden
+        saved_colors = self._t.settings.get("backplot_colors", {})
+        if saved_colors and getattr(self.simple_view, "backplot", None):
+            self.simple_view.backplot.set_colors(saved_colors)
+
         # ESC shortcut scoped to the overlay
         esc = QShortcut(QKeySequence(Qt.Key.Key_Escape), self.simple_view)
         esc.activated.connect(self.hide)

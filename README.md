@@ -24,7 +24,8 @@ A LinuxCNC graphical interface (VCP) for 3-axis milling machines, built with PyS
 ![Probing Tab](thorcnc/images/screen_probing.png)
 ### Customized Tool Change Dialog
 ![Tool Change Dialog](thorcnc/images/screen_toolchange.png)
-
+### Load Tool Dialog
+![Tool Change Dialog](thorcnc/images/load_tool.png)
 ---
 
 ## Features

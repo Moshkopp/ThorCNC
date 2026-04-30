@@ -59,7 +59,34 @@ _COLOR_FEED    = (0.9, 0.9, 0.9, 1.0)    # weiß
 _COLOR_ARC     = (0.2, 0.9, 0.9, 1.0)    # cyan
 _COLOR_TOOL    = (1.0, 0.9, 0.0, 1.0)    # gelb
 
+# Standardfarben als Hex — werden via set_colors() überschrieben
+DEFAULT_BACKPLOT_COLORS = {
+    "rapid":      "#ff3333",
+    "feed":       "#e5e5e5",
+    "arc":        "#33e5e5",
+    "tool":       "#e5cc33",
+    "trail":      "#ff9900",
+    "background": "#0d1117",
+    "wcs_size":   28.0,   # WCS-Kreuz Armlänge in mm (float, kein Hex)
+}
+
+# WCS-Kreuz Farben: immer RGB wie Maschinenkoordinaten-Konvention
+_WCS_COLORS = np.array([
+    [1.0, 0.2, 0.2, 1], [1.0, 0.2, 0.2, 1],  # X = rot
+    [0.2, 1.0, 0.2, 1], [0.2, 1.0, 0.2, 1],  # Y = grün
+    [0.3, 0.5, 1.0, 1], [0.3, 0.5, 1.0, 1],  # Z = blau
+], dtype=np.float32)
+
 _CROSS_LEN = 40.0   # Length of axis cross arms (mm)
+
+
+def _hex_to_rgba(hex_color: str, alpha: float = 1.0) -> tuple:
+    """Convert '#rrggbb' hex string to (r, g, b, a) float tuple."""
+    from PySide6.QtGui import QColor
+    c = QColor(hex_color)
+    if not c.isValid():
+        return (1.0, 1.0, 1.0, alpha)
+    return (c.redF(), c.greenF(), c.blueF(), alpha)
 
 
 def _text_to_strokes(text: str, size: float = 80.0) -> list:
@@ -179,20 +206,30 @@ if _HAS_GL:
 
             layout.addWidget(self._view)
 
+            # Instanz-Farben (überschreibbar via set_colors) — vor _setup_static_items!
+            self._color_rapid = _COLOR_RAPID
+            self._color_feed  = _COLOR_FEED
+            self._color_arc   = _COLOR_ARC
+            self._color_tool  = (0.9, 0.8, 0.2, 1.0)
+            self._color_trail = (1.0, 0.6, 0.0, 1.0)
+            self._wcs_size    = 28.0   # Armlänge WCS-Kreuz in mm
+            self._wcs_pos     = (0.0, 0.0, 0.0)
+
             self._setup_static_items()
 
             # Toolpath-Items (werden bei load_toolpath ersetzt)
             self._items: list = []
             self._items_data: list = []
             self._wcs_offset = (0.0, 0.0, 0.0)
+            self._last_segments: list = []
 
             # Tool marker (End mill) - Cylinder
             self._tool_marker = gl.GLMeshItem(
                 meshdata=self._capped_cylinder(1.0, 20.0, cols=40),
-                color=(0.9, 0.8, 0.2, 1.0),   # Undurchsichtiges Titan-Gold
-                shader='shaded',              # Echter 3D-Lichteffekt
+                color=self._color_tool,
+                shader='shaded',
                 smooth=True,
-                glOptions='opaque',           # Verhindert, dass Linien durch den Fräser durchscheinen!
+                glOptions='opaque',
                 drawEdges=False
             )
             self._view.addItem(self._tool_marker)
@@ -201,7 +238,7 @@ if _HAS_GL:
             self._trail_pts = []
             self._trail_item = gl.GLLinePlotItem(
                 pos=np.empty((0, 3), dtype=np.float32),
-                color=(1.0, 0.6, 0.0, 1.0),  # Orange
+                color=self._color_trail,
                 width=4,
                 antialias=True,
                 mode='line_strip',
@@ -307,34 +344,29 @@ if _HAS_GL:
                 size=8, pxMode=True)
             self._view.addItem(self._mach_marker)
 
-            # ── WCS Origin (G54 etc., movable) ────────────────────────
-            # orange Kreuz, etwas kürzer
-            ws = _CROSS_LEN * 0.7
+            # ── WCS Origin (G54 etc., movable) — RGB wie Maschinenkonvention ─
+            ws = self._wcs_size
             wcs_pts = np.array([
                 [0, 0, 0], [ws, 0,  0],
                 [0, 0, 0], [0,  ws, 0],
                 [0, 0, 0], [0,  0,  ws],
             ], dtype=np.float32)
-            wcs_col = np.array([
-                [1.0, 0.5, 0.0, 1], [1.0, 0.5, 0.0, 1],
-                [1.0, 0.5, 0.0, 1], [1.0, 0.5, 0.0, 1],
-                [1.0, 0.5, 0.0, 1], [1.0, 0.5, 0.0, 1],
-            ], dtype=np.float32)
             self._wcs_cross = gl.GLLinePlotItem(
-                pos=wcs_pts, color=wcs_col, width=2.0,
+                pos=wcs_pts, color=_WCS_COLORS, width=2.0,
                 antialias=True, mode='lines')
             self._view.addItem(self._wcs_cross)
 
-            # WCS Origin Marker (Orange point)
+            # WCS Origin Marker (weißer Punkt)
             self._wcs_marker = gl.GLScatterPlotItem(
                 pos=np.array([[0, 0, 0]], dtype=np.float32),
-                color=np.array([[1.0, 0.5, 0.0, 1.0]], dtype=np.float32),
+                color=np.array([[1.0, 1.0, 1.0, 1.0]], dtype=np.float32),
                 size=10, pxMode=True)
             self._view.addItem(self._wcs_marker)
 
         # ── Öffentliche API ──────────────────────────────────────────────────
 
         def load_toolpath(self, segments: list[Segment]):
+            self._last_segments = segments
             # Alte Toolpath-Items entfernen
             for item in self._items:
                 self._view.removeItem(item)
@@ -358,9 +390,9 @@ if _HAS_GL:
                 self._items.append(item)
                 self._items_data.append((item, arr))
 
-            add(RAPID, _COLOR_RAPID, 1)
-            add(FEED,  _COLOR_FEED,  1)
-            add(ARC,   _COLOR_ARC,   1)
+            add(RAPID, self._color_rapid, 1)
+            add(FEED,  self._color_feed,  1)
+            add(ARC,   self._color_arc,   1)
 
         def _capped_cylinder(self, r: float, length: float, cols: int=40):
             md = gl.MeshData.cylinder(rows=1, cols=cols, radius=[r, r], length=length)
@@ -408,16 +440,40 @@ if _HAS_GL:
             self._trail_pts.clear()
             self._trail_item.setData(pos=np.empty((0, 3), dtype=np.float32))
 
+        def set_colors(self, colors: dict):
+            """Apply color/size settings to backplot elements live.
+            Hex strings for colors, float for 'wcs_size'."""
+            path_changed = False
+            for key in ("rapid", "feed", "arc"):
+                if key in colors:
+                    rgba = _hex_to_rgba(colors[key])
+                    setattr(self, f"_color_{key}", rgba)
+                    path_changed = True
+            if "tool" in colors:
+                self._color_tool = _hex_to_rgba(colors["tool"])
+                self._tool_marker.setColor(self._color_tool)
+            if "trail" in colors:
+                self._color_trail = _hex_to_rgba(colors["trail"])
+                self._trail_item.setData(color=self._color_trail)
+            if "background" in colors:
+                self._view.setBackgroundColor(colors["background"])
+            if "wcs_size" in colors:
+                self._wcs_size = float(colors["wcs_size"])
+                self.set_wcs_origin(*self._wcs_pos)
+            if path_changed and self._last_segments:
+                self.load_toolpath(self._last_segments)
+
         def set_wcs_origin(self, x: float, y: float, z: float):
-            """Moves the WCS axis cross (orange) to the new position."""
+            """Moves the WCS axis cross (RGB) to the new position."""
             self._wcs_offset = (x, y, z)
-            ws = _CROSS_LEN * 0.7
+            self._wcs_pos = (x, y, z)
+            ws = self._wcs_size
             wcs_pts = np.array([
                 [x,    y,    z   ], [x+ws, y,    z   ],
                 [x,    y,    z   ], [x,    y+ws, z   ],
                 [x,    y,    z   ], [x,    y,    z+ws],
             ], dtype=np.float32)
-            self._wcs_cross.setData(pos=wcs_pts)
+            self._wcs_cross.setData(pos=wcs_pts, color=_WCS_COLORS)
             self._wcs_marker.setData(pos=np.array([[x, y, z]], dtype=np.float32))
 
             for item, arr in self._items_data:
@@ -639,6 +695,10 @@ class BackplotWidget(QFrame):
     def set_view_opts(self, opts: dict):
         if self._impl:
             self._impl.set_view_opts(opts)
+
+    def set_colors(self, colors: dict):
+        if self._impl:
+            self._impl.set_colors(colors)
 
     def set_antialiasing(self, enabled: bool):
         if self._impl:

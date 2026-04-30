@@ -4,11 +4,29 @@ import os
 import linuxcnc
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import (
-    QPushButton, QComboBox, QCheckBox, QGroupBox, QVBoxLayout, 
+    QPushButton, QComboBox, QCheckBox, QGroupBox, QVBoxLayout,
     QWidget, QLineEdit, QHBoxLayout, QLabel, QTextEdit, QFrame,
-    QDoubleSpinBox, QMessageBox, QTabWidget, QColorDialog
+    QDoubleSpinBox, QMessageBox, QTabWidget, QColorDialog, QGridLayout
 )
 from PySide6.QtGui import QColor
+
+_BACKPLOT_COLOR_KEYS = [
+    ("tool",       "Fräser"),
+    ("trail",      "Trail"),
+    ("background", "Hintergrund"),
+    ("rapid",      "Eilgang (G0)"),
+    ("feed",       "Vorschub (G1)"),
+    ("arc",        "Bogen (G2/G3)"),
+]
+_BACKPLOT_COLOR_DEFAULTS = {
+    "rapid":      "#ff3333",
+    "feed":       "#e5e5e5",
+    "arc":        "#33e5e5",
+    "tool":       "#e5cc33",
+    "trail":      "#ff9900",
+    "background": "#0d1117",
+    "wcs_size":   28.0,
+}
 
 from .base import ThorModule
 from ..i18n import _t
@@ -74,32 +92,59 @@ class SettingsTabModule(ThorModule):
                 cb_lang.setCurrentIndex(idx)
             cb_lang.currentIndexChanged.connect(lambda i, c=cb_lang: self._on_language_changed(c.itemData(i)))
 
-        # ── UI Settings (Antialiasing, Tabs, etc) ──
+        # ── UI Tab: 2-Spalten-Layout ──────────────────────────────────────────
         if ui_tab := self._t._w(QWidget, "settings_tab_ui"):
-            layout = ui_tab.layout()
+            old_layout = ui_tab.layout()
+
+            # Vorhandene Widgets aus dem .ui-Layout einsammeln (Theme, GCode, Language)
+            left_widgets = []
+            while old_layout.count():
+                item = old_layout.takeAt(0)
+                if w := item.widget():
+                    w.setParent(None)
+                    left_widgets.append(w)
+
+            # Wrapper mit 2-Spalten-HBox in das leere Layout einhängen
+            wrapper = QWidget()
+            hbox = QHBoxLayout(wrapper)
+            hbox.setSpacing(16)
+            hbox.setContentsMargins(0, 0, 0, 0)
+
+            left_vbox = QVBoxLayout()
+            left_vbox.setSpacing(8)
+            right_vbox = QVBoxLayout()
+            right_vbox.setSpacing(8)
+
+            # Linke Spalte: Theme, G-Code Highlighting, Language
+            for w in left_widgets:
+                left_vbox.addWidget(w)
+            left_vbox.addStretch()
+
+            hbox.addLayout(left_vbox, 1)
+            hbox.addLayout(right_vbox, 1)
+            old_layout.addWidget(wrapper)
+
+            # ── Rechte Spalte: Grafik / Performance ──
             gb_gfx = QGroupBox(_t("Grafik / Performance"))
             gl_gfx = QVBoxLayout(gb_gfx)
             self._cb_aa = QCheckBox(_t("Backplot Antialiasing (Glättung)"))
             self._cb_aa.setToolTip(_t("Verbessert die Linienqualität (MSAA). Erfordert Neustart für volle Wirkung."))
-            
             active = self._t.settings.get("backplot_antialiasing", True)
             self._cb_aa.setChecked(active)
             self._cb_aa.toggled.connect(self._on_aa_toggled)
-
             gl_gfx.addWidget(self._cb_aa)
+
             lay_msaa = QHBoxLayout()
             lay_msaa.addWidget(QLabel(_t("MSAA Samples:")))
             self._cb_msaa = QComboBox()
             for x in [2, 4, 8, 16]:
                 self._cb_msaa.addItem(f"{x}x", userData=x)
-            
             saved_msaa = self._t.settings.get("backplot_msaa_samples", 4)
             idx = self._cb_msaa.findData(saved_msaa)
-            if idx >= 0: self._cb_msaa.setCurrentIndex(idx)
-            
+            if idx >= 0:
+                self._cb_msaa.setCurrentIndex(idx)
             self._cb_msaa.setEnabled(active)
             self._cb_msaa.currentIndexChanged.connect(self._on_msaa_changed)
-            
             lay_msaa.addWidget(self._cb_msaa)
             gl_gfx.addLayout(lay_msaa)
 
@@ -108,13 +153,9 @@ class SettingsTabModule(ThorModule):
             self._cb_resource_monitor.setChecked(self._t.settings.get("show_resource_monitor", False))
             self._cb_resource_monitor.toggled.connect(self._on_resource_monitor_toggled)
             gl_gfx.addWidget(self._cb_resource_monitor)
+            right_vbox.addWidget(gb_gfx)
 
-            layout.insertWidget(layout.count() - 1, gb_gfx)
-
-            # ── Navigation / Tabs ──
-            # (HTML tab removed)
-
-            # ── Werkzeugliste ──
+            # ── Rechte Spalte: Werkzeugliste ──
             gb_tools = QGroupBox(_t("Werkzeugliste"))
             gl_tools = QVBoxLayout(gb_tools)
             self._cb_show_pocket = QCheckBox(_t("Pocket-Spalte anzeigen"))
@@ -123,8 +164,12 @@ class SettingsTabModule(ThorModule):
             self._cb_show_pocket.setChecked(show_pocket)
             self._cb_show_pocket.toggled.connect(self._on_show_pocket_column_changed)
             gl_tools.addWidget(self._cb_show_pocket)
-            layout.insertWidget(layout.count() - 1, gb_tools)
-            
+            right_vbox.addWidget(gb_tools)
+
+            # ── Rechte Spalte: Backplot Farben ──
+            self._setup_backplot_colors(right_vbox)
+            right_vbox.addStretch()
+
             # Initiale Sichtbarkeit anwenden
             self._on_show_pocket_column_changed(show_pocket)
 
@@ -385,6 +430,116 @@ class SettingsTabModule(ThorModule):
 
         self._write_ts_before_after()
         self._write_probe_before_after()
+
+    # ── Backplot Farben ───────────────────────────────────────────────────────
+
+    def _setup_backplot_colors(self, parent_layout):
+        """Erzeugt die Farbauswahl-Gruppe für den Backplot im UI-Tab."""
+        gb = QGroupBox(_t("Backplot Farben / Groessen"))
+        outer = QVBoxLayout(gb)
+        outer.setContentsMargins(10, 10, 10, 10)
+        outer.setSpacing(8)
+
+        saved = self._t.settings.get("backplot_colors", {})
+
+        # Zwei gleichbreite Spalten nebeneinander
+        cols_lay = QHBoxLayout()
+        cols_lay.setSpacing(20)
+
+        left_keys  = _BACKPLOT_COLOR_KEYS[:3]   # Fräser, Hintergrund, Vorschub
+        right_keys = _BACKPLOT_COLOR_KEYS[3:]   # Trail, Eilgang, Bogen
+
+        for group in (left_keys, right_keys):
+            col_grid = QGridLayout()
+            col_grid.setHorizontalSpacing(8)
+            col_grid.setVerticalSpacing(5)
+            col_grid.setColumnStretch(1, 1)   # Button-Spalte dehnt sich aus
+            for row_i, (key, label) in enumerate(group):
+                hex_color = saved.get(key, _BACKPLOT_COLOR_DEFAULTS[key])
+                lbl = QLabel(_t(label) + ":")
+                lbl.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+                btn = QPushButton()
+                btn.setFixedHeight(28)
+                btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+                self._set_color_btn_style(btn, hex_color)
+                btn.clicked.connect(lambda _=False, k=key, b=btn: self._pick_backplot_color(k, b))
+                col_grid.addWidget(lbl, row_i, 0)
+                col_grid.addWidget(btn, row_i, 1)
+
+            wrapper = QWidget()
+            wrapper.setLayout(col_grid)
+            cols_lay.addWidget(wrapper, 1)   # gleicher Stretch für beide Hälften
+
+        outer.addLayout(cols_lay)
+
+        # ── Trennlinie + WCS-Kreuz Größe ──────────────────────────────────
+        sep = QFrame()
+        sep.setFrameShape(QFrame.Shape.HLine)
+        outer.addWidget(sep)
+
+        wcs_lay = QHBoxLayout()
+        wcs_lay.setSpacing(8)
+        wcs_lay.addWidget(QLabel(_t("WCS-Kreuz Groesse (mm):")))
+        self._dsb_wcs_size = QDoubleSpinBox()
+        self._dsb_wcs_size.setRange(5.0, 200.0)
+        self._dsb_wcs_size.setSingleStep(5.0)
+        self._dsb_wcs_size.setDecimals(1)
+        self._dsb_wcs_size.setFixedWidth(100)
+        self._dsb_wcs_size.setValue(float(saved.get("wcs_size", _BACKPLOT_COLOR_DEFAULTS["wcs_size"])))
+        self._dsb_wcs_size.valueChanged.connect(self._on_wcs_size_changed)
+        wcs_lay.addWidget(self._dsb_wcs_size)
+        wcs_lay.addStretch()
+        outer.addLayout(wcs_lay)
+
+        parent_layout.addWidget(gb)
+
+    @staticmethod
+    def _set_color_btn_style(btn: QPushButton, hex_color: str):
+        c = QColor(hex_color)
+        brightness = c.red() * 0.299 + c.green() * 0.587 + c.blue() * 0.114
+        text = "#000000" if brightness > 128 else "#ffffff"
+        btn.setStyleSheet(
+            f"background-color:{hex_color}; color:{text}; border:1px solid #555; border-radius:3px;"
+        )
+        btn.setText(hex_color)
+
+    def _pick_backplot_color(self, key: str, btn: QPushButton):
+        saved = self._t.settings.get("backplot_colors", {})
+        current_hex = saved.get(key, _BACKPLOT_COLOR_DEFAULTS[key])
+        color = QColorDialog.getColor(QColor(current_hex), None, _t("Farbe wählen"))
+        if not color.isValid():
+            return
+        hex_color = color.name()
+
+        # In Settings speichern
+        saved[key] = hex_color
+        self._t.settings.set("backplot_colors", saved)
+        self._t.settings.save()
+
+        # Button aktualisieren
+        self._set_color_btn_style(btn, hex_color)
+
+        # Auf beide Backplots anwenden (Haupt + SimpleView)
+        self._t.backplot.set_colors({key: hex_color})
+        try:
+            sv = self._t.simple_view_mod.simple_view
+            if sv and getattr(sv, "backplot", None):
+                sv.backplot.set_colors({key: hex_color})
+        except AttributeError:
+            pass
+
+    def _on_wcs_size_changed(self, value: float):
+        saved = self._t.settings.get("backplot_colors", {})
+        saved["wcs_size"] = value
+        self._t.settings.set("backplot_colors", saved)
+        self._t.settings.save()
+        self._t.backplot.set_colors({"wcs_size": value})
+        try:
+            sv = self._t.simple_view_mod.simple_view
+            if sv and getattr(sv, "backplot", None):
+                sv.backplot.set_colors({"wcs_size": value})
+        except AttributeError:
+            pass
 
     def _save_abort_handler(self):
         """Speichert den G-Code für den Abort-Handler und aktualisiert die .ngc Datei."""

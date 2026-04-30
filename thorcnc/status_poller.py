@@ -143,16 +143,16 @@ class StatusPoller(QObject):
         # We use Cartesian 'position' (commanded) instead of 'actual_position' (feedback).
         # This ensures the DRO matches the G-code target exactly when the segment ends,
         # making DTG behavior intuitive and eliminating servo-lag flicker in the UI.
-        pos = list(s.position[:3])
-            
+        pos = tuple(s.position[:3])
+
         if pos != self._position:
             self._position = pos
-            self.position_changed.emit(pos)
+            self.position_changed.emit(list(pos))
 
-        g5x = list(s.g5x_offset[:3])
+        g5x = tuple(s.g5x_offset[:3])
         if g5x != self._g5x_offset:
             self._g5x_offset = g5x
-            self.g5x_offset_changed.emit(g5x)
+            self.g5x_offset_changed.emit(list(g5x))
 
         g5x_idx = s.g5x_index
         if g5x_idx != self._g5x_index:
@@ -163,10 +163,10 @@ class StatusPoller(QObject):
             self._tool = s.tool_in_spindle
             self.tool_in_spindle.emit(s.tool_in_spindle)
 
-        tool_off = list(s.tool_offset[:3])
+        tool_off = tuple(s.tool_offset[:3])
         if tool_off != self._tool_offset:
             self._tool_offset = tool_off
-            self.tool_offset_changed.emit(tool_off)
+            self.tool_offset_changed.emit(list(tool_off))
 
         if s.file != self._file:
             self._file = s.file
@@ -267,7 +267,7 @@ class StatusPoller(QObject):
         except Exception:
             pass
 
-        homed = list(s.homed[:3])
+        homed = tuple(s.homed[:3])
         if homed != self._homed:
             self._homed = homed
-            self.homed_changed.emit(homed)
+            self.homed_changed.emit(list(homed))
