@@ -4,6 +4,14 @@
 
 ## 🔲 Offene Punkte
 
+### HAL-Pins
+- [ ] Diverse Funktionen als HAL-Pin verfügbar machen (z.B. Betriebsmodus, Spindel-Status, aktive WCS, Vorschub-Override)
+
+### Programm-Icon
+- [ ] Icon für ThorCNC erstellen (SVG/PNG, für Taskbar, Desktop-Shortcut, Fenster-Titelleiste)
+
+
+
 ### Probe Result Panel
 - [ ] Toleranz für Δ-Anzeige konfigurierbar machen (initial fix ±0.05mm)
 - [ ] CSV-Export aus History
@@ -84,4 +92,4 @@ HAL, ControlPanel, Backplot, ProgramControl, Status, HighlightSettings
 
 ---
 
-*Letztes Update: 26.04.2026*
+*Letztes Update: 01.05.2026*
