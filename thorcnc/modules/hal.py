@@ -46,6 +46,12 @@ class HALModule(ThorModule):
             # Handwheel / TsHW Integration Pins
             hal_comp.newpin("jog-vel-final", hal.HAL_FLOAT, hal.HAL_OUT)
 
+            # Großwerkzeug-Versatz am Toolsetter
+            hal_comp.newpin("ts-contact-diameter", hal.HAL_FLOAT, hal.HAL_OUT)
+            hal_comp.newpin("ts-large-tool-enable", hal.HAL_BIT,   hal.HAL_OUT)
+            hal_comp.newpin("ts-offset-dir-x",      hal.HAL_FLOAT, hal.HAL_OUT)
+            hal_comp.newpin("ts-offset-dir-y",      hal.HAL_FLOAT, hal.HAL_OUT)
+
             hal_comp.ready()
             from thorcnc.i18n import _t
             self._t._status(_t("HAL component 'thorcnc' ready."))

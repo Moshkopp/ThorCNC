@@ -134,5 +134,8 @@
         "wcs_size": 38.0,
         "feed": "#aaff00",
         "background": "#2c4348"
-    }
+    },
+    "ts_large_tool_enable": true,
+    "ts_offset_direction": "X-",
+    "ts_contact_diameter": 20.0
 }

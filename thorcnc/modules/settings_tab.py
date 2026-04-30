@@ -427,7 +427,7 @@ class SettingsTabModule(ThorModule):
         if b := self._t._w(QPushButton, "btn_set_taster_pos"):
             b.clicked.connect(self._set_taster_pos_from_machine)
 
-
+        self._setup_large_tool_offset()
         self._write_ts_before_after()
         self._write_probe_before_after()
 
@@ -435,7 +435,7 @@ class SettingsTabModule(ThorModule):
 
     def _setup_backplot_colors(self, parent_layout):
         """Erzeugt die Farbauswahl-Gruppe für den Backplot im UI-Tab."""
-        gb = QGroupBox(_t("Backplot Farben / Groessen"))
+        gb = QGroupBox(_t("Backplot Farben / Größen"))
         outer = QVBoxLayout(gb)
         outer.setContentsMargins(10, 10, 10, 10)
         outer.setSpacing(8)
@@ -479,7 +479,7 @@ class SettingsTabModule(ThorModule):
 
         wcs_lay = QHBoxLayout()
         wcs_lay.setSpacing(8)
-        wcs_lay.addWidget(QLabel(_t("WCS-Kreuz Groesse (mm):")))
+        wcs_lay.addWidget(QLabel(_t("WCS-Kreuz Größe (mm):")))
         self._dsb_wcs_size = QDoubleSpinBox()
         self._dsb_wcs_size.setRange(5.0, 200.0)
         self._dsb_wcs_size.setSingleStep(5.0)
@@ -527,6 +527,111 @@ class SettingsTabModule(ThorModule):
                 sv.backplot.set_colors({key: hex_color})
         except AttributeError:
             pass
+
+    # ── Großwerkzeug-Versatz ─────────────────────────────────────────────────
+
+    _OFFSET_DIRS = {
+        "X+": ( 1.0,  0.0),
+        "X-": (-1.0,  0.0),
+        "Y+": ( 0.0,  1.0),
+        "Y-": ( 0.0, -1.0),
+    }
+
+    def _setup_large_tool_offset(self):
+        """Neue GroupBox im Toolsetter-Tab für den Großwerkzeug-Versatz."""
+        ts_tab = self._t._w(QWidget, "settings_tab_toolsetter")
+        if not ts_tab:
+            return
+        layout = ts_tab.layout()
+        if not layout:
+            return
+
+        gb = QGroupBox(_t("Große Werkzeuge (> Taster-Kontaktfläche)"))
+        vbox = QVBoxLayout(gb)
+        vbox.setSpacing(6)
+        vbox.setContentsMargins(10, 10, 10, 10)
+
+        # Beschreibung
+        lbl_desc = QLabel(_t(
+            "Wenn der Werkzeugdurchmesser größer als die Taster-Kontaktfläche ist,\n"
+            "wird vor dem Messen um den Werkzeug-Radius versetzt, sodass\n"
+            "die Schneide über der Taster-Mitte liegt."
+        ))
+        lbl_desc.setObjectName("settings_desc_label")
+        lbl_desc.setWordWrap(True)
+        vbox.addWidget(lbl_desc)
+
+        # Checkbox: Feature aktiv
+        self._cb_large_tool = QCheckBox(_t("Versatz aktivieren wenn Werkzeug > Kontaktfläche"))
+        enabled = self._t.settings.get("ts_large_tool_enable", False)
+        self._cb_large_tool.setChecked(bool(enabled))
+        self._cb_large_tool.toggled.connect(self._on_large_tool_toggled)
+        vbox.addWidget(self._cb_large_tool)
+
+        # Kontaktfläche Ø + Richtung nebeneinander
+        row_lay = QHBoxLayout()
+        row_lay.setSpacing(16)
+
+        row_lay.addWidget(QLabel(_t("Kontaktfläche Durchmesser (mm):")))
+        self._dsb_contact_dia = QDoubleSpinBox()
+        self._dsb_contact_dia.setRange(1.0, 200.0)
+        self._dsb_contact_dia.setSingleStep(0.5)
+        self._dsb_contact_dia.setDecimals(1)
+        self._dsb_contact_dia.setFixedWidth(80)
+        self._dsb_contact_dia.setValue(float(self._t.settings.get("ts_contact_diameter", 16.0)))
+        self._dsb_contact_dia.valueChanged.connect(self._on_contact_dia_changed)
+        row_lay.addWidget(self._dsb_contact_dia)
+
+        row_lay.addSpacing(20)
+        row_lay.addWidget(QLabel(_t("Versatzrichtung:")))
+        self._cb_offset_dir = QComboBox()
+        for d in self._OFFSET_DIRS:
+            self._cb_offset_dir.addItem(d)
+        saved_dir = self._t.settings.get("ts_offset_direction", "X+")
+        idx = self._cb_offset_dir.findText(saved_dir)
+        if idx >= 0:
+            self._cb_offset_dir.setCurrentIndex(idx)
+        self._cb_offset_dir.currentTextChanged.connect(self._on_offset_dir_changed)
+        self._cb_offset_dir.setFixedWidth(70)
+        row_lay.addWidget(self._cb_offset_dir)
+        row_lay.addStretch()
+        vbox.addLayout(row_lay)
+
+        layout.addWidget(gb)
+
+        # HAL-Pins beim Start setzen
+        self._sync_large_tool_hal()
+
+    def _sync_large_tool_hal(self):
+        """Alle Großwerkzeug-HAL-Pins aus den gespeicherten Werten setzen."""
+        if not self._t._hal_comp:
+            return
+        try:
+            enabled = bool(self._t.settings.get("ts_large_tool_enable", False))
+            dia     = float(self._t.settings.get("ts_contact_diameter", 16.0))
+            dirkey  = self._t.settings.get("ts_offset_direction", "X+")
+            dx, dy  = self._OFFSET_DIRS.get(dirkey, (1.0, 0.0))
+            self._t._hal_comp["ts-large-tool-enable"] = enabled
+            self._t._hal_comp["ts-contact-diameter"]  = dia
+            self._t._hal_comp["ts-offset-dir-x"]      = dx
+            self._t._hal_comp["ts-offset-dir-y"]      = dy
+        except Exception:
+            pass
+
+    def _on_large_tool_toggled(self, enabled: bool):
+        self._t.settings.set("ts_large_tool_enable", enabled)
+        self._t.settings.save()
+        self._sync_large_tool_hal()
+
+    def _on_contact_dia_changed(self, value: float):
+        self._t.settings.set("ts_contact_diameter", value)
+        self._t.settings.save()
+        self._sync_large_tool_hal()
+
+    def _on_offset_dir_changed(self, text: str):
+        self._t.settings.set("ts_offset_direction", text)
+        self._t.settings.save()
+        self._sync_large_tool_hal()
 
     def _on_wcs_size_changed(self, value: float):
         saved = self._t.settings.get("backplot_colors", {})

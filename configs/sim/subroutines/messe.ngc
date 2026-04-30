@@ -45,6 +45,23 @@ o110 if [#<safe_approach> GT 0]
 o110 endif
 G53 G0 Z#<safe_approach>
 
+(--- 6b. GROSSWERKZEUG-VERSATZ ---)
+(Wenn Werkzeug-Dia > Kontaktflaeche: Schneide ueber Taster-Mitte verschieben)
+#<_lte_enable>   = #<_hal[thorcnc.ts-large-tool-enable]>
+#<_lte_contact>  = #<_hal[thorcnc.ts-contact-diameter]>
+#<_lte_dir_x>    = #<_hal[thorcnc.ts-offset-dir-x]>
+#<_lte_dir_y>    = #<_hal[thorcnc.ts-offset-dir-y]>
+#<_lte_tool_dia> = #5413
+#<_lte_offset>   = 0.0
+
+o200 if [#<_lte_enable> AND [#<_lte_tool_dia> GT #<_lte_contact>]]
+  #<_lte_offset> = [#<_lte_tool_dia> / 2.0]
+  (debug, Grosse Werkzeug erkannt: Dia=#<_lte_tool_dia> Versatz=#<_lte_offset>mm)
+  G91
+  G0 X[#<_lte_offset> * #<_lte_dir_x>] Y[#<_lte_offset> * #<_lte_dir_y>]
+  G90
+o200 endif
+
 (--- 7. MEASUREMENT PROCESS IN G59.3 ---)
 G59.3
 G49
@@ -66,6 +83,13 @@ G90
 G10 L1 P#<_selected_tool> Z#<new_tool_length>
 G43 H#<_selected_tool>
 (debug, Tool length: #<new_tool_length> mm)
+
+(--- 8b. GROSSWERKZEUG-VERSATZ RUECKGAENGIG ---)
+o201 if [#<_lte_enable> AND [#<_lte_offset> GT 0]]
+  G91
+  G0 X[-#<_lte_offset> * #<_lte_dir_x>] Y[-#<_lte_offset> * #<_lte_dir_y>]
+  G90
+o201 endif
 
 (--- 9. COMPLETION ---)
 G53 G0 Z#<wechsel_z>
