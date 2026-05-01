@@ -38,15 +38,7 @@ done
 
 INI="${CUSTOM_INI:-$SIM_INI}"
 
-# ── Venv aktivieren falls vorhanden, sonst ~/.local/bin ─────────────────────
-VENV_ACTIVATE="$SCRIPT_DIR/../venv/bin/activate"
-if [ -f "$VENV_ACTIVATE" ]; then
-    # shellcheck disable=SC1090
-    source "$VENV_ACTIVATE"
-    echo "[start.sh] Venv aktiviert: $(dirname "$VENV_ACTIVATE")"
-else
-    export PATH="$HOME/.local/bin:$PATH"
-fi
+export PATH="$HOME/.local/bin:$PATH"
 
 # ── Dev-Install falls thorcnc-Befehl nicht gefunden ─────────────────────────
 if ! command -v thorcnc &>/dev/null; then
@@ -64,11 +56,6 @@ fi
 # ── Umgebungsvariablen setzen ────────────────────────────────────────────────
 [ -n "$THEME" ] && export THORCNC_THEME="$THEME"
 export PYTHONPATH="$SCRIPT_DIR${PYTHONPATH:+:$PYTHONPATH}"
-
-# Falls wir nicht im venv sind, stellen wir sicher, dass ~/.local/bin ganz vorne ist
-if [ -z "${VIRTUAL_ENV:-}" ]; then
-    export PATH="$HOME/.local/bin:$PATH"
-fi
 
 echo "[start.sh] Starte LinuxCNC mit: $INI"
 echo "[start.sh] Theme: $THEME"
