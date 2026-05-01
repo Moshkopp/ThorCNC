@@ -80,7 +80,7 @@ def main():
     app = QApplication.instance() or QApplication(sys.argv)
     app.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
 
-    _icon_path = os.path.join(_DIR, "images", "icon.svg")
+    _icon_path = os.path.join(_DIR, "images", "icon.png")
     if os.path.isfile(_icon_path):
         app.setWindowIcon(QIcon(_icon_path))
 

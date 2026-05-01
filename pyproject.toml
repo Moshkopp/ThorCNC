@@ -1,10 +1,10 @@
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 [project]
 name = "thorcnc"
-version = "0.1.0"
+dynamic = ["version"]
 description = "LinuxCNC VCP – Mill (mm), PySide6, kein Framework-Overhead"
 license = { text = "GPL-2.0-or-later" }
 requires-python = ">=3.11"
@@ -22,6 +22,9 @@ backplot = [
 
 [project.scripts]
 thorcnc = "thorcnc.main:main"
+
+[tool.hatch.version]
+source = "vcs"
 
 [tool.hatch.build.targets.wheel]
 packages = ["thorcnc"]

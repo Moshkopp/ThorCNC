@@ -70,6 +70,9 @@ fi
 OLD_REV=$(git rev-parse --short HEAD)
 info "Aktuelle Version: $OLD_REV"
 
+# update.sh-Hash merken für Selbst-Update-Erkennung
+UPDATER_HASH_BEFORE=$(md5sum "$0" | cut -d' ' -f1)
+
 # --- Stash & Pull ------------------------------------------------------------
 if $FORCE_MODE; then
     warn "FORCE MODE: Verwerfe lokale Änderungen und setze auf origin zurück..."
@@ -77,7 +80,6 @@ if $FORCE_MODE; then
     git reset --hard "origin/$(git rev-parse --abbrev-ref HEAD)"
 else
     info "Bereite Repository vor (Index-Reparatur)..."
-    # Fallback-Strategie für beschädigte Indizes auf VMs
     if ! git update-index --refresh &>/dev/null; then
         warn "Index ist beschädigt. Starte Deep-Repair..."
         rm -f .git/index.lock &>/dev/null || true
@@ -98,7 +100,6 @@ git pull --ff-only origin "$(git rev-parse --abbrev-ref HEAD)" || {
     warn "Versuche 'git pull --rebase'..."
     git pull --rebase origin "$(git rev-parse --abbrev-ref HEAD)" || {
         warn "Konnte nicht automatisch mergen."
-        warn "Versuche lokale Änderungen wiederherzustellen..."
     }
 }
 
@@ -118,25 +119,58 @@ else
     echo ""
 fi
 
-# --- Paket neu installieren --------------------------------------------------
-EXTRAS="[backplot]"
+# --- Selbst-Update-Erkennung -------------------------------------------------
+UPDATER_HASH_AFTER=$(md5sum "$0" | cut -d' ' -f1)
+if [ "$UPDATER_HASH_BEFORE" != "$UPDATER_HASH_AFTER" ]; then
+    echo ""
+    echo -e "${YELLOW}╔══════════════════════════════════════════════════════════╗${NC}"
+    echo -e "${YELLOW}║  update.sh wurde aktualisiert!                           ║${NC}"
+    echo -e "${YELLOW}║  Bitte update.sh erneut ausführen um die neue Version    ║${NC}"
+    echo -e "${YELLOW}║  des Updaters zu verwenden.                              ║${NC}"
+    echo -e "${YELLOW}╚══════════════════════════════════════════════════════════╝${NC}"
+    echo ""
+    exit 0
+fi
 
+# --- Hilfsfunktionen für Abhängigkeitsprüfung --------------------------------
+apt_installed() {
+    dpkg -l "$1" 2>/dev/null | grep -q '^ii'
+}
+
+pip_installed() {
+    # $1 = Paketname, $2 = Mindestversion (optional)
+    local pkg="$1" minver="${2:-}"
+    local installed
+    installed=$(pip show "$pkg" 2>/dev/null | grep '^Version:' | cut -d' ' -f2)
+    [ -z "$installed" ] && return 1
+    if [ -n "$minver" ]; then
+        python3 -c "
+from packaging.version import Version
+import sys
+sys.exit(0 if Version('$installed') >= Version('$minver') else 1)
+" 2>/dev/null || return 1
+    fi
+    return 0
+}
+
+# --- Paket neu installieren --------------------------------------------------
 OS=$(. /etc/os-release 2>/dev/null && echo "${ID:-unknown}" || echo "unknown")
 
 if [ "$OS" = "debian" ] || [ "$OS" = "ubuntu" ]; then
-    # pip-PySide6 entfernen – apt-Version soll genutzt werden
-    info "Entferne pip-PySide6 falls vorhanden..."
-    pip uninstall -y PySide6 PySide6-Addons PySide6-Essentials shiboken6 2>/dev/null || true
+    # pip-PySide6 entfernen – nur wenn pip-Version vorhanden
+    if pip show PySide6 &>/dev/null 2>&1; then
+        info "Entferne pip-PySide6 (apt-Version soll genutzt werden)..."
+        pip uninstall -y PySide6 PySide6-Addons PySide6-Essentials shiboken6 2>/dev/null || true
+    fi
 
     if dpkg -l python3-pyqtgraph &>/dev/null 2>&1; then
         warn "python3-pyqtgraph (apt) gefunden – wird entfernt..."
         sudo apt-get remove -y python3-pyqtgraph || true
     fi
 
-    # Sicherstellen dass alle Qt xcb Laufzeit-Bibliotheken installiert sind.
-    # Einzeln installieren damit ein fehlendes Paket nicht alle anderen blockiert.
-    # Debian 13 (Trixie) hat den t64-Übergang: viele lib*0 → lib*0t64.
-    info "Stelle Qt xcb Laufzeit-Bibliotheken sicher (apt)..."
+    # Fehlende apt-Pakete sammeln und in einem Aufruf installieren
+    info "Prüfe Qt xcb Laufzeit-Bibliotheken..."
+    missing_pkgs=()
     for pkg in \
         python3-pyside6 \
         python3-pyside6.qtopenglwidgets \
@@ -152,25 +186,41 @@ if [ "$OS" = "debian" ] || [ "$OS" = "ubuntu" ]; then
         libxcb-xkb1 \
         libxkbcommon-x11-0
     do
-        sudo apt-get install -y "$pkg" 2>/dev/null || warn "Paket nicht verfügbar: $pkg (wird übersprungen)"
+        apt_installed "$pkg" || missing_pkgs+=("$pkg")
     done
 
     # libxcb-cursor: Debian 13 (t64-Übergang) kann libxcb-cursor0t64 heißen
-    if ! sudo apt-get install -y libxcb-cursor0 2>/dev/null; then
-        sudo apt-get install -y libxcb-cursor0t64 2>/dev/null || \
-            warn "libxcb-cursor0 (und libxcb-cursor0t64) nicht installierbar – Qt xcb Plugin kann fehlschlagen!"
+    if ! apt_installed libxcb-cursor0 && ! apt_installed libxcb-cursor0t64; then
+        missing_pkgs+=(libxcb-cursor0)
+    fi
+
+    if [ ${#missing_pkgs[@]} -gt 0 ]; then
+        info "Installiere fehlende Pakete: ${missing_pkgs[*]}"
+        for pkg in "${missing_pkgs[@]}"; do
+            sudo apt-get install -y "$pkg" 2>/dev/null || warn "Paket nicht verfügbar: $pkg (wird übersprungen)"
+        done
+    else
+        ok "Alle Qt xcb Bibliotheken bereits installiert."
     fi
 fi
 
-# pyqtgraph + PyOpenGL + matplotlib via pip (force-reinstall)
-info "Aktualisiere pyqtgraph + PyOpenGL + matplotlib via pip..."
-pip install $PIP_BREAK_FLAG --force-reinstall "pyqtgraph>=0.13" "PyOpenGL>=3.1" "matplotlib>=3.5" || \
-    warn "pip force-reinstall fehlgeschlagen – Backplot funktioniert evtl. nicht."
+# pip-Abhängigkeiten nur installieren wenn Version nicht ausreicht
+info "Prüfe pip-Abhängigkeiten..."
+pip_deps_needed=()
+pip_installed pyqtgraph  0.13  || pip_deps_needed+=("pyqtgraph>=0.13")
+pip_installed PyOpenGL   3.1   || pip_deps_needed+=("PyOpenGL>=3.1")
+pip_installed matplotlib 3.5   || pip_deps_needed+=("matplotlib>=3.5")
 
-OS=$(. /etc/os-release 2>/dev/null && echo "${ID:-unknown}" || echo "unknown")
+if [ ${#pip_deps_needed[@]} -gt 0 ]; then
+    info "Installiere/aktualisiere: ${pip_deps_needed[*]}"
+    pip install $PIP_BREAK_FLAG "${pip_deps_needed[@]}" || \
+        warn "pip install fehlgeschlagen – Backplot funktioniert evtl. nicht."
+else
+    ok "Alle pip-Abhängigkeiten bereits aktuell."
+fi
 
 if [ "$OS" = "debian" ] || [ "$OS" = "ubuntu" ]; then
-    # Auf Debian/Ubuntu: PySide6 von apt behalten, pip soll es nicht überschreiben
+    pip_installed psutil || pip install $PIP_BREAK_FLAG psutil
     if $DEV_MODE; then
         info "Editable Reinstall (Debian, ohne pip-PySide6)..."
         pip install $PIP_BREAK_FLAG --no-deps -e .
@@ -178,8 +228,8 @@ if [ "$OS" = "debian" ] || [ "$OS" = "ubuntu" ]; then
         info "Reinstalliere thorcnc (Debian, ohne pip-PySide6)..."
         pip install $PIP_BREAK_FLAG --no-deps .
     fi
-    pip install $PIP_BREAK_FLAG --upgrade psutil
 else
+    EXTRAS="[backplot]"
     if $DEV_MODE; then
         info "Editable Reinstall mit Extras $EXTRAS..."
         pip install $PIP_BREAK_FLAG --upgrade -e ".$EXTRAS"
@@ -191,13 +241,10 @@ fi
 ok "thorcnc aktualisiert."
 
 # --- Subroutines synchronisieren ---------------------------------------------
-# Hinweis: Probe-Parameter (1000-1042) werden beim ThorCNC-Start automatisch
-# in die eigene var-Datei eingetragen - kein manueller Schritt nötig.
-
 install_subroutines() {
     SRC="$SCRIPT_DIR/configs/sim/subroutines"
     DEST="$HOME/linuxcnc/nc_files/subroutines"
-    
+
     if [ -d "$SRC" ]; then
         info "Synchronisiere Subroutines nach $DEST..."
         mkdir -p "$DEST"
@@ -216,8 +263,6 @@ fi
 
 # --- Probe-Parameter in var-Datei vorinitialisieren --------------------------
 seed_probe_params() {
-    # Sucht alle INI-Dateien im linuxcnc/configs-Verzeichnis und ergänzt
-    # fehlende Probe-Parameter (1000-1042) ohne bestehende Werte zu überschreiben.
     PROBE_PARAMS="1000 1001 1010 1011 1012 1013 1014 1020 1021 1030 1031 1040"
     CONFIGS_DIR="$HOME/linuxcnc/configs"
 
@@ -251,6 +296,8 @@ if [ ! -d "$DESKTOP_PATH" ] && [ -d "$HOME/Schreibtisch" ]; then
     DESKTOP_PATH="$HOME/Schreibtisch"
 fi
 
+THORCNC_ICON="$SCRIPT_DIR/thorcnc/images/icon.png"
+
 if [ -d "$DESKTOP_PATH" ] && confirm "Desktop-Verknüpfungen erstellen/aktualisieren (Update, Sim)?"; then
     SHORTCUT="$DESKTOP_PATH/ThorCNC-Update.desktop"
 
@@ -260,7 +307,7 @@ Type=Application
 Name=ThorCNC Update
 Comment=Zieht neueste Version und installiert thorcnc neu
 Exec=bash -c "cd '$SCRIPT_DIR' && ./update.sh; echo; echo 'Fertig.'; read -p 'Drücke Enter zum Schließen...' -n 1 -s"
-Icon=system-software-update
+Icon=$THORCNC_ICON
 Terminal=true
 Categories=Utility;
 EOD
@@ -276,7 +323,7 @@ Type=Application
 Name=ThorCNC Sim
 Comment=Startet ThorCNC in der Simulation
 Exec=bash -c "cd '$SCRIPT_DIR' && ./start.sh"
-Icon=applications-engineering
+Icon=$THORCNC_ICON
 Terminal=false
 Categories=Engineering;
 EOD
