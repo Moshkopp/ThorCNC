@@ -101,6 +101,10 @@ class StatusPoller(QObject):
     def stop(self):
         self._timer.stop()
 
+    def reset_file_state(self):
+        """Force next poll to emit file_loaded even if path hasn't changed."""
+        self._file = None
+
     def _poll(self):
         try:
             self.stat.poll()

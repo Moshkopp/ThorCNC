@@ -301,6 +301,8 @@ class FileManagerModule(ThorModule):
         """Load file into LinuxCNC."""
         if self._selected_filepath:
             self._t._user_program = self._selected_filepath
+            if self._t.poller:
+                self._t.poller.reset_file_state()
             self._t.cmd.mode(linuxcnc.MODE_AUTO)
             self._t.cmd.wait_complete()
             self._t.cmd.program_open(self._selected_filepath)

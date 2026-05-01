@@ -398,6 +398,10 @@ class ThorCNC(QObject):
         mapping = self._ARROW_JOG_MAP.get(event.key())
         if mapping is None:
             return False
+        from PySide6.QtWidgets import QLineEdit, QTextEdit, QPlainTextEdit, QSpinBox, QDoubleSpinBox, QAbstractSpinBox
+        fw = QApplication.focusWidget()
+        if isinstance(fw, (QLineEdit, QTextEdit, QPlainTextEdit, QSpinBox, QDoubleSpinBox, QAbstractSpinBox)):
+            return False
         if event.isAutoRepeat():
             return True
         if not self._is_machine_on:
