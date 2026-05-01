@@ -9,10 +9,24 @@ Handles:
 
 import os
 import linuxcnc
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QDir
+from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (QTreeView, QWidget, QHBoxLayout, QLabel,
                                QPushButton, QFileDialog, QFileSystemModel)
-from PySide6.QtCore import QDir
+
+
+class _GCodeFileSystemModel(QFileSystemModel):
+    """QFileSystemModel that highlights .nc/.ngc files with a distinct color."""
+
+    _GCODE_EXTS = {".nc", ".ngc"}
+    _COLOR = QColor("#4ec9b0")  # teal-green, clearly visible on dark bg
+
+    def data(self, index, role=Qt.ItemDataRole.DisplayRole):
+        if role == Qt.ItemDataRole.ForegroundRole and index.column() == 0:
+            path = self.filePath(index)
+            if os.path.splitext(path)[1].lower() in self._GCODE_EXTS:
+                return self._COLOR
+        return super().data(index, role)
 
 from .base import ThorModule
 from ..gcode_parser import parse_file
@@ -136,7 +150,7 @@ class FileManagerModule(ThorModule):
         self._file_home_dir = start_dir
 
         # File system model
-        self._fs_model = QFileSystemModel()
+        self._fs_model = _GCodeFileSystemModel()
         self._fs_model.setRootPath(start_dir)
         self._fs_model.setFilter(QDir.AllDirs | QDir.Files | QDir.NoDotAndDotDot)
 

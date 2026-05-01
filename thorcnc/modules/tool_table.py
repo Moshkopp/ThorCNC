@@ -219,14 +219,21 @@ class ToolTableModule(ThorModule):
                     dia_str = d.group(1) if d else ""
                     if dia_str.startswith("+"):
                         dia_str = dia_str[1:]
+                    len_str = z.group(1) if z else ""
+
+                    def _fmt3(s):
+                        try:
+                            return f"{float(s):.3f}"
+                        except (ValueError, TypeError):
+                            return s
 
                     row = self._widget.rowCount()
                     self._widget.insertRow(row)
 
                     self._widget.setItem(row, 0, NumericTableWidgetItem(t.group(1) if t else ""))
                     self._widget.setItem(row, 1, NumericTableWidgetItem(p.group(1) if p else ""))
-                    self._widget.setItem(row, 2, NumericTableWidgetItem(dia_str))
-                    self._widget.setItem(row, 3, NumericTableWidgetItem(z.group(1) if z else ""))
+                    self._widget.setItem(row, 2, NumericTableWidgetItem(_fmt3(dia_str)))
+                    self._widget.setItem(row, 3, NumericTableWidgetItem(_fmt3(len_str)))
                     self._widget.setItem(row, 4, QTableWidgetItem(comment))
 
             self._widget.sortByColumn(0, Qt.SortOrder.AscendingOrder)
