@@ -11,7 +11,10 @@ import os
 import re
 import linuxcnc
 from PySide6.QtCore import Qt, QTimer, Slot
-from PySide6.QtWidgets import (QTableWidget, QTableWidgetItem, QPushButton, QMenu, QColorDialog)
+from PySide6.QtWidgets import (
+    QTableWidget, QTableWidgetItem, QPushButton, QMenu, QColorDialog,
+    QLabel, QFrame, QGridLayout, QGroupBox, QSizePolicy,
+)
 from PySide6.QtGui import QColor
 
 from .base import ThorModule
@@ -37,6 +40,7 @@ class ToolTableModule(ThorModule):
     def setup(self):
         """Initialize tool table UI."""
         self._setup_tool_table()
+        self._setup_tool_status_panel()
 
     def connect_signals(self):
         """Wire tool table signals."""
@@ -102,6 +106,82 @@ class ToolTableModule(ThorModule):
             from PySide6.QtCore import QByteArray
             self._widget.horizontalHeader().restoreState(
                 QByteArray.fromHex(tt_state.encode()))
+
+    def _setup_tool_status_panel(self):
+        """Rebuild toolGroup with DRO design language (same classes as DRO module)."""
+        if not hasattr(self._t, "status_bar") or not self._t.status_bar:
+            return
+        toolGroup = self._t.status_bar.findChild(QGroupBox, "toolGroup")
+        if not toolGroup:
+            return
+
+        from PySide6.QtWidgets import QWidget, QSizePolicy
+        btn_width = 85
+
+        # Inner widget carries the grid — toolGroup's QVBoxLayout stays untouched
+        inner = QWidget()
+        inner.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        grid = QGridLayout(inner)
+        grid.setContentsMargins(8, 6, 8, 6)
+        grid.setSpacing(6)
+
+        # Row 0: LOAD (btn-blue, 85×44) | T-number (dro-value, white override)
+        btn_load = QPushButton("LOAD")
+        btn_load.setObjectName("btn_m6_change")
+        btn_load.setFixedSize(btn_width, 44)
+        btn_load.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self._t._add_class(btn_load, "btn-blue")
+        grid.addWidget(btn_load, 0, 0)
+
+        lbl_nr = QLabel("T0")
+        lbl_nr.setObjectName("label_tool_nr")
+        self._t._add_class(lbl_nr, "dro-value")
+        lbl_nr.setFixedHeight(44)
+        lbl_nr.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        grid.addWidget(lbl_nr, 0, 1)
+
+        # Separator (same as DRO)
+        sep = QFrame()
+        sep.setFrameShape(QFrame.Shape.HLine)
+        sep.setFixedHeight(2)
+        grid.addWidget(sep, 1, 0, 1, 2)
+
+        # Row 2: Ø (dro-axis-label) | diameter (dro-value, 52 px)
+        lbl_dia_sym = QLabel("Ø")
+        self._t._add_class(lbl_dia_sym, "dro-axis-label")
+        lbl_dia_sym.setFixedWidth(btn_width)
+        lbl_dia_sym.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        grid.addWidget(lbl_dia_sym, 2, 0)
+
+        lbl_dia = QLabel("0.000")
+        lbl_dia.setObjectName("tool_dia_label")
+        self._t._add_class(lbl_dia, "dro-value")
+        lbl_dia.setFixedHeight(52)
+        lbl_dia.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        grid.addWidget(lbl_dia, 2, 1)
+
+        # Row 3: L (dro-axis-label) | length (dro-value, 52 px)
+        lbl_len_sym = QLabel("L")
+        self._t._add_class(lbl_len_sym, "dro-axis-label")
+        lbl_len_sym.setFixedWidth(btn_width)
+        lbl_len_sym.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        grid.addWidget(lbl_len_sym, 3, 0)
+
+        lbl_len = QLabel("0.000")
+        lbl_len.setObjectName("tool_len_label")
+        self._t._add_class(lbl_len, "dro-value")
+        lbl_len.setFixedHeight(52)
+        lbl_len.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        grid.addWidget(lbl_len, 3, 1)
+
+        # Row 4: comment spans full width
+        lbl_comment = QLabel("-")
+        lbl_comment.setObjectName("tool_comment_label")
+        lbl_comment.setWordWrap(True)
+        grid.addWidget(lbl_comment, 4, 0, 1, 2)
+
+        grid.setColumnStretch(1, 1)
+        toolGroup.layout().addWidget(inner)
 
     def _load_tool_table(self):
         """Load tool table from .tbl file."""
