@@ -537,6 +537,7 @@ class ThorCNC(QObject):
         self.gcode_view_mod.connect_signals()
         self.mdi_mod.connect_signals()
         self.control_panel_mod.connect_signals()
+        self.simple_view_mod.connect_signals()
         self.backplot_mod.connect_signals()
         self.program_control.connect_signals()
         self.status_mod.connect_signals()

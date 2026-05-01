@@ -56,6 +56,7 @@ class ToolSelectionDialog(QDialog):
         self.table.setHorizontalHeaderLabels([_t("Tool (T)"), _t("Diameter (D)"), _t("Description")])
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
+        self.table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)
         self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.table.setSelectionMode(QAbstractItemView.SingleSelection)
         self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)
@@ -95,7 +96,7 @@ class ToolSelectionDialog(QDialog):
             t_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
             
             d_item = QTableWidgetItem(f"{tool.get('dia', 0.0):.3f}")
-            d_item.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+            d_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
             
             c_item = QTableWidgetItem(tool.get('comment', ''))
             

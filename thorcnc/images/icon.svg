@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+
+  <!-- Background -->
+  <rect width="512" height="512" rx="90" fill="#0d1117"/>
+  <rect x="4" y="4" width="504" height="504" rx="87" fill="none" stroke="#e5cc33" stroke-width="5" opacity="0.22"/>
+
+  <!-- T horizontal bar -->
+  <rect x="64" y="106" width="384" height="82" rx="16" fill="#e5cc33"/>
+  <rect x="64" y="106" width="384" height="28" rx="16" fill="white" opacity="0.10"/>
+
+  <!-- Chuck ring (shank → fluted section) -->
+  <rect x="198" y="182" width="116" height="20" rx="5" fill="#b89a15"/>
+
+  <!-- Shaft body -->
+  <rect x="210" y="200" width="92" height="172" fill="#e5cc33"/>
+
+  <!--
+    Helical flutes: diagonal lines at ~38° from vertical (right-hand helix, upper-right → lower-left).
+    Direction vector: (-260, 320). Perpendicular spacing: ~18px.
+    All endpoints pre-clipped to shaft bounds (x=210..302, y=200..372).
+    stroke-width=9 at 18px spacing → ~50% land/flute ratio (realistic 2-flute endmill).
+  -->
+  <g fill="none" stroke="#0d1117" stroke-width="9" opacity="0.42" stroke-linecap="butt">
+    <line x1="245" y1="200" x2="210" y2="244"/>
+    <line x1="274" y1="200" x2="210" y2="278"/>
+    <line x1="302" y1="201" x2="210" y2="315"/>
+    <line x1="302" y1="236" x2="210" y2="350"/>
+    <line x1="302" y1="272" x2="221" y2="372"/>
+    <line x1="302" y1="308" x2="250" y2="372"/>
+    <line x1="302" y1="344" x2="279" y2="372"/>
+  </g>
+
+  <!-- Endmill tip: square endmill with chamfered corners -->
+  <polygon points="210,372 302,372 284,410 228,410" fill="#e5cc33"/>
+  <!-- Flat cutting face -->
+  <rect x="228" y="407" width="56" height="10" rx="4" fill="#b89a15"/>
+
+</svg>

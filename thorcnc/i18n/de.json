@@ -216,6 +216,7 @@
     "Machine Behavior": "Maschinen-Verhalten",
     "Arrow key jogging (←→ X, ↑↓ Y, PgUp/Dn Z)": "Pfeiltasten-Joggen (←→ X, ↑↓ Y, PgUp/Dn Z)",
     "Enables keyboard jogging: arrow keys for X/Y, PgUp/Dn for Z.": "Ermöglicht Joggen per Tastatur: Pfeiltasten für X/Y, Bild↑↓ für Z.",
+    "The probe reads a negative Z value — enter the absolute value (positive) here.": "Der Taster zeigt einen negativen Z-Wert an — hier den Betrag (positiv) eintragen.",
     "Moving to machine zero (G53 X0 Y0 Z0)": "Fahre zu Maschinen-Nullpunkt (G53 X0 Y0 Z0)",
     "Moving to WCS X0 Y0 (via NGC)": "Fahre zu WCS X0 Y0 (via NGC)",
     "Start queue cleared": "Start-Vormerkung aufgehoben",

@@ -51,6 +51,10 @@ class StatusPoller(QObject):
     error_message        = Signal(str)
     info_message         = Signal(str)
 
+    # GUI control via HAL pins
+    simple_view_toggle   = Signal()    # rising edge on thorcnc.simple-view-toggle (Taster)
+    simple_view_state    = Signal(bool)  # direct state of thorcnc.simple-view (Schalter)
+
     # Periodic tick (for anything not covered above)
     periodic             = Signal()
 
@@ -84,6 +88,8 @@ class StatusPoller(QObject):
         self._gcodes         = None
         self._mcodes         = None
         self._dout           = None
+        self._simple_view_toggle = False
+        self._simple_view_state  = False
 
         self._timer = QTimer(self)
         self._timer.setInterval(interval_ms)
@@ -271,3 +277,17 @@ class StatusPoller(QObject):
         if homed != self._homed:
             self._homed = homed
             self.homed_changed.emit(list(homed))
+
+        try:
+            if self._hal_comp:
+                sv_toggle = bool(self._hal_comp["simple-view-toggle"])
+                if sv_toggle and not self._simple_view_toggle:
+                    self.simple_view_toggle.emit()
+                self._simple_view_toggle = sv_toggle
+
+                sv_state = bool(self._hal_comp["simple-view"])
+                if sv_state != self._simple_view_state:
+                    self._simple_view_state = sv_state
+                    self.simple_view_state.emit(sv_state)
+        except Exception:
+            pass

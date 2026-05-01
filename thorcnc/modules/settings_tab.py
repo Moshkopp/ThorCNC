@@ -398,7 +398,19 @@ class SettingsTabModule(ThorModule):
             gl_behavior.addStretch()
             col_behavior.addWidget(gb_behavior)
             adv_layout.addLayout(col_behavior, 1)
-            
+
+            # Col 3: About
+            col_about = QVBoxLayout()
+            gb_about = QGroupBox(_t("About"))
+            gl_about = QVBoxLayout(gb_about)
+            btn_about = QPushButton(_t("About ThorCNC"))
+            btn_about.setMinimumHeight(45)
+            btn_about.clicked.connect(self._show_about_dialog)
+            gl_about.addWidget(btn_about)
+            gl_about.addStretch()
+            col_about.addWidget(gb_about)
+            adv_layout.addLayout(col_about, 1)
+
             adv_layout.addStretch()
 
         # ── Abort Handler & Toolsetter Initialization ────────────────────────
@@ -420,6 +432,9 @@ class SettingsTabModule(ThorModule):
             dsb.valueChanged.connect(
                 lambda v, k=prefs_key: self._on_toolsensor_changed(k, v)
             )
+
+        if dsb := self._t._w(QDoubleSpinBox, "dsb_ts_spindle_zero"):
+            dsb.setToolTip(_t("The probe reads a negative Z value — enter the absolute value (positive) here."))
 
         if b := self._t._w(QPushButton, "btn_set_wechsel_pos"):
             b.clicked.connect(self._set_wechsel_pos_from_machine)
@@ -866,3 +881,16 @@ class SettingsTabModule(ThorModule):
     def run_linuxcnc_status(self):
         import subprocess
         subprocess.Popen(["linuxcnc_status"])
+
+    def _show_about_dialog(self):
+        from .. import __version__
+        dlg = QMessageBox()
+        dlg.setWindowTitle(_t("About ThorCNC"))
+        dlg.setText(
+            f"<h2>ThorCNC</h2>"
+            f"<p>{_t('Version')}: <b>{__version__}</b></p>"
+            f"<p>LinuxCNC VCP — Mill (mm), PySide6</p>"
+            f"<p>GPL-2.0-or-later</p>"
+        )
+        dlg.setStandardButtons(QMessageBox.StandardButton.Ok)
+        dlg.exec()

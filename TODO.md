@@ -4,11 +4,8 @@
 
 ## 🔲 Offene Punkte
 
-### HAL-Pins
-- [ ] Diverse Funktionen als HAL-Pin verfügbar machen (z.B. Betriebsmodus, Spindel-Status, aktive WCS, Vorschub-Override)
-
-### Programm-Icon
-- [ ] Icon für ThorCNC erstellen (SVG/PNG, für Taskbar, Desktop-Shortcut, Fenster-Titelleiste)
+### Versionierung
+- [ ] Automatische Versionierung (Bump-Script oder hatch-vcs) — noch offen
 
 
 
@@ -91,5 +88,15 @@ HAL, ControlPanel, Backplot, ProgramControl, Status, HighlightSettings
 | SurfaceMapWidget | ~283 | widgets/surface_map_widget.py |
 
 ---
+
+---
+
+## ✅ Heute abgeschlossen (01.05.2026)
+
+- [x] About-Button unter Settings → Advanced, zeigt Version aus `thorcnc.__version__` ✅
+- [x] Toolsetter Spindle Zero: Minimum = 0, Tooltip erklärt Vorzeichen-Konvention ✅
+- [x] Manual Tool Selection Dialog: Diameter zentriert, Spalten optimiert ✅
+- [x] HAL-Pins: `thorcnc.simple-view` (Schalter) + `thorcnc.simple-view-toggle` (Taster) ✅
+- [x] Programm-Icon: SVG erstellt (`thorcnc/images/icon.svg`), in App + install.sh eingebunden ✅
 
 *Letztes Update: 01.05.2026*

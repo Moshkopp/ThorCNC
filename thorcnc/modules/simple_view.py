@@ -23,9 +23,20 @@ class SimpleViewModule(ThorModule):
         self._setup_simple_overlay()
 
     def connect_signals(self):
-        # Poller updates for positions are handled via MainWindow delegation 
-        # or direct calls to self.simple_view in other modules (DRO, Spindle).
-        pass
+        self._t.poller.simple_view_toggle.connect(self._hal_toggle)
+        self._t.poller.simple_view_state.connect(self._hal_state)
+
+    def _hal_toggle(self):
+        if self.simple_view and self.simple_view.isVisible():
+            self.hide()
+        else:
+            self.show()
+
+    def _hal_state(self, active: bool):
+        if active:
+            self.show()
+        else:
+            self.hide()
 
     def _setup_simple_overlay(self):
         """Create SimpleView as a child overlay of the central widget."""

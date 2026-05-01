@@ -185,14 +185,19 @@ install_thorcnc() {
 # ── Desktop-Entry ─────────────────────────────────────────────────────────────
 install_desktop_entry() {
     DESKTOP_DIR="$HOME/.local/share/applications"
-    mkdir -p "$DESKTOP_DIR"
+    ICON_SRC="$SCRIPT_DIR/thorcnc/images/icon.svg"
+    ICON_DEST="$HOME/.local/share/icons/thorcnc.svg"
+    mkdir -p "$DESKTOP_DIR" "$HOME/.local/share/icons"
+    if [ -f "$ICON_SRC" ]; then
+        cp "$ICON_SRC" "$ICON_DEST"
+    fi
     cat > "$DESKTOP_DIR/thorcnc.desktop" <<EOF
 [Desktop Entry]
 Type=Application
 Name=ThorCNC
 Comment=LinuxCNC VCP – Fräse
 Exec=thorcnc
-Icon=applications-engineering
+Icon=$ICON_DEST
 Categories=Engineering;
 Terminal=false
 EOF

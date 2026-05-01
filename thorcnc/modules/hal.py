@@ -46,6 +46,10 @@ class HALModule(ThorModule):
             # Handwheel / TsHW Integration Pins
             hal_comp.newpin("jog-vel-final", hal.HAL_FLOAT, hal.HAL_OUT)
 
+            # GUI control inputs
+            hal_comp.newpin("simple-view",        hal.HAL_BIT, hal.HAL_IN)  # Schalter: 1=an, 0=aus
+            hal_comp.newpin("simple-view-toggle", hal.HAL_BIT, hal.HAL_IN)  # Taster: steigende Flanke = toggle
+
             # Großwerkzeug-Versatz am Toolsetter
             hal_comp.newpin("ts-contact-diameter", hal.HAL_FLOAT, hal.HAL_OUT)
             hal_comp.newpin("ts-large-tool-enable", hal.HAL_BIT,   hal.HAL_OUT)

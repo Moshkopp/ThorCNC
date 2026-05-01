@@ -16,7 +16,7 @@ import argparse
 
 from PySide6.QtWidgets import QApplication
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QSurfaceFormat
+from PySide6.QtGui import QSurfaceFormat, QIcon
 
 from .mainwindow import ThorCNC
 
@@ -79,6 +79,10 @@ def main():
 
     app = QApplication.instance() or QApplication(sys.argv)
     app.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
+
+    _icon_path = os.path.join(_DIR, "images", "icon.svg")
+    if os.path.isfile(_icon_path):
+        app.setWindowIcon(QIcon(_icon_path))
 
     os.environ.setdefault("THORCNC_THEME", theme)
     load_theme(app, theme)
