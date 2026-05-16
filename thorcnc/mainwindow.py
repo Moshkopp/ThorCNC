@@ -316,6 +316,22 @@ class ThorCNC(QObject):
         self.ui.setWindowTitle(name)
         # Machine envelope is set by backplot_mod.setup()
 
+    def get_axis_joint(self, axis: str) -> int:
+        """Returns the first joint index associated with the given axis (X, Y, Z, etc.)."""
+        axis = axis.upper()
+        coords = "XYZ"
+        if self.ini:
+            coords = (self.ini.find("TRAJ", "COORDINATES") or "XYZ").upper().replace(" ", "")
+        
+        # In LinuxCNC, the N-th character in COORDINATES corresponds to Joint N.
+        # For XYYZ: 0=X, 1=Y, 2=Y, 3=Z
+        try:
+            return coords.index(axis)
+        except ValueError:
+            # Fallback for standard 3-axis mill if axis not found in string
+            fallback = {"X": 0, "Y": 1, "Z": 2}
+            return fallback.get(axis, 0)
+
     # ── StatusPoller ──────────────────────────────────────────────────────────
 
     def _setup_poller(self):
@@ -383,21 +399,28 @@ class ThorCNC(QObject):
         return super().eventFilter(watched, event)
 
     # ── Arrow-key jog ──────────────────────────────────────────────────────
-    _ARROW_JOG_MAP = {
-        Qt.Key.Key_Right:    (0, +1),
-        Qt.Key.Key_Left:     (0, -1),
-        Qt.Key.Key_Up:       (1, +1),
-        Qt.Key.Key_Down:     (1, -1),
-        Qt.Key.Key_PageUp:   (2, +1),
-        Qt.Key.Key_PageDown: (2, -1),
-    }
 
     def _handle_arrow_jog_key(self, event, pressed: bool) -> bool:
         if not self.settings.get("arrow_key_jog", False):
             return False
-        mapping = self._ARROW_JOG_MAP.get(event.key())
+            
+        # Key -> Axis name mapping
+        key_map = {
+            Qt.Key.Key_Right:    ("X", +1),
+            Qt.Key.Key_Left:     ("X", -1),
+            Qt.Key.Key_Up:       ("Y", +1),
+            Qt.Key.Key_Down:     ("Y", -1),
+            Qt.Key.Key_PageUp:   ("Z", +1),
+            Qt.Key.Key_PageDown: ("Z", -1),
+        }
+        
+        mapping = key_map.get(event.key())
         if mapping is None:
             return False
+            
+        axis, sign = mapping
+        joint = self.get_axis_joint(axis)
+        
         from PySide6.QtWidgets import QLineEdit, QTextEdit, QPlainTextEdit, QSpinBox, QDoubleSpinBox, QAbstractSpinBox
         fw = QApplication.focusWidget()
         if isinstance(fw, (QLineEdit, QTextEdit, QPlainTextEdit, QSpinBox, QDoubleSpinBox, QAbstractSpinBox)):

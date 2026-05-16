@@ -38,17 +38,18 @@ class MotionModule(ThorModule):
         if b := btn("ref_all_button"):
             b.clicked.connect(self._home_all)
         if b := btn("ref_x_button"):
-            b.clicked.connect(lambda: self._home_joint(0))
+            b.clicked.connect(lambda: self._home_joint(self._t.get_axis_joint("X")))
         if b := btn("ref_y_button"):
-            b.clicked.connect(lambda: self._home_joint(1))
+            b.clicked.connect(lambda: self._home_joint(self._t.get_axis_joint("Y")))
         if b := btn("ref_z_button"):
-            b.clicked.connect(lambda: self._home_joint(2))
+            b.clicked.connect(lambda: self._home_joint(self._t.get_axis_joint("Z")))
         if b := btn("v_override_to_100_button"):
             b.clicked.connect(self._on_v_override_to_100)
         if b := btn("btn_go_to_home"):
             b.clicked.connect(self._go_to_home)
 
-        for axis, joint in (("x", 0), ("y", 1), ("z", 2)):
+        for axis in ("x", "y", "z"):
+            joint = self._t.get_axis_joint(axis)
             for dirn, sign in (("plus", 1), ("minus", -1)):
                 if b := btn(f"{axis}_{dirn}_jogbutton_3"):
                     b.pressed.connect(lambda a=joint, s=sign: self._jog_start(a, s))

@@ -103,7 +103,8 @@ class DROModule(ThorModule):
         sep.setFixedHeight(2)
         glay.addWidget(sep, 1, 0, 1, 6)
 
-        for i, (axis, joint) in enumerate([("X", 0), ("Y", 1), ("Z", 2)], start=2):
+        for i, axis in enumerate(["X", "Y", "Z"], start=2):
+            joint = self._t.get_axis_joint(axis)
             btn_zero = QPushButton(_t("ZERO\n{}").format(axis))
             btn_zero.setObjectName("dro_zero_btn")
             btn_zero.setFixedSize(btn_width, 52)
