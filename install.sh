@@ -101,6 +101,7 @@ install_deps() {
             info "Installiere Qt xcb Laufzeit-Bibliotheken (einzeln)..."
             for pkg in \
                 python3-pyside6 \
+                python3-pyside6.qtopengl \
                 python3-pyside6.qtopenglwidgets \
                 python3-pyside6.qtuitools \
                 python3-pyside6.qtsvg \
