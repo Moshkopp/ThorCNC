@@ -102,6 +102,8 @@ install_deps() {
             for pkg in \
                 python3-pyside6 \
                 python3-pyside6.qtopenglwidgets \
+                python3-pyside6.qtuitools \
+                python3-pyside6.qtsvg \
                 python3-opengl \
                 libopengl0 \
                 libegl1 \
