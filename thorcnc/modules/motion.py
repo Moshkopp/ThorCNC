@@ -17,6 +17,7 @@ class MotionModule(ThorModule):
         super().__init__(thorc)
         self._jog_velocity = 100.0
         self._jog_increment = 0.0
+        self._lbl_actual_feed = None
 
     def setup(self):
         self._setup_jog_display()
@@ -30,6 +31,7 @@ class MotionModule(ThorModule):
         if hasattr(p, 'rapid_override'):
             p.rapid_override.connect(self._on_rapid_override)
         p.homed_changed.connect(self._on_homed)
+        p.periodic.connect(self._update_actual_feed)
 
         def btn(name):
             from PySide6.QtWidgets import QPushButton
@@ -72,6 +74,15 @@ class MotionModule(ThorModule):
             b.clicked.connect(lambda: self._set_jog_increment(0.1))
         if b := btn("btn_jog_0_01"):
             b.clicked.connect(lambda: self._set_jog_increment(0.01))
+
+        # Add Actual Feed label to jogBox
+        from PySide6.QtWidgets import QGroupBox, QLabel
+        if box := ui.findChild(QGroupBox, "jogBox"):
+            if lay := box.layout():
+                self._lbl_actual_feed = QLabel("F: 0")
+                self._lbl_actual_feed.setObjectName("actual_feed_label")
+                self._lbl_actual_feed.setStyleSheet("font-weight: bold; color: #2ecc71; font-size: 11pt; margin-top: 4px;")
+                lay.addWidget(self._lbl_actual_feed)
 
     def _update_goto_home_style(self, all_homed: bool):
         in_auto = getattr(self._t, "_current_mode", None) == linuxcnc.MODE_AUTO
@@ -342,3 +353,10 @@ class MotionModule(ThorModule):
     def _jog_stop(self, joint: int):
         if self._jog_increment <= 0.0:
             self._t.cmd.jog(linuxcnc.JOG_STOP, False, joint)
+
+    def _update_actual_feed(self):
+        """Update the actual feed display in the jog panel."""
+        if not self._lbl_actual_feed:
+            return
+        feed = self._t.poller.stat.current_vel * 60.0
+        self._lbl_actual_feed.setText(f"Feed: {int(feed)}")

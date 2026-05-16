@@ -248,6 +248,7 @@ class DROModule(ThorModule):
             rpm = getattr(self._t.poller, '_spindle_actual', 0.0)
             if rpm is None or rpm <= 0:
                 rpm = abs(self._t.poller.stat.spindle[0]['speed'])
+
             sv.set_feed_rpm(feed, rpm)
 
     @Slot(list)

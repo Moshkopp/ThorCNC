@@ -218,6 +218,14 @@ QPushButton:checked {
     font-size: 16pt;
 }
 
+.dro-info {
+    font-family: 'Bebas Kai', 'Noto Sans', sans-serif;
+    font-size: 14pt;
+    font-weight: bold;
+    color: #c8daea;
+    padding: 2px 8px;
+}
+
 /* ── Run Controls ── */
 QPushButton#btn_run,
 QPushButton#btn_pause_mdi,
