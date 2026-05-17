@@ -1,11 +1,11 @@
 {
     "last_file_dir": "/home/moshy/Downloads",
-    "window_geometry": "01d9d0cb0003000000000000000000000000077f00000437000001100000001c0000060f0000036d00000001020000000780000000000000001c0000077f00000437",
-    "window_state": "000000ff00000000fd00000000000007800000040000000004000000040000000800000008fc00000000",
+    "window_geometry": "01d9d0cb0003000000000000000000000000077f00000437000001100000001c0000060f0000036d0000000100040000078000000000000000000000077f00000437",
+    "window_state": "000000ff00000000fd00000000000007800000041c00000004000000040000000800000008fc00000000",
     "backplot_view": {
-        "distance": 1006.4449618333251,
-        "elevation": 72.0,
-        "azimuth": 263.0,
+        "distance": 892.5830127612843,
+        "elevation": 26.0,
+        "azimuth": 266.0,
         "center": [
             303.0343322753906,
             253.02255249023438,
@@ -25,6 +25,17 @@
     "ts_search_vel": 300.0,
     "ts_probe_vel": 10.0,
     "mdi_history": [
+        "G53 G0 X0",
+        "G53 G0 Y0",
+        "G53 G0 Z0",
+        "G1 X10 Y20 F5000",
+        "G53 G0 X0 Y0",
+        "G53 G0 Z0",
+        "O<goto_zero_xy> call",
+        "G1 X10 Y20 F5000",
+        "O<goto_zero_xy> call",
+        "G53 G0 X0 Y0",
+        "G53 G0 Z0",
         "T5 M6 G43",
         "M61 Q0 G49",
         "T5 M6 G43",
@@ -63,18 +74,7 @@
         "T10 M6 G43",
         "T99 M6 G43",
         "T14 M6 G43",
-        "T10 M6 G43",
-        "T14 M6 G43",
-        "T99 M6 G43",
-        "T7 M6 G43",
-        "T99 M6 G43",
-        "T3 M6 G43",
-        "T99 M6 G43",
-        "G10 L2 P1 R45",
-        "T99 M6 G43",
-        "G53 G0 Z0",
-        "T99 M6 G43",
-        "G53 G0 Z0"
+        "T10 M6 G43"
     ],
     "theme": "dark",
     "backplot_msaa_samples": 16,
@@ -131,5 +131,7 @@
     },
     "shortcut_name": "Park",
     "shortcut_gcode": "G1 X10 Y20 F5000",
-    "last_tool": 5
+    "last_tool": 5,
+    "ui_font_family": "Roboto Condensed",
+    "ui_font_scale": 110
 }

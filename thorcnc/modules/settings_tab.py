@@ -6,7 +6,8 @@ from PySide6.QtCore import Qt, QTimer, QObject, QEvent
 from PySide6.QtWidgets import (
     QPushButton, QComboBox, QCheckBox, QGroupBox, QVBoxLayout,
     QWidget, QLineEdit, QHBoxLayout, QLabel, QTextEdit, QFrame,
-    QDoubleSpinBox, QMessageBox, QTabWidget, QColorDialog, QGridLayout
+    QDoubleSpinBox, QMessageBox, QTabWidget, QColorDialog, QGridLayout,
+    QSlider, QSpinBox
 )
 from PySide6.QtGui import QColor, QPixmap
 
@@ -233,6 +234,8 @@ class SettingsTabModule(ThorModule):
             # Linke Spalte: Theme, G-Code Highlighting, Language
             for w in left_widgets:
                 left_vbox.addWidget(w)
+
+            left_vbox.addWidget(self._build_ui_font_groupbox())
             left_vbox.addStretch()
 
             hbox.addLayout(left_vbox, 1)
@@ -588,6 +591,62 @@ class SettingsTabModule(ThorModule):
         self._setup_toolsetter_hover_images()
         self._write_ts_before_after()
         self._write_probe_before_after()
+
+    # ── UI Schriftart & Skalierung ────────────────────────────────────────────
+
+    def _build_ui_font_groupbox(self) -> QGroupBox:
+        """Dropdown für Schriftart + Slider für Schrift-Skalierung (live reload)."""
+        from ..main import UI_FONT_CHOICES, UI_FONT_DEFAULT, UI_FONT_SCALE_DEFAULT
+
+        gb = QGroupBox(_t("UI Font"))
+        v = QVBoxLayout(gb)
+
+        # Schriftart
+        row_family = QHBoxLayout()
+        row_family.addWidget(QLabel(_t("Family:")))
+        self._cb_ui_font = QComboBox()
+        for fam in UI_FONT_CHOICES:
+            self._cb_ui_font.addItem(fam, userData=fam)
+        saved_fam = self._t.settings.get("ui_font_family", UI_FONT_DEFAULT)
+        idx = self._cb_ui_font.findData(saved_fam)
+        self._cb_ui_font.setCurrentIndex(idx if idx >= 0 else 0)
+        self._cb_ui_font.currentIndexChanged.connect(self._on_ui_font_changed)
+        row_family.addWidget(self._cb_ui_font, 1)
+        v.addLayout(row_family)
+
+        # Skalierung
+        row_scale = QHBoxLayout()
+        row_scale.addWidget(QLabel(_t("Scale:")))
+        self._sl_ui_font = QSlider(Qt.Orientation.Horizontal)
+        self._sl_ui_font.setRange(80, 130)
+        self._sl_ui_font.setSingleStep(1)
+        self._sl_ui_font.setPageStep(5)
+        self._sl_ui_font.setTickPosition(QSlider.TickPosition.TicksBelow)
+        self._sl_ui_font.setTickInterval(10)
+        saved_scale = int(self._t.settings.get("ui_font_scale", UI_FONT_SCALE_DEFAULT))
+        self._sl_ui_font.setValue(max(80, min(130, saved_scale)))
+        self._lbl_ui_font_val = QLabel(f"{self._sl_ui_font.value()} %")
+        self._lbl_ui_font_val.setMinimumWidth(48)
+        self._sl_ui_font.valueChanged.connect(self._on_ui_font_scale_changed)
+        row_scale.addWidget(self._sl_ui_font, 1)
+        row_scale.addWidget(self._lbl_ui_font_val)
+        v.addLayout(row_scale)
+
+        return gb
+
+    def _on_ui_font_changed(self, idx: int):
+        fam = self._cb_ui_font.itemData(idx)
+        if not fam:
+            return
+        self._t.settings.set("ui_font_family", fam)
+        self._t.settings.save()
+        self._t.navigation.apply_theme()
+
+    def _on_ui_font_scale_changed(self, value: int):
+        self._lbl_ui_font_val.setText(f"{value} %")
+        self._t.settings.set("ui_font_scale", int(value))
+        self._t.settings.save()
+        self._t.navigation.apply_theme()
 
     # ── Backplot Farben ───────────────────────────────────────────────────────
 

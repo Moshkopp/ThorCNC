@@ -434,14 +434,20 @@ class NavigationModule(ThorModule):
         for m_txt in ("MANUAL", "AUTO", "MDI"):
             set_btn_state(f"MODE_{m_txt}", active=(m_txt == current_txt))
 
-    def apply_theme(self, name: str):
-        """Switches the UI theme and updates icons."""
-        valid_themes = ["dark", "light"]
-        if name not in valid_themes: return
-
+    def apply_theme(self, name: str = None):
+        """Switches the UI theme (or reapplies current) and updates icons."""
         from PySide6.QtWidgets import QApplication
-        from ..main import load_theme
-        load_theme(QApplication.instance(), name)
+        from ..main import load_theme, UI_FONT_DEFAULT, UI_FONT_SCALE_DEFAULT
+
+        valid_themes = ["dark", "light"]
+        if name is None:
+            name = self._t.settings.get("theme", "dark")
+        if name not in valid_themes:
+            return
+
+        ui_font  = self._t.settings.get("ui_font_family", UI_FONT_DEFAULT)
+        ui_scale = self._t.settings.get("ui_font_scale", UI_FONT_SCALE_DEFAULT)
+        load_theme(QApplication.instance(), name, ui_font, ui_scale)
         self._t.settings.set("theme", name)
         self._t.settings.save()
         self.update_nav_icons()

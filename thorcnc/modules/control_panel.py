@@ -81,12 +81,17 @@ class ControlPanelModule(ThorModule):
 
         _set_enabled(self._t.dro._btn_ref_all, can_mdi)
 
-        for i, axis in enumerate(("X", "Y", "Z")):
+        for axis in ("X", "Y", "Z"):
             if axis in self._t.dro._dro_ref_btn:
                 btn = self._t.dro._dro_ref_btn[axis]
-                is_homed = i < len(homed) and homed[i]
+                joints = self._t.get_axis_joints(axis)
+                is_homed = all(j < len(homed) and homed[j] for j in joints)
                 btn_enabled = can_mdi
                 if axis in ("X", "Y") and enable_g53 and is_homed and not z_safe:
+                    btn_enabled = False
+                # Block individual REF on unsafe tandem axes (only when not yet
+                # homed — once homed, button is in G53 mode and is fine).
+                if not is_homed and not self._t.is_axis_homing_safe(axis):
                     btn_enabled = False
                 _set_enabled(btn, btn_enabled)
 

@@ -13,6 +13,10 @@ QGroupBox { font-weight: bold; }
     color: #f0f4f9;
 }
 
+QPushButton {
+    font-family: 'Bebas Neue', 'Noto Sans', sans-serif;
+}
+
 QWidget {
     background-color: #3e4f62; /* Level 0: Main Background */
 }

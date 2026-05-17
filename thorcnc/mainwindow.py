@@ -316,21 +316,59 @@ class ThorCNC(QObject):
         self.ui.setWindowTitle(name)
         # Machine envelope is set by backplot_mod.setup()
 
-    def get_axis_joint(self, axis: str) -> int:
-        """Returns the first joint index associated with the given axis (X, Y, Z, etc.)."""
-        axis = axis.upper()
+    def _coords(self) -> str:
         coords = "XYZ"
         if self.ini:
             coords = (self.ini.find("TRAJ", "COORDINATES") or "XYZ").upper().replace(" ", "")
-        
-        # In LinuxCNC, the N-th character in COORDINATES corresponds to Joint N.
-        # For XYYZ: 0=X, 1=Y, 2=Y, 3=Z
+        return coords
+
+    def get_axis_joint(self, axis: str) -> int:
+        """Returns the first joint index associated with the given axis (X, Y, Z, etc.)."""
+        axis = axis.upper()
         try:
-            return coords.index(axis)
+            return self._coords().index(axis)
         except ValueError:
-            # Fallback for standard 3-axis mill if axis not found in string
             fallback = {"X": 0, "Y": 1, "Z": 2}
             return fallback.get(axis, 0)
+
+    def get_axis_joints(self, axis: str) -> list:
+        """All joint indices for this axis (multiple in tandem/gantry, e.g. XYYZ → Y=[1,2])."""
+        axis = axis.upper()
+        out = [i for i, c in enumerate(self._coords()) if c == axis]
+        if not out:
+            out = [self.get_axis_joint(axis)]
+        return out
+
+    def get_joint_axis(self, joint: int) -> str:
+        """Reverse map joint index → axis letter (empty string if unknown)."""
+        coords = self._coords()
+        return coords[joint] if 0 <= joint < len(coords) else ""
+
+    def _joint_home_sequence(self, joint: int):
+        """HOME_SEQUENCE from [JOINT_N], or None if unavailable."""
+        if not self.ini:
+            return None
+        val = self.ini.find(f"JOINT_{joint}", "HOME_SEQUENCE")
+        try:
+            return int(val) if val is not None else None
+        except (TypeError, ValueError):
+            return None
+
+    def is_axis_homing_safe(self, axis: str) -> bool:
+        """True if this axis can be safely homed by a single cmd.home(joint).
+
+        - Single-joint axis: always safe.
+        - Multi-joint axis: only safe if all joints share the SAME NEGATIVE
+          HOME_SEQUENCE (LinuxCNC's tandem-pair convention — both motors
+          home synchronously). Same positive sequence is NOT safe via
+          per-joint homing — must go through cmd.home(-1) / REF ALL.
+        """
+        joints = self.get_axis_joints(axis)
+        if len(joints) <= 1:
+            return True
+        seqs = [self._joint_home_sequence(j) for j in joints]
+        first = seqs[0]
+        return first is not None and first < 0 and all(s == first for s in seqs)
 
     # ── StatusPoller ──────────────────────────────────────────────────────────
 

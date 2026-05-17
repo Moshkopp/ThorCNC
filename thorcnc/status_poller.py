@@ -277,7 +277,7 @@ class StatusPoller(QObject):
         except Exception:
             pass
 
-        homed = tuple(s.homed[:3])
+        homed = tuple(s.homed[:9])
         if homed != self._homed:
             self._homed = homed
             self.homed_changed.emit(list(homed))

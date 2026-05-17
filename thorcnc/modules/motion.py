@@ -248,7 +248,16 @@ class MotionModule(ThorModule):
 
     @Slot(list)
     def _on_homed(self, homed: list):
-        self._t._all_joints_homed = all(i < len(homed) and homed[i] for i in range(3))
+        # Axis-aware AND tandem-aware: an axis is "homed" only when ALL its
+        # joints are homed (e.g. XYYZ → Y is homed iff joint 1 AND joint 2 are).
+        axis_homed = {}
+        for axis in ("X", "Y", "Z"):
+            joints = self._t.get_axis_joints(axis)
+            axis_homed[axis] = all(
+                0 <= j < len(homed) and bool(homed[j]) for j in joints
+            )
+
+        self._t._all_joints_homed = all(axis_homed.values())
         self._update_goto_home_style(self._t._is_machine_on and self._t._all_joints_homed)
 
         if self._t.dro._btn_ref_all:
@@ -260,14 +269,14 @@ class MotionModule(ThorModule):
 
         enable_g53 = self._t.settings.get("homing_g53_conversion", False)
 
-        for i, axis in enumerate(("X", "Y", "Z")):
-            is_homed = i < len(homed) and homed[i]
+        for axis in ("X", "Y", "Z"):
+            is_homed = axis_homed[axis]
             if axis in self._t.dro._dro_work:
                 lbl = self._t.dro._dro_work[axis]
                 lbl.setProperty("homed", is_homed)
                 lbl.style().unpolish(lbl)
                 lbl.style().polish(lbl)
-            
+
             if axis in self._t.dro._dro_ref_btn:
                 btn = self._t.dro._dro_ref_btn[axis]
 
@@ -316,23 +325,31 @@ class MotionModule(ThorModule):
         self._t.cmd.home(-1)
 
     def _home_joint(self, joint: int):
-        is_homed = False
+        axis = self._t.get_joint_axis(joint)
+        joints = self._t.get_axis_joints(axis) if axis else [joint]
+
         homed_status = getattr(self._t.poller, "_homed", [])
-        if 0 <= joint < len(homed_status):
-            is_homed = homed_status[joint]
+        axis_homed = all(
+            0 <= j < len(homed_status) and bool(homed_status[j]) for j in joints
+        )
 
         enable_g53 = self._t.settings.get("homing_g53_conversion", False)
+        if enable_g53 and axis_homed and axis:
+            self._t.mdi_mod._send_mdi(f"G53 G0 {axis}0")
+            return
 
-        if enable_g53 and is_homed:
-            axis_map = {0: "X", 1: "Y", 2: "Z"}
-            axis = axis_map.get(joint)
-            if axis:
-                self._t.mdi_mod._send_mdi(f"G53 G0 {axis}0")
+        # Refuse to individually home a tandem axis without negative HOME_SEQUENCE —
+        # would risk asynchronous joint motion (gantry rack).
+        if axis and not self._t.is_axis_homing_safe(axis):
+            self._t._status(_t("REF {} not safe individually — use REF ALL").format(axis),
+                            error=True)
             return
 
         self._t.cmd.mode(linuxcnc.MODE_MANUAL)
         self._t.cmd.wait_complete()
-        self._t.cmd.home(joint)
+        # For tandem pair with negative HOME_SEQUENCE, cmd.home(joints[0])
+        # homes both motors synchronously via LinuxCNC's joint-group logic.
+        self._t.cmd.home(joints[0])
 
     def _set_jog_increment(self, inc: float):
         self._jog_increment = inc

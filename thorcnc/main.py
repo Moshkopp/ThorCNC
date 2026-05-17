@@ -37,16 +37,23 @@ def _load_bundled_fonts(app: QApplication):
             print(f"[ThorCNC] Font konnte nicht geladen werden: {path}")
 
 
-def load_theme(app: QApplication, name: str):
+UI_FONT_DEFAULT = "Bebas Neue"
+UI_FONT_CHOICES = ("Bebas Neue", "Roboto Condensed", "Oswald", "Barlow Condensed")
+UI_FONT_SCALE_DEFAULT = 100  # percent
+
+
+def load_theme(app: QApplication, name: str,
+               ui_font: str = UI_FONT_DEFAULT,
+               ui_font_scale: int = UI_FONT_SCALE_DEFAULT):
     import re
     qss_file = os.path.join(THEMES_DIR, f"{name}.qss")
     if not os.path.isfile(qss_file):
         print(f"[ThorCNC] Theme '{name}' nicht gefunden, verwende 'dark'")
         qss_file = os.path.join(THEMES_DIR, "dark.qss")
-    
+
     with open(qss_file, "r") as f:
         content = f.read()
-    
+
     # Einfache Auflösung von @import "file.qss";
     def _resolve(match):
         filename = match.group(1)
@@ -55,8 +62,30 @@ def load_theme(app: QApplication, name: str):
             with open(path, "r") as f_imp:
                 return f_imp.read()
         return f"/* Import failed: {filename} */"
-    
+
     content = re.sub(r'@import\s+"([^"]+)";', _resolve, content)
+
+    # UI-Font + Skalierung: chirurgisch nur in QSS-Blöcken anwenden,
+    # die 'Bebas Neue' (= UI-Font-Marker) enthalten.
+    if ui_font not in UI_FONT_CHOICES:
+        ui_font = UI_FONT_DEFAULT
+    scale = max(60, min(200, int(ui_font_scale))) / 100.0
+
+    if ui_font != UI_FONT_DEFAULT or abs(scale - 1.0) > 0.001:
+        def _scale_block(m):
+            block = m.group(0)
+            if "'Bebas Neue'" not in block:
+                return block
+            block = re.sub(
+                r'(font-size:\s*)(\d+)(pt)',
+                lambda fs: f"{fs.group(1)}{max(6, round(int(fs.group(2)) * scale))}{fs.group(3)}",
+                block
+            )
+            return block
+        content = re.sub(r'\{[^}]*\}', _scale_block, content)
+        if ui_font != UI_FONT_DEFAULT:
+            content = content.replace("'Bebas Neue'", f"'{ui_font}'")
+
     app.setStyleSheet(content)
 
 
@@ -100,7 +129,11 @@ def main():
         app.setWindowIcon(QIcon(_icon_path))
 
     os.environ.setdefault("THORCNC_THEME", theme)
-    load_theme(app, theme)
+
+    prefs = _load_prefs_dict(ini_path)
+    ui_font  = prefs.get("ui_font_family", UI_FONT_DEFAULT)
+    ui_scale = prefs.get("ui_font_scale", UI_FONT_SCALE_DEFAULT)
+    load_theme(app, theme, ui_font, ui_scale)
 
     win = ThorCNC(ini_path=ini_path)
     win.show()
@@ -109,8 +142,8 @@ def main():
     sys.exit(app.exec())
 
 
-def _theme_from_prefs(ini_path: str) -> str:
-    """Liest das gespeicherte Theme aus der JSON-Prefs-Datei."""
+def _load_prefs_dict(ini_path: str) -> dict:
+    """Lädt das gesamte Prefs-Dict (ggf. via INI->PREFS_FILE-Pfad)."""
     try:
         prefs_file = "thorcnc.prefs"
         ini_dir = os.path.dirname(ini_path) if ini_path else os.path.expanduser("~")
@@ -126,13 +159,16 @@ def _theme_from_prefs(ini_path: str) -> str:
         if os.path.isfile(prefs_path):
             import json
             with open(prefs_path, "r", encoding="utf-8") as f:
-                prefs = json.load(f)
-            t = prefs.get("theme", "")
-            if t in ("dark", "light"):
-                return t
+                return json.load(f)
     except Exception:
         pass
-    return ""
+    return {}
+
+
+def _theme_from_prefs(ini_path: str) -> str:
+    """Liest das gespeicherte Theme aus der JSON-Prefs-Datei."""
+    t = _load_prefs_dict(ini_path).get("theme", "")
+    return t if t in ("dark", "light") else ""
 
 
 def _theme_from_ini(ini_path: str) -> str:
