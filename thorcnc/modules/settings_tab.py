@@ -259,18 +259,46 @@ class SettingsTabModule(ThorModule):
             
             self._te_abort_gcode = QTextEdit()
             self._te_abort_gcode.setPlaceholderText(_t("e.g. M5 M9\nG54\nG90\nG40"))
-            self._te_abort_gcode.setMinimumHeight(200)
-            
+            self._te_abort_gcode.setMaximumHeight(140)
+
             saved_abort = self._t.settings.get("abort_gcode", "M5 M9\nG54\nG90\nG40")
             self._te_abort_gcode.setPlainText(saved_abort)
             gl_abort.addWidget(self._te_abort_gcode)
-            
+
             btn_save_abort = QPushButton(_t("SAVE & APPLY"))
-            btn_save_abort.setMinimumHeight(45)
+            btn_save_abort.setMinimumHeight(40)
             btn_save_abort.clicked.connect(self._save_abort_handler)
             gl_abort.addWidget(btn_save_abort)
-            
+
             col_abort.addWidget(gb_abort)
+
+            # --- Custom Shortcut Button (SHORTS Flyout) ---
+            gb_shortcut = QGroupBox(_t("Custom Shortcut (SHORTS Flyout)"))
+            gl_shortcut = QVBoxLayout(gb_shortcut)
+
+            lbl_shortcut_desc = QLabel(_t(
+                "If a button label is set, a button appears in the SHORTS flyout "
+                "that executes the G-code below as MDI."))
+            lbl_shortcut_desc.setWordWrap(True)
+            gl_shortcut.addWidget(lbl_shortcut_desc)
+
+            gl_shortcut.addWidget(QLabel(_t("Button Label:")))
+            self._le_shortcut_name = QLineEdit()
+            self._le_shortcut_name.setPlaceholderText(_t("e.g. PARK"))
+            self._le_shortcut_name.setText(str(self._t.settings.get("shortcut_name", "")))
+            self._le_shortcut_name.textChanged.connect(self._on_shortcut_changed)
+            gl_shortcut.addWidget(self._le_shortcut_name)
+
+            gl_shortcut.addWidget(QLabel(_t("G-Code:")))
+            self._te_shortcut_gcode = QTextEdit()
+            self._te_shortcut_gcode.setPlaceholderText(_t("e.g. G53 G0 Z0\nG53 G0 X0 Y500"))
+            self._te_shortcut_gcode.setMaximumHeight(140)
+            self._te_shortcut_gcode.setPlainText(str(self._t.settings.get("shortcut_gcode", "")))
+            self._te_shortcut_gcode.textChanged.connect(self._on_shortcut_changed)
+            gl_shortcut.addWidget(self._te_shortcut_gcode)
+
+            col_abort.addWidget(gb_shortcut)
+            col_abort.addStretch()
             main_layout.addLayout(col_abort, 2)
             
             # --- Column 3: Macros (Right) ---
@@ -666,6 +694,15 @@ class SettingsTabModule(ThorModule):
         self._t.settings.set("abort_gcode", gcode)
         self._t.settings.save()
         self._write_on_abort_ngc()
+
+    def _on_shortcut_changed(self):
+        """Persist the custom shortcut and refresh the SHORTS flyout."""
+        self._t.settings.set("shortcut_name", self._le_shortcut_name.text())
+        self._t.settings.set("shortcut_gcode", self._te_shortcut_gcode.toPlainText())
+        self._t.settings.save()
+        nav = getattr(self._t, "navigation", None)
+        if nav and hasattr(nav, "refresh_custom_shortcut"):
+            nav.refresh_custom_shortcut()
 
     def _write_on_abort_ngc(self):
         """Aktualisiert die on_abort.ngc Datei basierend auf dem aktuellen UI-Inhalt."""

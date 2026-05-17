@@ -111,10 +111,24 @@ class NavigationModule(ThorModule):
                 i_btn.clicked.connect(
                     lambda checked=False, tt=item_text, nn=name: self.handle_flyout_action(nn, tt))
 
+            # User-defined shortcut button (only on the SHORTS panel)
+            if name == "SHORTS":
+                self._custom_shortcut_btn = QPushButton("")
+                self._custom_shortcut_btn.setObjectName("btn_flyout_item")
+                self._custom_shortcut_btn.setMinimumHeight(60)
+                self._custom_shortcut_btn.setMinimumWidth(180)
+                self._custom_shortcut_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+                self._custom_shortcut_btn.clicked.connect(self._execute_custom_shortcut)
+                self._custom_shortcut_btn.hide()
+                p_lay.addWidget(self._custom_shortcut_btn)
+
             p_lay.addStretch()
             self._flyout_panels[name] = panel
             btn.clicked.connect(
                 lambda checked=False, n=name, b=btn: self.toggle_flyout(n, b))
+
+        # Apply any saved custom shortcut now that the button exists
+        self.refresh_custom_shortcut()
 
         sidebar_lay = ui.leftPanel.layout()
         if sidebar_lay:
@@ -194,8 +208,14 @@ class NavigationModule(ThorModule):
         if is_opening:
             self._update_flyout_highlights()
 
-            num_items = panel.layout().count()
-            panel_height = (num_items * 60) + ((num_items - 1) * 5) + 10
+            # Count only widgets that are not explicitly hidden — the SHORTS
+            # panel has an optional custom-shortcut button that may be hidden.
+            lay = panel.layout()
+            num_items = sum(
+                1 for i in range(lay.count())
+                if (w := lay.itemAt(i).widget()) is not None and not w.isHidden()
+            )
+            panel_height = (num_items * 60) + max(0, num_items - 1) * 5 + 10
             panel.setFixedHeight(panel_height)
 
             panel.show()
@@ -288,6 +308,35 @@ class NavigationModule(ThorModule):
             pass
 
         self._update_flyout_highlights()
+
+    def refresh_custom_shortcut(self):
+        """Show/hide and label the user-defined SHORTS shortcut button."""
+        btn = getattr(self, "_custom_shortcut_btn", None)
+        if not btn:
+            return
+        name = str(self._t.settings.get("shortcut_name", "")).strip()
+        gcode = str(self._t.settings.get("shortcut_gcode", "")).strip()
+        if name and gcode:
+            btn.setText(name.upper())
+            btn.show()
+        else:
+            btn.hide()
+
+    def _execute_custom_shortcut(self):
+        """Run the user-defined G-code via MDI, line by line."""
+        gcode = str(self._t.settings.get("shortcut_gcode", "")).strip()
+        if not gcode:
+            return
+        try:
+            for line in (ln.strip() for ln in gcode.splitlines()):
+                if line and not line.startswith(";"):
+                    self._t.mdi_mod._send_mdi(line)
+                    self._t.cmd.wait_complete()
+            name = str(self._t.settings.get("shortcut_name", "")).strip() or _t("Shortcut")
+            self._t._status(_t("Custom shortcut '{}' executed").format(name))
+            self._close_shorts_on_idle = True
+        except Exception as e:
+            self._t._status(_t("Custom shortcut failed: {}").format(e))
 
     def toggle_line_queue_flyout(self):
         """Toggles the mini-flyout for line selection."""

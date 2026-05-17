@@ -3,9 +3,9 @@
     "window_geometry": "01d9d0cb0003000000000000000000000000077f00000437000001100000001c0000060f0000036d00000001020000000780000000000000001c0000077f00000437",
     "window_state": "000000ff00000000fd00000000000007800000040000000004000000040000000800000008fc00000000",
     "backplot_view": {
-        "distance": 892.5830127612843,
+        "distance": 1134.8316590364973,
         "elevation": 30.0,
-        "azimuth": -76.0,
+        "azimuth": -80.0,
         "center": [
             322.51116943359375,
             256.2047119140625,
@@ -25,6 +25,7 @@
     "ts_search_vel": 300.0,
     "ts_probe_vel": 10.0,
     "mdi_history": [
+        "blubb",
         "G53 G0 Z0",
         "T9 M6 G43",
         "T5 M6 G43",
@@ -73,8 +74,7 @@
         "T99 M6 G43",
         "G53 G0 Z0",
         "G53 G0 X0",
-        "G53 G0 Y0",
-        "G53 G0 Z0"
+        "G53 G0 Y0"
     ],
     "theme": "dark",
     "backplot_msaa_samples": 16,
@@ -128,5 +128,7 @@
     "ts_large_tool_enable": true,
     "backplot_colors": {
         "wcs_size": 48.0
-    }
+    },
+    "shortcut_name": "Park",
+    "shortcut_gcode": "blubb"
 }
