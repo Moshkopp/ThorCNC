@@ -1272,6 +1272,83 @@ QTabWidget#settings_tabs > QTabBar::tab:hover:!selected {
     background: #566a80;
 }
 
+/* ── Settings tab — improved readability ── */
+QTabWidget#settings_tabs QGroupBox {
+    background-color: #eef2f7;
+    border: 1px solid #b8c4d4;
+    border-radius: 6px;
+    margin-top: 20px;
+    padding: 12px 10px 10px 10px;
+}
+
+QTabWidget#settings_tabs QGroupBox::title {
+    subcontrol-origin: margin;
+    subcontrol-position: top left;
+    left: 12px;
+    padding: 3px 12px;
+    color: #1a4e80;
+    font-size: 10pt;
+    font-weight: bold;
+    background-color: #ffffff;
+    border: 1px solid #b8c4d4;
+    border-radius: 4px;
+}
+
+QTabWidget#settings_tabs QLabel {
+    color: #1a2230;
+    font-size: 10pt;
+}
+
+QTabWidget#settings_tabs QLabel#settings_desc_label {
+    color: #4a5a70;
+    font-size: 9pt;
+    margin-bottom: 4px;
+}
+
+QTabWidget#settings_tabs QLineEdit,
+QTabWidget#settings_tabs QTextEdit {
+    background-color: #ffffff;
+    border: 1px solid #b8c4d4;
+    border-radius: 4px;
+    padding: 5px 8px;
+    color: #1a2230;
+    selection-background-color: #3a7abf;
+}
+
+QTabWidget#settings_tabs QDoubleSpinBox,
+QTabWidget#settings_tabs QSpinBox,
+QTabWidget#settings_tabs QComboBox {
+    background-color: #ffffff;
+    border: 1px solid #b8c4d4;
+    border-radius: 4px;
+    padding: 2px 4px;
+    color: #1a2230;
+    selection-background-color: #3a7abf;
+    min-height: 22px;
+}
+
+/* Toolsetter tab — wider input fields for readability */
+QWidget#settings_tab_toolsetter QDoubleSpinBox,
+QWidget#settings_tab_toolsetter QSpinBox,
+QWidget#settings_tab_toolsetter QComboBox {
+    min-width: 140px;
+}
+
+QTabWidget#settings_tabs QLineEdit:focus,
+QTabWidget#settings_tabs QTextEdit:focus,
+QTabWidget#settings_tabs QDoubleSpinBox:focus,
+QTabWidget#settings_tabs QSpinBox:focus,
+QTabWidget#settings_tabs QComboBox:focus {
+    border-color: #2d6099;
+}
+
+QTabWidget#settings_tabs QFrame#settings_separator {
+    background-color: #b8c4d4;
+    min-height: 1px;
+    max-height: 1px;
+    margin: 4px 0;
+}
+
 QLabel#backplot_unavailable_label {
     color: #90a0b8;
     border: 1px dashed #6a7e96;

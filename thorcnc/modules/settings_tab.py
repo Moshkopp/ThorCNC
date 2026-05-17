@@ -2,13 +2,100 @@
 
 import os
 import linuxcnc
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import Qt, QTimer, QObject, QEvent
 from PySide6.QtWidgets import (
     QPushButton, QComboBox, QCheckBox, QGroupBox, QVBoxLayout,
     QWidget, QLineEdit, QHBoxLayout, QLabel, QTextEdit, QFrame,
     QDoubleSpinBox, QMessageBox, QTabWidget, QColorDialog, QGridLayout
 )
-from PySide6.QtGui import QColor
+from PySide6.QtGui import QColor, QPixmap
+
+
+class _HoverImageBridge(QObject):
+    """Event filter that swaps an image label between a default text and
+    field-specific images when the mouse enters/leaves watched widgets.
+
+    Child widgets inherit their parent's mapping by walking up the parent
+    chain — so X/Y/Z spinboxes in a Change-Position group all show the
+    group's image without needing individual entries.
+
+    A short grace timer on Leave avoids flicker when the mouse crosses
+    between sibling widgets inside the same group.
+    """
+
+    def __init__(self, image_label, mapping, assets_dir, default_text, parent=None):
+        super().__init__(parent)
+        self._image_label = image_label
+        self._mapping = mapping
+        self._assets_dir = assets_dir
+        self._default_text = default_text
+        self._current_pixmap = None
+        self._current_key = None  # (filename, caption) currently displayed, or None
+        image_label.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
+
+        self._leave_timer = QTimer(self)
+        self._leave_timer.setSingleShot(True)
+        self._leave_timer.setInterval(80)
+        self._leave_timer.timeout.connect(self._show_default)
+
+    def eventFilter(self, obj, event):
+        et = event.type()
+        if et == QEvent.Type.Enter:
+            entry = self._lookup_mapping(obj)
+            if entry:
+                self._leave_timer.stop()
+                self._show(*entry)
+        elif et == QEvent.Type.Leave:
+            # Delay the reset so a follow-up Enter on a sibling can cancel it.
+            self._leave_timer.start()
+        elif et == QEvent.Type.Resize and obj is self._image_label and self._current_pixmap:
+            self._rescale()
+        return False
+
+    def _lookup_mapping(self, widget):
+        """Walk up the parent chain looking for a mapped objectName."""
+        while widget is not None:
+            entry = self._mapping.get(widget.objectName())
+            if entry:
+                return entry
+            widget = widget.parent()
+        return None
+
+    def _show(self, filename, caption):
+        key = (filename, caption)
+        if key == self._current_key:
+            return  # already displayed — avoid flicker
+        self._current_key = key
+        path = os.path.join(self._assets_dir, filename) if filename else ""
+        if filename and os.path.isfile(path):
+            self._current_pixmap = QPixmap(path)
+            self._rescale()
+        else:
+            self._current_pixmap = None
+            self._image_label.clear()
+            self._image_label.setText(
+                f"<b>{caption}</b><br><i>(no image yet — place "
+                f"<code>{filename}</code> in <code>assets/toolsetter/</code>)</i>"
+                if filename else f"<b>{caption}</b>"
+            )
+
+    def _show_default(self):
+        if self._current_key is None:
+            return
+        self._current_key = None
+        self._current_pixmap = None
+        self._image_label.clear()
+        self._image_label.setText(self._default_text)
+
+    def _rescale(self):
+        if not self._current_pixmap:
+            return
+        size = self._image_label.size()
+        scaled = self._current_pixmap.scaled(
+            size, Qt.AspectRatioMode.KeepAspectRatio,
+            Qt.TransformationMode.SmoothTransformation,
+        )
+        self._image_label.setPixmap(scaled)
 
 _BACKPLOT_COLOR_KEYS = [
     ("tool",       "Cutter"),
@@ -47,6 +134,34 @@ class SettingsTabModule(ThorModule):
         ("dsb_ts_retract",      "ts_retract",      1.0),
         ("dsb_ts_spindle_zero", "ts_spindle_zero", 100.0),
     ]
+
+    # Map widget objectName -> (image filename, caption)
+    # Image files live in thorcnc/assets/toolsetter/.  Missing files fall back
+    # to a short caption, so adding images is incremental.
+    # Child widgets of a mapped widget inherit the parent's mapping via the
+    # event filter, so X / Y / Z spinboxes don't need their own entries.
+    _TS_HOVER_MAP = {
+        # Change Position — one image for the whole group (X/Y/Z share it)
+        "groupBox_ts_wechsel": ("change_position.png",
+                                "Change Position — safety location for manual tool changes (machine coords)"),
+        # Probe Position — one image for the whole group
+        "groupBox_ts_mess":    ("probe_position.png",
+                                "Probe Position — XY of the sensor, Z of the probe surface"),
+        # Measurement parameters — one image per parameter
+        "dsb_ts_spindle_zero": ("spindle_zero.png",
+                                "Spindle Zero — reference tool measurement at G59.3"),
+        "dsb_ts_max_probe":    ("max_probe.png",
+                                "MAX Probe — maximum probing distance (negative = downwards)"),
+        "dsb_ts_retract":      ("retract.png",
+                                "Retract — distance after first contact before fine measurement"),
+        "dsb_ts_search_vel":   ("search_vel.png",
+                                "Search Vel — fast pre-positioning velocity (mm/min)"),
+        "dsb_ts_probe_vel":    ("probe_vel.png",
+                                "Probe Vel — slow probing velocity for fine measurement (mm/min)"),
+        # Macros
+        "te_ts_before":        ("ts_before.png",  "Before Toolsetter — G-code before each measurement"),
+        "te_ts_after":         ("ts_after.png",   "After Toolsetter — G-code after each measurement"),
+    }
 
     def __init__(self, thorc):
         super().__init__(thorc)
@@ -470,6 +585,7 @@ class SettingsTabModule(ThorModule):
             b.clicked.connect(self._set_taster_pos_from_machine)
 
         self._setup_large_tool_offset()
+        self._setup_toolsetter_hover_images()
         self._write_ts_before_after()
         self._write_probe_before_after()
 
@@ -579,6 +695,22 @@ class SettingsTabModule(ThorModule):
         "Y-": ( 0.0, -1.0),
     }
 
+    @staticmethod
+    def _find_containing_layout(widget, layout):
+        """Return the layout (or sub-layout) that directly contains widget."""
+        if widget is None or layout is None:
+            return None
+        for i in range(layout.count()):
+            item = layout.itemAt(i)
+            if item.widget() is widget:
+                return layout
+            sub = item.layout()
+            if sub is not None:
+                found = SettingsTabModule._find_containing_layout(widget, sub)
+                if found is not None:
+                    return found
+        return None
+
     def _setup_large_tool_offset(self):
         """Neue GroupBox im Toolsetter-Tab für den Großwerkzeug-Versatz."""
         ts_tab = self._t._w(QWidget, "settings_tab_toolsetter")
@@ -639,10 +771,74 @@ class SettingsTabModule(ThorModule):
         row_lay.addStretch()
         vbox.addLayout(row_lay)
 
-        layout.addWidget(gb)
+        # Place Large Tools beneath the "Beschreibung" group on the right column.
+        # Fallback to appending full width if the structure can't be found.
+        gb_info = ts_tab.findChild(QGroupBox, "groupBox_ts_info")
+        h_layout = self._find_containing_layout(gb_info, layout)
+        if gb_info and h_layout is not None:
+            idx = h_layout.indexOf(gb_info)
+            h_layout.takeAt(idx)  # detach from horizontal row
+            right_col = QVBoxLayout()
+            right_col.setSpacing(10)
+            right_col.addWidget(gb_info)
+            right_col.addWidget(gb)
+            right_col.addStretch()
+            h_layout.insertLayout(idx, right_col)
+        else:
+            layout.addWidget(gb)
 
         # HAL-Pins beim Start setzen
         self._sync_large_tool_hal()
+
+    def _setup_toolsetter_hover_images(self):
+        """Turn the 'Beschreibung' label into a hover-driven image viewer.
+
+        On mouse-enter of a watched input widget, the relevant image is
+        displayed; on mouse-leave the original description text returns.
+        Missing image files fall back to a short caption — adding images
+        is incremental and the UI stays functional without them.
+        """
+        ts_tab = self._t._w(QWidget, "settings_tab_toolsetter")
+        if not ts_tab:
+            return
+        lbl_desc = ts_tab.findChild(QLabel, "lbl_ts_desc")
+        if not lbl_desc:
+            return
+
+        # Give the input column more horizontal room (UI default is 460)
+        frame_inputs = ts_tab.findChild(QFrame, "frame_ts_inputs")
+        if frame_inputs:
+            frame_inputs.setMaximumWidth(520)
+
+        # Give the label space to show large images; preserve text wrap as fallback.
+        lbl_desc.setWordWrap(True)
+        lbl_desc.setMinimumSize(360, 380)
+        lbl_desc.setScaledContents(False)
+
+        assets_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)),
+                                  "assets", "toolsetter")
+
+        bridge = _HoverImageBridge(
+            image_label=lbl_desc,
+            mapping=self._TS_HOVER_MAP,
+            assets_dir=assets_dir,
+            default_text=lbl_desc.text(),
+            parent=ts_tab,
+        )
+        self._ts_hover_bridge = bridge  # keep reference alive
+
+        # Install the filter on every widget mentioned in the mapping AND on
+        # all of its children — so child spinboxes/labels inherit the mapping
+        # via the parent-chain lookup in _HoverImageBridge.
+        for obj_name in self._TS_HOVER_MAP.keys():
+            w = ts_tab.findChild(QWidget, obj_name)
+            if not w:
+                continue
+            w.installEventFilter(bridge)
+            for child in w.findChildren(QWidget):
+                child.installEventFilter(bridge)
+        # Also watch the description label itself for resize events
+        lbl_desc.installEventFilter(bridge)
 
     def _sync_large_tool_hal(self):
         """Alle Großwerkzeug-HAL-Pins aus den gespeicherten Werten setzen."""
