@@ -151,8 +151,8 @@ QPushButton:checked {
 .btn-blue {
     background-color: #3a7abf;
     color: white;
-    font-family: 'Bebas Kai', 'Noto Sans', sans-serif;
-    font-size: 10pt;
+    font-family: 'Bebas Neue', 'Noto Sans', sans-serif;
+    font-size: 13pt;
     font-weight: bold;
     border: 1px solid #2d6099;
 }
@@ -162,8 +162,8 @@ QPushButton:checked {
 .btn-green {
     background-color: #4a5a6e;
     color: #eef2f7;
-    font-family: 'Bebas Kai', 'Noto Sans', sans-serif;
-    font-size: 10pt;
+    font-family: 'Bebas Neue', 'Noto Sans', sans-serif;
+    font-size: 13pt;
     font-weight: bold;
     border: 1px solid #6a7e96;
 }
@@ -173,8 +173,8 @@ QPushButton:checked {
 .btn-red {
     background-color: #c0392b;
     color: white;
-    font-family: 'Bebas Kai', 'Noto Sans', sans-serif;
-    font-size: 10pt;
+    font-family: 'Bebas Neue', 'Noto Sans', sans-serif;
+    font-size: 13pt;
     font-weight: bold;
     border: 1px solid #8e2a20;
 }
@@ -199,8 +199,8 @@ QPushButton:checked {
     border: 1px solid #6a7e96;
     border-radius: 4px;
     padding: 2px 8px;
-    font-family: 'Bebas Kai', 'Noto Sans', sans-serif;
-    font-size: 16pt;
+    font-family: 'Bebas Neue', 'Noto Sans', sans-serif;
+    font-size: 19pt;
     color: #2ecc71;
 }
 
@@ -210,16 +210,16 @@ QPushButton:checked {
 
 .dro-machine {
     color: #c8daea;
-    font-size: 16pt;
+    font-size: 19pt;
 }
 
 .dro-dtg {
     color: #f39c12;
-    font-size: 16pt;
+    font-size: 19pt;
 }
 
 .dro-info {
-    font-family: 'Bebas Kai', 'Noto Sans', sans-serif;
+    font-family: 'Bebas Neue', 'Noto Sans', sans-serif;
     font-size: 14pt;
     font-weight: bold;
     color: #c8daea;
@@ -1135,18 +1135,18 @@ QLabel#section_title {
 }
 
 QLabel[objectName="dro_header"] {
-    font: bold 12pt "Bebas Kai";
+    font: bold 12pt "Bebas Neue";
     color: #eef2f7;
     padding: 0 4px;
 }
 
 QLabel[objectName="dro_axis_label"] {
-    font: bold 20pt "Bebas Kai";
+    font: bold 20pt "Bebas Neue";
     color: #eef2f7;
 }
 
 QLabel[objectName="dro_work"] {
-    font: 18pt "Bebas Kai";
+    font: 18pt "Bebas Neue";
     color: #00dd55;
     background-color: #3e4f62;
     border-radius: 3px;
@@ -1154,7 +1154,7 @@ QLabel[objectName="dro_work"] {
 }
 
 QLabel[objectName="dro_machine"] {
-    font: 18pt "Bebas Kai";
+    font: 18pt "Bebas Neue";
     color: #c8daea;
     background-color: #3e4f62;
     border-radius: 3px;
@@ -1162,7 +1162,7 @@ QLabel[objectName="dro_machine"] {
 }
 
 QLabel[objectName="dro_dtg"] {
-    font: 18pt "Bebas Kai";
+    font: 18pt "Bebas Neue";
     color: #e67e22;
     background-color: #3e4f62;
     border-radius: 3px;
@@ -1170,7 +1170,7 @@ QLabel[objectName="dro_dtg"] {
 }
 
 QComboBox#wcsCombo {
-    font: bold 12pt "Bebas Kai";
+    font: bold 12pt "Bebas Neue";
     color: #eef2f7;
     background: #3e4f62;
     border: 1px solid #6a7e96;
@@ -1231,8 +1231,8 @@ QPushButton#rapid_override_to_100_button,
 QPushButton#v_override_to_100_button {
     background-color: #3a7abf;
     color: white;
-    font-family: 'Bebas Kai', 'Noto Sans', sans-serif;
-    font-size: 10pt;
+    font-family: 'Bebas Neue', 'Noto Sans', sans-serif;
+    font-size: 13pt;
     font-weight: bold;
     border: 1px solid #2d6099;
     border-radius: 4px;
@@ -1434,7 +1434,7 @@ QPushButton#btn_probe_center_mode:checked {
 
 /* ── Tool-Timer / Status ── */
 #time_display {
-    font-family: 'Bebas Kai';
+    font-family: 'Bebas Neue';
     font-size: 14pt;
     color: #cc0000;
     font-weight: bold;
@@ -1490,7 +1490,7 @@ QLabel#m6ToolNumLarge {
     color: #f0883e;
     font-size: 72pt;
     font-weight: 900;
-    font-family: 'Bebas Kai', 'DejaVu Sans', sans-serif;
+    font-family: 'Bebas Neue', 'DejaVu Sans', sans-serif;
 }
 
 QLabel#m6ToolDescription {

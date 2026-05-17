@@ -16,12 +16,25 @@ import argparse
 
 from PySide6.QtWidgets import QApplication
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QSurfaceFormat, QIcon
+from PySide6.QtGui import QSurfaceFormat, QIcon, QFontDatabase
 
 from .mainwindow import ThorCNC
 
 _DIR = os.path.dirname(__file__)
 THEMES_DIR = os.path.join(_DIR, "themes")
+FONTS_DIR  = os.path.join(_DIR, "assets", "fonts")
+
+
+def _load_bundled_fonts(app: QApplication):
+    """Lädt gebündelte Schriften, damit die UI distro-unabhängig identisch aussieht."""
+    if not os.path.isdir(FONTS_DIR):
+        return
+    for name in sorted(os.listdir(FONTS_DIR)):
+        if not name.lower().endswith((".ttf", ".otf")):
+            continue
+        path = os.path.join(FONTS_DIR, name)
+        if QFontDatabase.addApplicationFont(path) < 0:
+            print(f"[ThorCNC] Font konnte nicht geladen werden: {path}")
 
 
 def load_theme(app: QApplication, name: str):
@@ -79,6 +92,8 @@ def main():
 
     app = QApplication.instance() or QApplication(sys.argv)
     app.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
+
+    _load_bundled_fonts(app)
 
     _icon_path = os.path.join(_DIR, "images", "icon.png")
     if os.path.isfile(_icon_path):

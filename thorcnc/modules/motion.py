@@ -170,7 +170,7 @@ class MotionModule(ThorModule):
         p.drawEllipse(QPointF(cx, cy), r, r)
 
         sign = "+" if direction in ("up", "right") else "-"
-        font = QFont("Bebas Kai", max(8, size // 3))
+        font = QFont("Bebas Neue", max(8, size // 3))
         font.setBold(True)
         p.setFont(font)
         label_color = ac.lighter(160)

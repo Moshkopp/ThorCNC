@@ -4,11 +4,11 @@
     "window_state": "000000ff00000000fd00000000000007800000040000000004000000040000000800000008fc00000000",
     "backplot_view": {
         "distance": 1006.4449618333251,
-        "elevation": 30.0,
-        "azimuth": 277.0,
+        "elevation": 72.0,
+        "azimuth": 263.0,
         "center": [
-            311.4662780761719,
-            254.057861328125,
+            303.0343322753906,
+            253.02255249023438,
             -117.02154541015625
         ]
     },
@@ -25,6 +25,9 @@
     "ts_search_vel": 300.0,
     "ts_probe_vel": 10.0,
     "mdi_history": [
+        "T5 M6 G43",
+        "M61 Q0 G49",
+        "T5 M6 G43",
         "T1 M6 G43",
         "M61 Q0 G49",
         "T1 M6 G43",
@@ -71,10 +74,7 @@
         "T99 M6 G43",
         "G53 G0 Z0",
         "T99 M6 G43",
-        "G53 G0 Z0",
-        "T99 M6 G43",
-        "T7 M6 G43",
-        "T99 M6 G43"
+        "G53 G0 Z0"
     ],
     "theme": "dark",
     "backplot_msaa_samples": 16,
@@ -131,5 +131,5 @@
     },
     "shortcut_name": "Park",
     "shortcut_gcode": "G1 X10 Y20 F5000",
-    "last_tool": 1
+    "last_tool": 5
 }

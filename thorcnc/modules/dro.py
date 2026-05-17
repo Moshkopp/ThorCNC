@@ -49,7 +49,7 @@ class DROModule(ThorModule):
         
         btn_width = 85
         axis_width = 50
-        val_width = 120 
+        val_width = 140
 
         # ZERO ALL
         btn_zero_all = QPushButton(_t("ZERO\nALL"))
