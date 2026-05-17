@@ -84,7 +84,15 @@ class MotionModule(ThorModule):
                 
             self._lbl_actual_feed = QLabel("Feed: 0", parent_widget)
             self._lbl_actual_feed.setObjectName("actual_feed_label")
-            self._lbl_actual_feed.setStyleSheet("font-weight: bold; color: #2ecc71; font-size: 20pt; background-color: transparent;")
+            self._lbl_actual_feed.setStyleSheet(
+                "font-weight: bold; "
+                "color: #2ecc71; "
+                "font-size: 20pt; "
+                "background-color: rgba(25, 28, 30, 0.85); "
+                "border: 1.5px solid #2ecc71; "
+                "border-radius: 5px; "
+                "padding: 4px 10px;"
+            )
             self._lbl_actual_feed.move(15, 15)
             self._lbl_actual_feed.adjustSize()
             self._lbl_actual_feed.raise_()
