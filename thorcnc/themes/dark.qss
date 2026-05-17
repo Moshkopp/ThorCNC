@@ -1182,7 +1182,7 @@ QLabel[objectName="dro_dtg"] {
 }
 
 QComboBox#wcsCombo {
-    font: bold 12pt "Bebas Neue";
+    font: bold 18pt "Bebas Neue";
     color: #eeeeec;
     background: rgb(60,68,70);
     border: 1px solid rgb(186,189,182);

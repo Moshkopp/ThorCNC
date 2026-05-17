@@ -4,12 +4,12 @@
     "window_state": "000000ff00000000fd00000000000007800000041c00000004000000040000000800000008fc00000000",
     "backplot_view": {
         "distance": 892.5830127612843,
-        "elevation": 16.0,
-        "azimuth": 259.0,
+        "elevation": 23.0,
+        "azimuth": -80.0,
         "center": [
-            303.0343322753906,
-            253.02255249023438,
-            -117.02154541015625
+            277.2605895996094,
+            244.14797973632812,
+            -121.76220703125
         ]
     },
     "main_splitter": "000000ff00000001000000030000024f0000005a000002b001ffffffff010000000100",
@@ -25,6 +25,14 @@
     "ts_search_vel": 300.0,
     "ts_probe_vel": 10.0,
     "mdi_history": [
+        "G53 G0 Z-15",
+        "G1 X10 Y20 F5000",
+        "G53 G0 X0",
+        "G53 G0 Y0",
+        "G53 G0 Z0",
+        "T3 M6 G43",
+        "T6 M6 G43",
+        "T4 M6 G43",
         "G53 G0 X0",
         "G53 G0 Y0",
         "G53 G0 Z0",
@@ -66,15 +74,7 @@
         "O<goto_zero_xy> call",
         "blubb",
         "T8 M6 G43",
-        "blubb",
-        "G53 G0 Z0",
-        "T9 M6 G43",
-        "T5 M6 G43",
-        "T9 M6 G43",
-        "T10 M6 G43",
-        "T99 M6 G43",
-        "T14 M6 G43",
-        "T10 M6 G43"
+        "blubb"
     ],
     "theme": "dark",
     "backplot_msaa_samples": 16,
@@ -129,9 +129,9 @@
     "backplot_colors": {
         "wcs_size": 48.0
     },
-    "shortcut_name": "Park",
-    "shortcut_gcode": "G1 X10 Y20 F5000",
-    "last_tool": 5,
+    "shortcut_name": "Park ",
+    "shortcut_gcode": "G53 G0 Z-15",
+    "last_tool": 3,
     "ui_font_family": "Roboto Condensed",
-    "ui_font_scale": 110
+    "ui_font_scale": 101
 }
