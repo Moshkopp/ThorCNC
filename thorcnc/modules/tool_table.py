@@ -176,11 +176,17 @@ class ToolTableModule(ThorModule):
         lbl_len.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         grid.addWidget(lbl_len, 3, 1)
 
-        # Row 4: comment spans full width
+        # Separator (between length and tool comment)
+        sep2 = QFrame()
+        sep2.setFrameShape(QFrame.Shape.HLine)
+        sep2.setFixedHeight(2)
+        grid.addWidget(sep2, 4, 0, 1, 2)
+
+        # Row 5: comment spans full width
         lbl_comment = QLabel("-")
         lbl_comment.setObjectName("tool_comment_label")
         lbl_comment.setWordWrap(True)
-        grid.addWidget(lbl_comment, 4, 0, 1, 2)
+        grid.addWidget(lbl_comment, 5, 0, 1, 2)
 
         grid.setColumnStretch(1, 1)
         toolGroup.layout().addWidget(inner)
