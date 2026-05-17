@@ -84,8 +84,9 @@ class MotionModule(ThorModule):
                 
             self._lbl_actual_feed = QLabel("Feed: 0", parent_widget)
             self._lbl_actual_feed.setObjectName("actual_feed_label")
-            self._lbl_actual_feed.setStyleSheet("font-weight: bold; color: #2ecc71; font-size: 14pt; background-color: transparent;")
-            self._lbl_actual_feed.move(10, 10)
+            self._lbl_actual_feed.setStyleSheet("font-weight: bold; color: #2ecc71; font-size: 20pt; background-color: transparent;")
+            self._lbl_actual_feed.move(15, 15)
+            self._lbl_actual_feed.adjustSize()
             self._lbl_actual_feed.raise_()
             self._lbl_actual_feed.show()
 
@@ -411,3 +412,4 @@ class MotionModule(ThorModule):
             return
         feed = self._t.poller.stat.current_vel * 60.0
         self._lbl_actual_feed.setText(f"Feed: {int(feed)}")
+        self._lbl_actual_feed.adjustSize()

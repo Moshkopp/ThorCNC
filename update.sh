@@ -78,11 +78,6 @@ collect_missing_apt() {
     [ "$OS" != "debian" ] && [ "$OS" != "ubuntu" ] && return 0
 
     local pkgs=(
-        python3-pyside6
-        python3-pyside6.qtopengl
-        python3-pyside6.qtopenglwidgets
-        python3-pyside6.qtuitools
-        python3-pyside6.qtsvg
         python3-opengl
         libopengl0
         libegl1
@@ -95,6 +90,17 @@ collect_missing_apt() {
         libxcb-xkb1
         libxkbcommon-x11-0
     )
+
+    if apt-cache show python3-pyside6 &>/dev/null; then
+        pkgs+=(
+            python3-pyside6
+            python3-pyside6.qtopengl
+            python3-pyside6.qtopenglwidgets
+            python3-pyside6.qtuitools
+            python3-pyside6.qtsvg
+        )
+    fi
+
     for pkg in "${pkgs[@]}"; do
         apt_installed "$pkg" || MISSING_APT+=("$pkg")
     done
@@ -112,6 +118,9 @@ collect_missing_pip() {
     pip_installed matplotlib 3.5  || MISSING_PIP+=("matplotlib>=3.5")
     if [ "$OS" = "debian" ] || [ "$OS" = "ubuntu" ]; then
         pip_installed psutil || MISSING_PIP+=("psutil")
+        if ! apt-cache show python3-pyside6 &>/dev/null; then
+            pip_installed PySide6 || MISSING_PIP+=("PySide6")
+        fi
     fi
 }
 
@@ -131,7 +140,7 @@ install_missing_pip() {
 
 reinstall_thorcnc() {
     # PySide6-Konflikt entschärfen (apt vs pip)
-    if [ "$OS" = "debian" ] || [ "$OS" = "ubuntu" ]; then
+    if { [ "$OS" = "debian" ] || [ "$OS" = "ubuntu" ]; } && apt-cache show python3-pyside6 &>/dev/null; then
         if pip show PySide6 &>/dev/null 2>&1; then
             info "Entferne pip-PySide6 (apt-Version soll genutzt werden)..."
             pip uninstall -y PySide6 PySide6-Addons PySide6-Essentials shiboken6 2>/dev/null || true
