@@ -1589,6 +1589,18 @@ QPushButton#btnToolConfirm {
     color: white;
 }
 
+QPushButton#btnToolUnload {
+    background-color: #d97a3a;
+    color: white;
+    min-height: 45px;
+    font-size: 12pt;
+    border-radius: 6px;
+}
+
+QPushButton#btnToolUnload:hover {
+    background-color: #e89052;
+}
+
 QPushButton#btnToolCancel {
     background-color: #3e4f62;
     min-height: 45px;

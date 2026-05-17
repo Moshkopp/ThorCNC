@@ -352,14 +352,18 @@ class ToolTableModule(ThorModule):
             self._t._status(_t("Error saving tool table: ") + str(e), error=True)
 
     def _on_tool(self, tool: int):
-        """Update tool display and geometry when tool changes."""
-        if tool == 0:
-            return  # Tool 0 = unknown
-
-        # Persist last loaded tool for next startup
-        if self._t.settings.get("last_tool") != tool:
-            self._t.settings.set("last_tool", tool)
-            self._t.settings.save()
+        """Update tool display and geometry when tool changes (incl. unload → T0)."""
+        # Persist tool changes; tool=0 only after the restore phase so the
+        # initial poll on startup (always reports 0) doesn't wipe the prefs.
+        if tool > 0:
+            if self._t.settings.get("last_tool") != tool:
+                self._t.settings.set("last_tool", tool)
+                self._t.settings.save()
+        elif self._restored_last_tool:
+            # Explicit unload via M61 Q0 — clear saved tool
+            if self._t.settings.get("last_tool") is not None:
+                self._t.settings.set("last_tool", None)
+                self._t.settings.save()
 
         # Update status bar label
         from PySide6.QtWidgets import QLabel
@@ -371,25 +375,25 @@ class ToolTableModule(ThorModule):
             if not entry.hasFocus():
                 entry.setText(str(tool))
 
-        # Reload tool table (in case tool.tbl changed)
-        self._load_tool_table()
-
-        # Read tool geometry from reloaded widget
+        # Read tool geometry — defaults stay for tool 0 (unloaded)
         dia, length, comment = "0.000", "0.000", "-"
-        if self._widget:
-            for r in range(self._widget.rowCount()):
-                t_item = self._widget.item(r, 0)
-                if t_item and t_item.text().strip() == str(tool):
-                    d_item = self._widget.item(r, 2)
-                    len_item = self._widget.item(r, 3)
-                    c_item = self._widget.item(r, 4)
-                    if d_item:
-                        dia = d_item.text()
-                    if len_item:
-                        length = len_item.text()
-                    if c_item:
-                        comment = c_item.text()
-                    break
+        if tool > 0:
+            # Reload tool table (in case tool.tbl changed)
+            self._load_tool_table()
+            if self._widget:
+                for r in range(self._widget.rowCount()):
+                    t_item = self._widget.item(r, 0)
+                    if t_item and t_item.text().strip() == str(tool):
+                        d_item = self._widget.item(r, 2)
+                        len_item = self._widget.item(r, 3)
+                        c_item = self._widget.item(r, 4)
+                        if d_item:
+                            dia = d_item.text()
+                        if len_item:
+                            length = len_item.text()
+                        if c_item:
+                            comment = c_item.text()
+                        break
 
         def _fmt3(val: str) -> str:
             try:
@@ -555,6 +559,9 @@ class ToolTableModule(ThorModule):
 
         dialog = ToolSelectionDialog(tool_data, self._t.ui)
         if dialog.exec():
-            val = dialog.get_selected_tool()
-            if val is not None:
-                self._t.mdi_mod._send_mdi(f"T{val} M6 G43")
+            if dialog.is_unload_requested():
+                self._t.mdi_mod._send_mdi("M61 Q0 G49")
+            else:
+                val = dialog.get_selected_tool()
+                if val is not None:
+                    self._t.mdi_mod._send_mdi(f"T{val} M6 G43")

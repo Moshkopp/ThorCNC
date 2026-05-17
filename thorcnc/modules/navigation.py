@@ -208,15 +208,11 @@ class NavigationModule(ThorModule):
         if is_opening:
             self._update_flyout_highlights()
 
-            # Count only widgets that are not explicitly hidden — the SHORTS
-            # panel has an optional custom-shortcut button that may be hidden.
-            lay = panel.layout()
-            num_items = sum(
-                1 for i in range(lay.count())
-                if (w := lay.itemAt(i).widget()) is not None and not w.isHidden()
-            )
-            panel_height = (num_items * 60) + max(0, num_items - 1) * 5 + 10
-            panel.setFixedHeight(panel_height)
+            # Let the layout dictate the height — accounts for QSS margins/borders
+            # and the optional custom-shortcut button on SHORTS.
+            panel.ensurePolished()
+            panel.layout().activate()
+            panel.setFixedHeight(panel.layout().minimumSize().height())
 
             panel.show()
             panel.raise_()
@@ -323,15 +319,30 @@ class NavigationModule(ThorModule):
             btn.hide()
 
     def _execute_custom_shortcut(self):
-        """Run the user-defined G-code via MDI, line by line."""
+        """Run the user-defined G-code via MDI, line by line.
+
+        Uses processEvents()+sleep while waiting so the StatusPoller keeps
+        firing — otherwise DRO/Backplot freeze until the move finishes.
+        """
+        import time
         gcode = str(self._t.settings.get("shortcut_gcode", "")).strip()
         if not gcode:
             return
         try:
             for line in (ln.strip() for ln in gcode.splitlines()):
-                if line and not line.startswith(";"):
-                    self._t.mdi_mod._send_mdi(line)
-                    self._t.cmd.wait_complete()
+                if not line or line.startswith(";"):
+                    continue
+                self._t.mdi_mod._send_mdi(line)
+
+                # Non-blocking wait until interpreter is idle again
+                start_t = time.time()
+                timeout = 300.0
+                while time.time() - start_t < timeout:
+                    QApplication.processEvents()
+                    if self._t.poller.stat.interp_state == linuxcnc.INTERP_IDLE:
+                        break
+                    time.sleep(0.05)
+
             name = str(self._t.settings.get("shortcut_name", "")).strip() or _t("Shortcut")
             self._t._status(_t("Custom shortcut '{}' executed").format(name))
             self._close_shorts_on_idle = True

@@ -17,6 +17,7 @@ class ToolSelectionDialog(QDialog):
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         
         self._selected_tool = None
+        self._unload_requested = False
         self._data = tool_data  # List of dicts or tuples
         
         self._setup_ui()
@@ -66,18 +67,24 @@ class ToolSelectionDialog(QDialog):
         self.table.itemDoubleClicked.connect(self.accept)
         layout.addWidget(self.table)
 
-        # Action Buttons
+        # Action Buttons: UNLOAD | CANCEL | LOAD
         btn_layout = QHBoxLayout()
+        self.btn_unload = QPushButton(_t("UNLOAD"))
+        self.btn_unload.setObjectName("btnToolUnload")
+        self.btn_unload.setFixedHeight(50)
+        self.btn_unload.clicked.connect(self._on_unload_clicked)
+
         self.btn_cancel = QPushButton(_t("CANCEL"))
         self.btn_cancel.setObjectName("btnToolCancel")
         self.btn_cancel.setFixedHeight(50)
         self.btn_cancel.clicked.connect(self.reject)
-        
-        self.btn_confirm = QPushButton(_t("SELECT TOOL"))
+
+        self.btn_confirm = QPushButton(_t("LOAD"))
         self.btn_confirm.setObjectName("btnToolConfirm")
         self.btn_confirm.setFixedHeight(50)
         self.btn_confirm.clicked.connect(self.accept)
-        
+
+        btn_layout.addWidget(self.btn_unload)
         btn_layout.addWidget(self.btn_cancel)
         btn_layout.addWidget(self.btn_confirm)
         layout.addLayout(btn_layout)
@@ -132,6 +139,13 @@ class ToolSelectionDialog(QDialog):
         else:
             # Otherwise use current table selection
             self.accept()
+
+    def _on_unload_clicked(self):
+        self._unload_requested = True
+        self.accept()
+
+    def is_unload_requested(self):
+        return self._unload_requested
 
     def get_selected_tool(self):
         # If we have an explicit override from search
