@@ -51,11 +51,10 @@ class MotionModule(ThorModule):
             b.clicked.connect(self._go_to_home)
 
         for axis in ("x", "y", "z"):
-            joint = self._t.get_axis_joint(axis)
             for dirn, sign in (("plus", 1), ("minus", -1)):
                 if b := btn(f"{axis}_{dirn}_jogbutton_3"):
-                    b.pressed.connect(lambda a=joint, s=sign: self._jog_start(a, s))
-                    b.released.connect(lambda a=joint: self._jog_stop(a))
+                    b.pressed.connect(lambda a=axis, s=sign: self._jog_start(a, s))
+                    b.released.connect(lambda a=axis: self._jog_stop(a))
 
         def sld(name):
             from PySide6.QtWidgets import QSlider
@@ -342,17 +341,44 @@ class MotionModule(ThorModule):
         if lbl := self._t._w(QLabel, "jog_vel_label"):
             lbl.setText(f"Velocity: {val}")
 
-    def _jog_start(self, joint: int, direction: int):
+    def _jog_start(self, axis_str, direction: int):
         self._t.cmd.mode(linuxcnc.MODE_MANUAL)
         self._t.cmd.wait_complete()
-        if self._jog_increment <= 0.0:
-            self._t.cmd.jog(linuxcnc.JOG_CONTINUOUS, False, joint, direction * self._jog_velocity)
-        else:
-            self._t.cmd.jog(linuxcnc.JOG_INCREMENT, False, joint, direction * self._jog_velocity, self._jog_increment)
 
-    def _jog_stop(self, joint: int):
+        if isinstance(axis_str, int):
+            jog_num = axis_str
+            teleop = False
+        else:
+            axis_str = str(axis_str).upper()
+            stat = self._t.poller.stat
+            teleop = (stat.motion_mode == linuxcnc.TRAJ_MODE_TELEOP)
+            if teleop:
+                axis_map = {"X": 0, "Y": 1, "Z": 2, "A": 3, "B": 4, "C": 5, "U": 6, "V": 7, "W": 8}
+                jog_num = axis_map.get(axis_str, 0)
+            else:
+                jog_num = self._t.get_axis_joint(axis_str)
+
         if self._jog_increment <= 0.0:
-            self._t.cmd.jog(linuxcnc.JOG_STOP, False, joint)
+            self._t.cmd.jog(linuxcnc.JOG_CONTINUOUS, teleop, jog_num, direction * self._jog_velocity)
+        else:
+            self._t.cmd.jog(linuxcnc.JOG_INCREMENT, teleop, jog_num, direction * self._jog_velocity, self._jog_increment)
+
+    def _jog_stop(self, axis_str):
+        if isinstance(axis_str, int):
+            jog_num = axis_str
+            teleop = False
+        else:
+            axis_str = str(axis_str).upper()
+            stat = self._t.poller.stat
+            teleop = (stat.motion_mode == linuxcnc.TRAJ_MODE_TELEOP)
+            if teleop:
+                axis_map = {"X": 0, "Y": 1, "Z": 2, "A": 3, "B": 4, "C": 5, "U": 6, "V": 7, "W": 8}
+                jog_num = axis_map.get(axis_str, 0)
+            else:
+                jog_num = self._t.get_axis_joint(axis_str)
+
+        if self._jog_increment <= 0.0:
+            self._t.cmd.jog(linuxcnc.JOG_STOP, teleop, jog_num)
 
     def _update_actual_feed(self):
         """Update the actual feed display in the jog panel."""

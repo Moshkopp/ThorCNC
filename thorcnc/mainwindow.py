@@ -419,7 +419,6 @@ class ThorCNC(QObject):
             return False
             
         axis, sign = mapping
-        joint = self.get_axis_joint(axis)
         
         from PySide6.QtWidgets import QLineEdit, QTextEdit, QPlainTextEdit, QSpinBox, QDoubleSpinBox, QAbstractSpinBox
         fw = QApplication.focusWidget()
@@ -432,11 +431,11 @@ class ThorCNC(QObject):
         import linuxcnc as _lc
         if self._interp_state not in (_lc.INTERP_IDLE,):
             return True
-        joint, direction = mapping
+        axis, direction = mapping
         if pressed:
-            self.motion._jog_start(joint, direction)
+            self.motion._jog_start(axis, direction)
         else:
-            self.motion._jog_stop(joint)
+            self.motion._jog_stop(axis)
         return True
 
 
