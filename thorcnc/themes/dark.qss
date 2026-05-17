@@ -1230,7 +1230,8 @@ QLabel#label_tool_nr {
 }
 
 QLabel#tool_comment_label {
-    color: #fffefe;
+    color: #52a0e5; /* vibrant blue accent */
+    font-weight: bold;
     font-size: 14pt;
     padding: 4px 2px;
 }
