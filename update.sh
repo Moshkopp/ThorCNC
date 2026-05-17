@@ -1,11 +1,14 @@
 #!/usr/bin/env bash
 # -----------------------------------------------------------------------------
 # ThorCNC Updater
-# Zieht die neuesten Änderungen aus dem Repository und reinstalliert das Paket.
+# Zieht die neuesten Änderungen aus dem Repository und reinstalliert das Paket
+# nur, wenn nötig. Ist bereits alles aktuell und alle Abhängigkeiten vorhanden,
+# beendet sich der Updater stumm.
 #
 # Verwendung:
 #   ./update.sh            # normales Update
 #   ./update.sh --dev      # Update im Entwicklungsmodus (editable)
+#   ./update.sh --force    # erzwingt Reinstall auch ohne Pending-Update
 # -----------------------------------------------------------------------------
 set -euo pipefail
 
@@ -18,23 +21,13 @@ for arg in "$@"; do
         --dev)   DEV_MODE=true ;;
         --force) FORCE_MODE=true ;;
         -h|--help)
-            sed -n '2,8p' "$0" | sed 's/^# //; s/^#//'
+            sed -n '2,12p' "$0" | sed 's/^# //; s/^#//'
             exit 0
             ;;
     esac
 done
 
-# --- PIP Flags (Debian 12+ / PEP 668) ----------------------------------------
-PIP_BREAK_FLAG=""
-detect_pip_flags() {
-    PIP_BREAK_FLAG=""
-    if pip install --help 2>/dev/null | grep -q 'break-system-packages'; then
-        PIP_BREAK_FLAG="--break-system-packages"
-    fi
-}
-detect_pip_flags
-
-# --- Farben ------------------------------------------------------------------
+# --- Farben & Output-Helfer --------------------------------------------------
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
 BLUE='\033[0;34m'; NC='\033[0m'; BOLD='\033[1m'
 
@@ -51,88 +44,13 @@ confirm() {
     esac
 }
 
-echo -e "${BOLD}ThorCNC Updater${NC}"
-echo "---------------------------------------"
-
-cd "$SCRIPT_DIR"
-
-# --- Git-Status prüfen -------------------------------------------------------
-if ! git rev-parse --git-dir &>/dev/null; then
-    err "Kein Git-Repository gefunden in: $SCRIPT_DIR"
+# --- PIP-Flag (Debian 12+ / PEP 668) -----------------------------------------
+PIP_BREAK_FLAG=""
+if pip install --help 2>/dev/null | grep -q 'break-system-packages'; then
+    PIP_BREAK_FLAG="--break-system-packages"
 fi
 
-# Lokale Änderungen anzeigen (kein Abbruch)
-if ! git diff --quiet || ! git diff --cached --quiet; then
-    warn "Lokale Änderungen vorhanden - werden beim Pull beibehalten (kein Überschreiben)."
-fi
-
-# Aktuelle Version merken
-OLD_REV=$(git rev-parse --short HEAD)
-info "Aktuelle Version: $OLD_REV"
-
-# update.sh-Hash merken für Selbst-Update-Erkennung
-UPDATER_HASH_BEFORE=$(md5sum "$0" | cut -d' ' -f1)
-
-# --- Stash & Pull ------------------------------------------------------------
-if $FORCE_MODE; then
-    warn "FORCE MODE: Verwerfe lokale Änderungen und setze auf origin zurück..."
-    git fetch origin &>/dev/null
-    git reset --hard "origin/$(git rev-parse --abbrev-ref HEAD)"
-else
-    info "Bereite Repository vor (Index-Reparatur)..."
-    if ! git update-index --refresh &>/dev/null; then
-        warn "Index ist beschädigt. Starte Deep-Repair..."
-        rm -f .git/index.lock &>/dev/null || true
-        rm -f .git/index &>/dev/null || true
-        git reset HEAD -- . &>/dev/null || true
-        git update-index --refresh &>/dev/null || true
-    fi
-
-    info "Sichere lokale Änderungen (Stash)..."
-    git stash push -m "update.sh auto-stash" || {
-        err "Stash fehlgeschlagen. Nutze './update.sh --force' um lokale Änderungen zu verwerfen."
-    }
-fi
-
-info "Lade neueste Änderungen von origin..."
-git pull --ff-only origin "$(git rev-parse --abbrev-ref HEAD)" || {
-    warn "Fast-forward nicht möglich (lokale Änderungen?)."
-    warn "Versuche 'git pull --rebase'..."
-    git pull --rebase origin "$(git rev-parse --abbrev-ref HEAD)" || {
-        warn "Konnte nicht automatisch mergen."
-    }
-}
-
-if ! $FORCE_MODE; then
-    info "Stelle lokale Änderungen wieder her (Stash pop)..."
-    git stash pop || warn "Keine Änderungen zum Wiederherstellen oder Konflikt beim Pop."
-fi
-
-NEW_REV=$(git rev-parse --short HEAD)
-
-if [ "$OLD_REV" = "$NEW_REV" ]; then
-    ok "Bereits auf dem neuesten Stand ($NEW_REV) - kein Commit-Update."
-else
-    ok "Aktualisiert: $OLD_REV -> $NEW_REV"
-    echo ""
-    git log --oneline "${OLD_REV}..HEAD"
-    echo ""
-fi
-
-# --- Selbst-Update-Erkennung -------------------------------------------------
-UPDATER_HASH_AFTER=$(md5sum "$0" | cut -d' ' -f1)
-if [ "$UPDATER_HASH_BEFORE" != "$UPDATER_HASH_AFTER" ]; then
-    echo ""
-    echo -e "${YELLOW}╔══════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${YELLOW}║  update.sh wurde aktualisiert!                           ║${NC}"
-    echo -e "${YELLOW}║  Bitte update.sh erneut ausführen um die neue Version    ║${NC}"
-    echo -e "${YELLOW}║  des Updaters zu verwenden.                              ║${NC}"
-    echo -e "${YELLOW}╚══════════════════════════════════════════════════════════╝${NC}"
-    echo ""
-    exit 0
-fi
-
-# --- Hilfsfunktionen für Abhängigkeitsprüfung --------------------------------
+# --- Dependency-Checker ------------------------------------------------------
 apt_installed() {
     dpkg -l "$1" 2>/dev/null | grep -q '^ii'
 }
@@ -153,100 +71,100 @@ sys.exit(0 if Version('$installed') >= Version('$minver') else 1)
     return 0
 }
 
-# --- Paket neu installieren --------------------------------------------------
 OS=$(. /etc/os-release 2>/dev/null && echo "${ID:-unknown}" || echo "unknown")
 
-if [ "$OS" = "debian" ] || [ "$OS" = "ubuntu" ]; then
-    # pip-PySide6 entfernen – nur wenn pip-Version vorhanden
-    if pip show PySide6 &>/dev/null 2>&1; then
-        info "Entferne pip-PySide6 (apt-Version soll genutzt werden)..."
-        pip uninstall -y PySide6 PySide6-Addons PySide6-Essentials shiboken6 2>/dev/null || true
-    fi
+# Sammelt fehlende apt-Pakete (nur auf Debian/Ubuntu relevant)
+collect_missing_apt() {
+    [ "$OS" != "debian" ] && [ "$OS" != "ubuntu" ] && return 0
 
-    if dpkg -l python3-pyqtgraph &>/dev/null 2>&1; then
-        warn "python3-pyqtgraph (apt) gefunden – wird entfernt..."
-        sudo apt-get remove -y python3-pyqtgraph || true
-    fi
-
-    # Fehlende apt-Pakete sammeln und in einem Aufruf installieren
-    info "Prüfe Qt xcb Laufzeit-Bibliotheken..."
-    missing_pkgs=()
-    for pkg in \
-        python3-pyside6 \
-        python3-pyside6.qtopengl \
-        python3-pyside6.qtopenglwidgets \
-        python3-pyside6.qtuitools \
-        python3-pyside6.qtsvg \
-        python3-opengl \
-        libopengl0 \
-        libegl1 \
-        libxcb-icccm4 \
-        libxcb-image0 \
-        libxcb-keysyms1 \
-        libxcb-randr0 \
-        libxcb-render-util0 \
-        libxcb-xinerama0 \
-        libxcb-xkb1 \
+    local pkgs=(
+        python3-pyside6
+        python3-pyside6.qtopengl
+        python3-pyside6.qtopenglwidgets
+        python3-pyside6.qtuitools
+        python3-pyside6.qtsvg
+        python3-opengl
+        libopengl0
+        libegl1
+        libxcb-icccm4
+        libxcb-image0
+        libxcb-keysyms1
+        libxcb-randr0
+        libxcb-render-util0
+        libxcb-xinerama0
+        libxcb-xkb1
         libxkbcommon-x11-0
-    do
-        apt_installed "$pkg" || missing_pkgs+=("$pkg")
+    )
+    for pkg in "${pkgs[@]}"; do
+        apt_installed "$pkg" || MISSING_APT+=("$pkg")
     done
 
     # libxcb-cursor: Debian 13 (t64-Übergang) kann libxcb-cursor0t64 heißen
     if ! apt_installed libxcb-cursor0 && ! apt_installed libxcb-cursor0t64; then
-        missing_pkgs+=(libxcb-cursor0)
+        MISSING_APT+=(libxcb-cursor0)
     fi
+}
 
-    if [ ${#missing_pkgs[@]} -gt 0 ]; then
-        info "Installiere fehlende Pakete: ${missing_pkgs[*]}"
-        for pkg in "${missing_pkgs[@]}"; do
-            sudo apt-get install -y "$pkg" 2>/dev/null || warn "Paket nicht verfügbar: $pkg (wird übersprungen)"
-        done
-    else
-        ok "Alle Qt xcb Bibliotheken bereits installiert."
+# Sammelt fehlende pip-Pakete
+collect_missing_pip() {
+    pip_installed pyqtgraph  0.13 || MISSING_PIP+=("pyqtgraph>=0.13")
+    pip_installed PyOpenGL   3.1  || MISSING_PIP+=("PyOpenGL>=3.1")
+    pip_installed matplotlib 3.5  || MISSING_PIP+=("matplotlib>=3.5")
+    if [ "$OS" = "debian" ] || [ "$OS" = "ubuntu" ]; then
+        pip_installed psutil || MISSING_PIP+=("psutil")
     fi
-fi
+}
 
-# pip-Abhängigkeiten nur installieren wenn Version nicht ausreicht
-info "Prüfe pip-Abhängigkeiten..."
-pip_deps_needed=()
-pip_installed pyqtgraph  0.13  || pip_deps_needed+=("pyqtgraph>=0.13")
-pip_installed PyOpenGL   3.1   || pip_deps_needed+=("PyOpenGL>=3.1")
-pip_installed matplotlib 3.5   || pip_deps_needed+=("matplotlib>=3.5")
+install_missing_apt() {
+    [ ${#MISSING_APT[@]} -eq 0 ] && return 0
+    for pkg in "${MISSING_APT[@]}"; do
+        sudo apt-get install -y "$pkg" 2>/dev/null || \
+            warn "Paket nicht verfügbar: $pkg (übersprungen)"
+    done
+}
 
-if [ ${#pip_deps_needed[@]} -gt 0 ]; then
-    info "Installiere/aktualisiere: ${pip_deps_needed[*]}"
-    pip install $PIP_BREAK_FLAG "${pip_deps_needed[@]}" || \
+install_missing_pip() {
+    [ ${#MISSING_PIP[@]} -eq 0 ] && return 0
+    pip install $PIP_BREAK_FLAG "${MISSING_PIP[@]}" || \
         warn "pip install fehlgeschlagen – Backplot funktioniert evtl. nicht."
-else
-    ok "Alle pip-Abhängigkeiten bereits aktuell."
-fi
+}
 
-if [ "$OS" = "debian" ] || [ "$OS" = "ubuntu" ]; then
-    pip_installed psutil || pip install $PIP_BREAK_FLAG psutil
-    if $DEV_MODE; then
-        info "Editable Reinstall (Debian, ohne pip-PySide6)..."
-        pip install $PIP_BREAK_FLAG --no-deps -e .
-    else
-        info "Reinstalliere thorcnc (Debian, ohne pip-PySide6)..."
-        pip install $PIP_BREAK_FLAG --no-deps .
-    fi
-else
-    EXTRAS="[backplot]"
-    if $DEV_MODE; then
-        info "Editable Reinstall mit Extras $EXTRAS..."
-        pip install $PIP_BREAK_FLAG --upgrade -e ".$EXTRAS"
-    else
-        info "Reinstalliere thorcnc mit Extras $EXTRAS..."
-        pip install $PIP_BREAK_FLAG --upgrade ".$EXTRAS"
-    fi
-fi
-ok "thorcnc aktualisiert."
+reinstall_thorcnc() {
+    # PySide6-Konflikt entschärfen (apt vs pip)
+    if [ "$OS" = "debian" ] || [ "$OS" = "ubuntu" ]; then
+        if pip show PySide6 &>/dev/null 2>&1; then
+            info "Entferne pip-PySide6 (apt-Version soll genutzt werden)..."
+            pip uninstall -y PySide6 PySide6-Addons PySide6-Essentials shiboken6 2>/dev/null || true
+        fi
+        if dpkg -l python3-pyqtgraph &>/dev/null 2>&1; then
+            warn "python3-pyqtgraph (apt) gefunden – wird entfernt..."
+            sudo apt-get remove -y python3-pyqtgraph || true
+        fi
 
-# --- Subroutines synchronisieren ---------------------------------------------
+        if $DEV_MODE; then
+            info "Editable Reinstall (Debian, ohne pip-PySide6)..."
+            pip install $PIP_BREAK_FLAG --no-deps -e .
+        else
+            info "Reinstalliere thorcnc (Debian, ohne pip-PySide6)..."
+            pip install $PIP_BREAK_FLAG --no-deps .
+        fi
+    else
+        local extras="[backplot]"
+        if $DEV_MODE; then
+            info "Editable Reinstall mit Extras $extras..."
+            pip install $PIP_BREAK_FLAG --upgrade -e ".$extras"
+        else
+            info "Reinstalliere thorcnc mit Extras $extras..."
+            pip install $PIP_BREAK_FLAG --upgrade ".$extras"
+        fi
+    fi
+    ok "thorcnc neu installiert."
+}
+
+# --- Subroutines + Desktop-Shortcuts (unverändert) ---------------------------
 install_subroutines() {
-    SRC="$SCRIPT_DIR/configs/sim/subroutines"
-    DEST="$HOME/linuxcnc/nc_files/subroutines"
+    local SRC="$SCRIPT_DIR/configs/sim/subroutines"
+    local DEST="$HOME/linuxcnc/nc_files/subroutines"
 
     if [ -d "$SRC" ]; then
         info "Synchronisiere Subroutines nach $DEST..."
@@ -258,51 +176,15 @@ install_subroutines() {
     fi
 }
 
-if confirm "nc_files/subroutines nach ~/linuxcnc/nc_files/ synchronisieren?"; then
-    install_subroutines
-else
-    info "nc_files übersprungen."
-fi
+install_desktop_shortcuts() {
+    local DESKTOP_PATH="$HOME/Desktop"
+    if [ ! -d "$DESKTOP_PATH" ] && [ -d "$HOME/Schreibtisch" ]; then
+        DESKTOP_PATH="$HOME/Schreibtisch"
+    fi
+    [ -d "$DESKTOP_PATH" ] || { warn "Kein Desktop-Ordner gefunden."; return 0; }
 
-# --- Probe-Parameter in var-Datei vorinitialisieren --------------------------
-seed_probe_params() {
-    PROBE_PARAMS="1000 1001 1010 1011 1012 1013 1014 1020 1021 1030 1031 1040"
-    CONFIGS_DIR="$HOME/linuxcnc/configs"
-
-    find "$CONFIGS_DIR" -name "*.ini" 2>/dev/null | while read -r ini_file; do
-        var_name=$(grep -i "^PARAMETER_FILE" "$ini_file" 2>/dev/null | head -1 | awk -F'=' '{print $2}' | tr -d ' \r')
-        [ -z "$var_name" ] && continue
-        var_file="$(dirname "$ini_file")/$var_name"
-        [ -f "$var_file" ] || continue
-
-        added=0
-        for p in $PROBE_PARAMS; do
-            if ! grep -q "^${p}[[:space:]]" "$var_file"; then
-                echo -e "${p}\t0.000000" >> "$var_file"
-                added=$((added + 1))
-            fi
-        done
-
-        if [ "$added" -gt 0 ]; then
-            ok "Probe-Parameter ($added neu) in: $var_file"
-        fi
-    done
-}
-
-echo ""
-echo -e "${BOLD}Update abgeschlossen.${NC}"
-echo ""
-
-# --- Desktop Shortcut --------------------------------------------------------
-DESKTOP_PATH="$HOME/Desktop"
-if [ ! -d "$DESKTOP_PATH" ] && [ -d "$HOME/Schreibtisch" ]; then
-    DESKTOP_PATH="$HOME/Schreibtisch"
-fi
-
-THORCNC_ICON="$SCRIPT_DIR/thorcnc/images/icon.png"
-
-if [ -d "$DESKTOP_PATH" ] && confirm "Desktop-Verknüpfungen erstellen/aktualisieren (Update, Sim)?"; then
-    SHORTCUT="$DESKTOP_PATH/ThorCNC-Update.desktop"
+    local THORCNC_ICON="$SCRIPT_DIR/thorcnc/images/icon.png"
+    local SHORTCUT="$DESKTOP_PATH/ThorCNC-Update.desktop"
 
     cat > "$SHORTCUT" <<EOD
 [Desktop Entry]
@@ -314,12 +196,10 @@ Icon=$THORCNC_ICON
 Terminal=true
 Categories=Utility;
 EOD
-
     chmod +x "$SHORTCUT"
     ok "Verknüpfung erstellt: ThorCNC-Update.desktop"
 
-    SIM_SHORTCUT="$DESKTOP_PATH/ThorCNC-Sim.desktop"
-
+    local SIM_SHORTCUT="$DESKTOP_PATH/ThorCNC-Sim.desktop"
     cat > "$SIM_SHORTCUT" <<EOD
 [Desktop Entry]
 Type=Application
@@ -330,11 +210,148 @@ Icon=$THORCNC_ICON
 Terminal=false
 Categories=Engineering;
 EOD
-
     chmod +x "$SIM_SHORTCUT"
     ok "Verknüpfung erstellt: ThorCNC-Sim.desktop"
-else
-    info "Desktop-Verknüpfungen übersprungen."
+}
+
+# =============================================================================
+# Hauptablauf
+# =============================================================================
+echo -e "${BOLD}ThorCNC Updater${NC}"
+echo "---------------------------------------"
+
+cd "$SCRIPT_DIR"
+
+if ! git rev-parse --git-dir &>/dev/null; then
+    err "Kein Git-Repository gefunden in: $SCRIPT_DIR"
 fi
 
+BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+OLD_REV=""
+NEW_REV=""
+PENDING=false
+PULLED=false
+FIRST_INSTALL=false
+MISSING_APT=()
+MISSING_PIP=()
+
+# --- Respawn nach Self-Update? -----------------------------------------------
+if [ "${THORCNC_UPDATER_RESPAWNED:-0}" = "1" ]; then
+    info "Updater neu gestartet mit aktualisierter Version."
+    PULLED=true   # Pull wurde im vorigen Lauf schon gemacht
+    OLD_REV="${THORCNC_UPDATER_OLD_REV:-}"
+    NEW_REV=$(git rev-parse --short HEAD)
+    unset THORCNC_UPDATER_RESPAWNED THORCNC_UPDATER_OLD_REV
+else
+    # --- Git: fetch + Pending-Check (stumm) ----------------------------------
+    OLD_REV=$(git rev-parse --short HEAD)
+    git fetch --quiet origin "$BRANCH" || warn "git fetch fehlgeschlagen — offline?"
+
+    if ! git diff --quiet "HEAD" "origin/$BRANCH" 2>/dev/null; then
+        PENDING=true
+    fi
+fi
+
+# --- Deps-Check (stumm sammeln) ----------------------------------------------
+collect_missing_apt
+collect_missing_pip
+pip show thorcnc &>/dev/null || FIRST_INSTALL=true
+
+DEPS_MISSING=false
+{ [ ${#MISSING_APT[@]} -gt 0 ] || [ ${#MISSING_PIP[@]} -gt 0 ]; } && DEPS_MISSING=true
+
+# --- Entscheidungs-Gate: Silent Fast Path ------------------------------------
+if ! $PENDING && ! $DEPS_MISSING && ! $FIRST_INSTALL && ! $FORCE_MODE && ! $PULLED; then
+    ok "ThorCNC ist aktuell."
+    exit 0
+fi
+
+# --- Pending Git-Update behandeln --------------------------------------------
+if $PENDING; then
+    echo ""
+    info "Folgende Änderungen liegen vor:"
+    git log --oneline --no-decorate "HEAD..origin/$BRANCH"
+    echo ""
+    if ! confirm "Diese Änderungen einspielen?"; then
+        info "Update abgebrochen."
+        exit 0
+    fi
+
+    # Self-Update-Hash merken
+    UPDATER_HASH_BEFORE=$(md5sum "$0" | cut -d' ' -f1)
+
+    # Pull-Sequenz (still — lokale Änderungen werden im Hintergrund gestasht)
+    git stash push --quiet -m "update.sh auto-stash" >/dev/null 2>&1 || true
+    if $FORCE_MODE; then
+        git reset --hard "origin/$BRANCH" >/dev/null
+    else
+        git pull --ff-only --quiet origin "$BRANCH" || {
+            warn "Fast-forward nicht möglich, versuche Rebase..."
+            git pull --rebase --quiet origin "$BRANCH" || \
+                err "Pull fehlgeschlagen. Bitte manuell beheben."
+        }
+    fi
+    git stash pop --quiet >/dev/null 2>&1 || true
+
+    NEW_REV=$(git rev-parse --short HEAD)
+    ok "Aktualisiert: $OLD_REV → $NEW_REV"
+    PULLED=true
+
+    # Self-Update-Erkennung → Respawn
+    UPDATER_HASH_AFTER=$(md5sum "$0" | cut -d' ' -f1)
+    if [ "$UPDATER_HASH_BEFORE" != "$UPDATER_HASH_AFTER" ]; then
+        info "update.sh wurde aktualisiert — starte Updater neu..."
+        echo ""
+        export THORCNC_UPDATER_RESPAWNED=1
+        export THORCNC_UPDATER_OLD_REV="$OLD_REV"
+        exec "$0" "$@"
+    fi
+fi
+
+# --- Fehlende Abhängigkeiten installieren ------------------------------------
+if $DEPS_MISSING; then
+    echo ""
+    info "Fehlende Abhängigkeiten gefunden:"
+    [ ${#MISSING_APT[@]} -gt 0 ] && echo "  apt: ${MISSING_APT[*]}"
+    [ ${#MISSING_PIP[@]} -gt 0 ] && echo "  pip: ${MISSING_PIP[*]}"
+    echo ""
+    if confirm "Installieren?"; then
+        install_missing_apt
+        install_missing_pip
+    else
+        warn "Abhängigkeiten übersprungen — ThorCNC funktioniert evtl. nicht vollständig."
+    fi
+fi
+
+# --- thorcnc reinstallieren (nur wenn nötig) ---------------------------------
+REINSTALL=false
+if $FIRST_INSTALL || $FORCE_MODE; then
+    REINSTALL=true
+elif $PULLED && [ -n "$OLD_REV" ] && [ "$OLD_REV" != "$NEW_REV" ]; then
+    REINSTALL=true
+elif $DEV_MODE && $PULLED; then
+    # Editable-Modus: nur bei Metadata-Änderung neu installieren
+    if [ -n "$OLD_REV" ] && git diff --name-only "$OLD_REV..HEAD" 2>/dev/null | grep -q '^pyproject\.toml$'; then
+        REINSTALL=true
+    fi
+fi
+
+if $REINSTALL; then
+    reinstall_thorcnc
+fi
+
+# --- Optionale Folge-Schritte (nur wenn etwas am Code passiert ist) ----------
+if $PULLED || $REINSTALL; then
+    echo ""
+    if confirm "nc_files/subroutines nach ~/linuxcnc/nc_files/ synchronisieren?"; then
+        install_subroutines
+    fi
+
+    if confirm "Desktop-Verknüpfungen erstellen/aktualisieren (Update, Sim)?"; then
+        install_desktop_shortcuts
+    fi
+fi
+
+echo ""
+echo -e "${BOLD}Update abgeschlossen.${NC}"
 echo ""
