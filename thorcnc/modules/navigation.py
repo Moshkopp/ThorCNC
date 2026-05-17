@@ -410,6 +410,13 @@ class NavigationModule(ThorModule):
         # Disable SHORTS buttons if not idle or not all homed
         set_btn_state("SHORTS_GO TO HOME", enabled=(can_mdi and all_homed))
         set_btn_state("SHORTS_GOTO ZERO XY", enabled=(can_mdi and all_homed))
+        if getattr(self, "_custom_shortcut_btn", None):
+            enabled = can_mdi and all_homed
+            if self._custom_shortcut_btn.isEnabled() != enabled:
+                self._custom_shortcut_btn.setEnabled(enabled)
+                self._custom_shortcut_btn.style().unpolish(self._custom_shortcut_btn)
+                self._custom_shortcut_btn.style().polish(self._custom_shortcut_btn)
+                self._custom_shortcut_btn.update()
 
         _MODES = {linuxcnc.MODE_MANUAL: "MANUAL", linuxcnc.MODE_AUTO: "AUTO", linuxcnc.MODE_MDI: "MDI"}
         current_txt = _MODES.get(self._t._current_mode, "")

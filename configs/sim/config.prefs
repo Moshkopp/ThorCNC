@@ -25,6 +25,12 @@
     "ts_search_vel": 300.0,
     "ts_probe_vel": 10.0,
     "mdi_history": [
+        "O<goto_zero_xy> call",
+        "G53 G0 X0 Y0",
+        "G53 G0 Z0",
+        "O<goto_zero_xy> call",
+        "blubb",
+        "T8 M6 G43",
         "blubb",
         "G53 G0 Z0",
         "T9 M6 G43",
@@ -68,13 +74,7 @@
         "T99 M6 G43",
         "M3 S1000",
         "T6 M6 G43",
-        "M3 S1000",
-        "T99 M6 G43",
-        "G53 G0 Z0",
-        "T99 M6 G43",
-        "G53 G0 Z0",
-        "G53 G0 X0",
-        "G53 G0 Y0"
+        "M3 S1000"
     ],
     "theme": "dark",
     "backplot_msaa_samples": 16,
@@ -130,5 +130,6 @@
         "wcs_size": 48.0
     },
     "shortcut_name": "Park",
-    "shortcut_gcode": "blubb"
+    "shortcut_gcode": "blubb",
+    "last_tool": 8
 }

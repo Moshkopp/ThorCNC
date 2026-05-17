@@ -39,6 +39,7 @@ class ToolTableModule(ThorModule):
 
     def setup(self):
         """Initialize tool table UI."""
+        self._restored_last_tool = False
         self._setup_tool_table()
         self._setup_tool_status_panel()
 
@@ -53,6 +54,7 @@ class ToolTableModule(ThorModule):
             self._t.poller.tool_in_spindle.connect(self._on_tool)
             self._t.poller.tool_offset_changed.connect(self._on_tool_offset_changed)
             self._t.poller.tool_change_request.connect(self._on_tool_change_request)
+            self._t.poller.homed_changed.connect(self._maybe_restore_last_tool)
 
         # MDI M6 button
         if b := self._t._w(QPushButton, "btn_m6_change"):
@@ -354,6 +356,11 @@ class ToolTableModule(ThorModule):
         if tool == 0:
             return  # Tool 0 = unknown
 
+        # Persist last loaded tool for next startup
+        if self._t.settings.get("last_tool") != tool:
+            self._t.settings.set("last_tool", tool)
+            self._t.settings.save()
+
         # Update status bar label
         from PySide6.QtWidgets import QLabel
         if lbl := self._t.status_bar.findChild(QLabel, "label_tool_nr"):
@@ -490,6 +497,40 @@ class ToolTableModule(ThorModule):
                     comment_item.setText(f"Ø{dia_text}mm")
         finally:
             self._widget.blockSignals(False)
+
+    @Slot(list)
+    def _maybe_restore_last_tool(self, homed: list):
+        """After all joints are homed, restore the last loaded tool via M61 (no M6 remap)."""
+        if self._restored_last_tool:
+            return
+        if not homed or not all(homed[i] for i in range(min(3, len(homed)))):
+            return
+
+        last = self._t.settings.get("last_tool")
+        if not last:
+            self._restored_last_tool = True
+            return
+
+        # Skip if a tool is already in the spindle (LinuxCNC kept state or user loaded manually)
+        try:
+            if self._t.poller.stat.tool_in_spindle == int(last):
+                self._restored_last_tool = True
+                return
+        except Exception:
+            pass
+
+        self._restored_last_tool = True
+        QTimer.singleShot(300, lambda: self._restore_last_tool(int(last)))
+
+    def _restore_last_tool(self, tool: int):
+        """Send M61 Q<tool> G43 to set tool + length offset without triggering M6 remap."""
+        try:
+            self._t.cmd.mode(linuxcnc.MODE_MDI)
+            self._t.cmd.wait_complete()
+            self._t.cmd.mdi(f"M61 Q{tool} G43")
+            self._t._status(_t("Last tool restored: ") + f"T{tool}")
+        except Exception as e:
+            self._t._status(_t("Error restoring last tool: ") + str(e), error=True)
 
     def _send_m6(self):
         """Send M6 tool change via MDI."""
