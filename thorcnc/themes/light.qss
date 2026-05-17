@@ -1223,7 +1223,7 @@ QLabel#label_tool_nr {
 }
 
 QLabel#tool_comment_label {
-    color: #1b5b9c; /* rich blue accent */
+    color: #27ae60; /* green accent matching light theme standards */
     font-weight: bold;
     font-size: 12pt;
     padding: 4px 2px;

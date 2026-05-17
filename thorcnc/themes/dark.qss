@@ -1230,7 +1230,7 @@ QLabel#label_tool_nr {
 }
 
 QLabel#tool_comment_label {
-    color: #52a0e5; /* vibrant blue accent */
+    color: #2ecc71; /* green accent matching DRO values */
     font-weight: bold;
     font-size: 14pt;
     padding: 4px 2px;
