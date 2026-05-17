@@ -53,8 +53,8 @@ class MotionModule(ThorModule):
         for axis in ("x", "y", "z"):
             for dirn, sign in (("plus", 1), ("minus", -1)):
                 if b := btn(f"{axis}_{dirn}_jogbutton_3"):
-                    b.pressed.connect(lambda a=axis, s=sign: self._jog_start(a, s))
-                    b.released.connect(lambda a=axis: self._jog_stop(a))
+                    b.pressed.connect(lambda *args, ax=axis, s=sign: self._jog_start(ax, s))
+                    b.released.connect(lambda *args, ax=axis: self._jog_stop(ax))
 
         def sld(name):
             from PySide6.QtWidgets import QSlider
@@ -74,14 +74,20 @@ class MotionModule(ThorModule):
         if b := btn("btn_jog_0_01"):
             b.clicked.connect(lambda: self._set_jog_increment(0.01))
 
-        # Add Actual Feed label to jogBox
-        from PySide6.QtWidgets import QGroupBox, QLabel
-        if box := ui.findChild(QGroupBox, "jogBox"):
-            if lay := box.layout():
-                self._lbl_actual_feed = QLabel("F: 0")
-                self._lbl_actual_feed.setObjectName("actual_feed_label")
-                self._lbl_actual_feed.setStyleSheet("font-weight: bold; color: #2ecc71; font-size: 11pt; margin-top: 4px;")
-                lay.addWidget(self._lbl_actual_feed)
+        # Add Actual Feed label as overlay in the backplot area
+        from PySide6.QtWidgets import QLabel
+        if hasattr(self._t, "backplot") and self._t.backplot:
+            # Overlay over the OpenGL view if it exists, otherwise the backplot frame
+            parent_widget = getattr(self._t.backplot, "_impl", self._t.backplot)
+            if parent_widget is None:
+                parent_widget = self._t.backplot
+                
+            self._lbl_actual_feed = QLabel("Feed: 0", parent_widget)
+            self._lbl_actual_feed.setObjectName("actual_feed_label")
+            self._lbl_actual_feed.setStyleSheet("font-weight: bold; color: #2ecc71; font-size: 14pt; background-color: transparent;")
+            self._lbl_actual_feed.move(10, 10)
+            self._lbl_actual_feed.raise_()
+            self._lbl_actual_feed.show()
 
     def _update_goto_home_style(self, all_homed: bool):
         in_auto = getattr(self._t, "_current_mode", None) == linuxcnc.MODE_AUTO
@@ -345,40 +351,42 @@ class MotionModule(ThorModule):
         self._t.cmd.mode(linuxcnc.MODE_MANUAL)
         self._t.cmd.wait_complete()
 
-        if isinstance(axis_str, int):
-            jog_num = axis_str
-            teleop = False
-        else:
-            axis_str = str(axis_str).upper()
-            stat = self._t.poller.stat
-            teleop = (stat.motion_mode == linuxcnc.TRAJ_MODE_TELEOP)
-            if teleop:
-                axis_map = {"X": 0, "Y": 1, "Z": 2, "A": 3, "B": 4, "C": 5, "U": 6, "V": 7, "W": 8}
-                jog_num = axis_map.get(axis_str, 0)
-            else:
-                jog_num = self._t.get_axis_joint(axis_str)
-
+        index, joint_flag = self._resolve_jog_target(axis_str)
         if self._jog_increment <= 0.0:
-            self._t.cmd.jog(linuxcnc.JOG_CONTINUOUS, teleop, jog_num, direction * self._jog_velocity)
+            self._t.cmd.jog(linuxcnc.JOG_CONTINUOUS, joint_flag, index, direction * self._jog_velocity)
         else:
-            self._t.cmd.jog(linuxcnc.JOG_INCREMENT, teleop, jog_num, direction * self._jog_velocity, self._jog_increment)
+            self._t.cmd.jog(linuxcnc.JOG_INCREMENT, joint_flag, index, direction * self._jog_velocity, self._jog_increment)
 
     def _jog_stop(self, axis_str):
-        if isinstance(axis_str, int):
-            jog_num = axis_str
-            teleop = False
-        else:
-            axis_str = str(axis_str).upper()
-            stat = self._t.poller.stat
-            teleop = (stat.motion_mode == linuxcnc.TRAJ_MODE_TELEOP)
-            if teleop:
-                axis_map = {"X": 0, "Y": 1, "Z": 2, "A": 3, "B": 4, "C": 5, "U": 6, "V": 7, "W": 8}
-                jog_num = axis_map.get(axis_str, 0)
-            else:
-                jog_num = self._t.get_axis_joint(axis_str)
-
+        index, joint_flag = self._resolve_jog_target(axis_str)
         if self._jog_increment <= 0.0:
-            self._t.cmd.jog(linuxcnc.JOG_STOP, teleop, jog_num)
+            self._t.cmd.jog(linuxcnc.JOG_STOP, joint_flag, index)
+
+    def _resolve_jog_target(self, axis_str):
+        """Return (index, joint_flag) for linuxcnc.command.jog().
+
+        joint_flag (LinuxCNC API):
+            True  → jog a joint (used in TRAJ_MODE_FREE)
+            False → jog an axis (used in TRAJ_MODE_TELEOP)
+
+        Source of truth is stat.motion_mode — with kinstype=BOTH the mode
+        can be either FREE or TELEOP regardless of homing state.
+        """
+        # Legacy: caller passed a joint number directly → joint jog
+        if isinstance(axis_str, int) and not isinstance(axis_str, bool):
+            return axis_str, True
+
+        axis_str = str(axis_str).upper()
+        stat = self._t.poller.stat
+        try:
+            stat.poll()  # refresh: poller's last sample may be up to 100 ms stale
+        except linuxcnc.error:
+            pass
+
+        if stat.motion_mode == linuxcnc.TRAJ_MODE_TELEOP:
+            axis_map = {"X": 0, "Y": 1, "Z": 2, "A": 3, "B": 4, "C": 5, "U": 6, "V": 7, "W": 8}
+            return axis_map.get(axis_str, 0), False
+        return self._t.get_axis_joint(axis_str), True
 
     def _update_actual_feed(self):
         """Update the actual feed display in the jog panel."""

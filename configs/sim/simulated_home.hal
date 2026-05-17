@@ -5,23 +5,32 @@
 # X/Y: window -1.5 .. 0.5  (negative end, HOME_SEARCH_VEL negative)
 # Z:   window -0.5 .. 1.5  (positive/top end, HOME_SEARCH_VEL positive)
 
-loadrt wcomp names=wcomp_x,wcomp_y,wcomp_z
+loadrt wcomp names=wcomp_x,wcomp_y1,wcomp_y2,wcomp_z
 
 setp wcomp_x.min -1.5
 setp wcomp_x.max  0.5
 net Xpos => wcomp_x.in
 net Xhomesw <= wcomp_x.out => joint.0.home-sw-in
 
-setp wcomp_y.min -1.5
-setp wcomp_y.max  0.5
-net Ypos => wcomp_y.in
-net Yhomesw <= wcomp_y.out => joint.1.home-sw-in
+setp wcomp_y1.min -1.5
+setp wcomp_y1.max  0.5
+net Ypos => wcomp_y1.in
+net Yhomesw <= wcomp_y1.out => joint.1.home-sw-in
+
+setp wcomp_y2.min -1.5
+setp wcomp_y2.max  0.5
+net Ypos => wcomp_y2.in
+net Y2homesw <= wcomp_y2.out => joint.2.home-sw-in
 
 setp wcomp_z.min -0.5
 setp wcomp_z.max  1.5
-net Zpos => wcomp_z.in
-net Zhomesw <= wcomp_z.out => joint.2.home-sw-in
+net Zpos_real => wcomp_z.in
+net Zhomesw <= wcomp_z.out => joint.3.home-sw-in
+
+# Connect joint 3 position feedback (core_sim.hal only does 0, 1, 2)
+net Zpos_real joint.3.motor-pos-cmd => joint.3.motor-pos-fb
 
 addf wcomp_x servo-thread
-addf wcomp_y servo-thread
+addf wcomp_y1 servo-thread
+addf wcomp_y2 servo-thread
 addf wcomp_z servo-thread
