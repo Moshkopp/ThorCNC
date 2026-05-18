@@ -2,7 +2,7 @@ T1 P1 D6.000 Z19.320 ;6mm vbit
 T2 P2 D8.000 Z35.364 ;Gühring 3T 10mm
 T3 P3 D4.000 ;Gühring 3T 4mm
 T4 P4 D6.000 ;SeoGeo Ø6mm 3T gerade
-T5 P5 D8.000 ;Ø8mm SeoGeo 1T
+T5 P5 D8.000 Z33.256 ;Ø8mm SeoGeo 1T
 T6 P6 D12.000 ;Seco Ø12mm 4T
 T7 P7 D56.000 ;Ø56mm
 T8 P8 D55.000 ;Ø55mm

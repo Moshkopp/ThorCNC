@@ -130,8 +130,8 @@
         "wcs_size": 48.0
     },
     "shortcut_name": "Park ",
-    "shortcut_gcode": "G53 G0 Z-15",
-    "last_tool": 3,
+    "shortcut_gcode": "G53 G0 Z0 G53 G0 Y0",
+    "last_tool": 5,
     "ui_font_family": "Roboto Condensed",
     "ui_font_scale": 101,
     "ts_offset_direction": "X-",

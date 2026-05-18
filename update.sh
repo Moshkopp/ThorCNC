@@ -7,6 +7,7 @@
 #
 # Verwendung:
 #   ./update.sh            # normales Update
+#   ./update.sh --build    # normales Update/Reinstall als Build
 #   ./update.sh --dev      # Update im Entwicklungsmodus (editable)
 #   ./update.sh --force    # erzwingt Reinstall auch ohne Pending-Update
 # -----------------------------------------------------------------------------
@@ -15,11 +16,13 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DEV_MODE=false
 FORCE_MODE=false
+MODE_EXPLICIT=false
 
 for arg in "$@"; do
     case "$arg" in
-        --dev)   DEV_MODE=true ;;
-        --force) FORCE_MODE=true ;;
+        --build) DEV_MODE=false; FORCE_MODE=false; MODE_EXPLICIT=true ;;
+        --dev)   DEV_MODE=true;  FORCE_MODE=false; MODE_EXPLICIT=true ;;
+        --force) DEV_MODE=false; FORCE_MODE=true;  MODE_EXPLICIT=true ;;
         -h|--help)
             sed -n '2,12p' "$0" | sed 's/^# //; s/^#//'
             exit 0
@@ -42,6 +45,92 @@ confirm() {
         j|y|ja|yes) return 0 ;;
         *) return 1 ;;
     esac
+}
+
+detect_installed_mode() {
+    # Gibt "dev" für editable installs aus, "build" für normale installs,
+    # sonst "build" als sicheren Default.
+    python3 - <<'PY' 2>/dev/null || echo "build"
+from importlib.metadata import distribution, PackageNotFoundError
+import json
+
+try:
+    dist = distribution("thorcnc")
+except PackageNotFoundError:
+    print("build")
+    raise SystemExit
+
+direct = dist.read_text("direct_url.json")
+if direct:
+    try:
+        data = json.loads(direct)
+        if data.get("dir_info", {}).get("editable"):
+            print("dev")
+            raise SystemExit
+    except Exception:
+        pass
+
+metadata = dist.read_text("METADATA") or ""
+print("build")
+PY
+}
+
+select_update_mode() {
+    $MODE_EXPLICIT && return 0
+    [ -t 0 ] || return 0
+
+    local default_mode choice prompt
+    default_mode="$(detect_installed_mode)"
+    case "$default_mode" in
+        dev) prompt="Modus wählen [1=Build, 2=Dev*, 3=Force]: " ;;
+        *)   prompt="Modus wählen [1=Build*, 2=Dev, 3=Force]: " ;;
+    esac
+
+    echo ""
+    echo "Update-Modus:"
+    echo "  1) Build  - normale Installation"
+    echo "  2) Dev    - editable Installation"
+    echo "  3) Force  - Reinstall erzwingen"
+    echo ""
+    read -rp "$prompt" choice
+    if [ -z "$choice" ]; then
+        choice="$default_mode"
+    fi
+
+    case "${choice,,}" in
+        1|build)
+            DEV_MODE=false
+            FORCE_MODE=false
+            ;;
+        2|dev)
+            DEV_MODE=true
+            FORCE_MODE=false
+            ;;
+        3|force)
+            DEV_MODE=false
+            FORCE_MODE=true
+            ;;
+        *)
+            warn "Ungültige Auswahl, verwende $default_mode."
+            if [ "$default_mode" = "dev" ]; then
+                DEV_MODE=true
+                FORCE_MODE=false
+            else
+                DEV_MODE=false
+                FORCE_MODE=false
+            fi
+            ;;
+    esac
+}
+
+current_update_mode_label() {
+    if $FORCE_MODE; then
+        echo "Force"
+    elif $DEV_MODE; then
+        echo "Dev"
+    else
+        echo "Build"
+    fi
 }
 
 # --- PIP-Flag (Debian 12+ / PEP 668) -----------------------------------------
@@ -230,6 +319,8 @@ echo -e "${BOLD}ThorCNC Updater${NC}"
 echo "---------------------------------------"
 
 cd "$SCRIPT_DIR"
+select_update_mode
+info "Gewählter Modus: $(current_update_mode_label)"
 
 if ! git rev-parse --git-dir &>/dev/null; then
     err "Kein Git-Repository gefunden in: $SCRIPT_DIR"

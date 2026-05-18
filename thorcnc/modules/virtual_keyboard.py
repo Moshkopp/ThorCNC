@@ -2,6 +2,7 @@
 
 from PySide6.QtCore import QEvent, Qt
 from PySide6.QtGui import QKeyEvent
+from PySide6.QtGui import QTextCursor
 from PySide6.QtWidgets import (
     QApplication,
     QAbstractSpinBox,
@@ -137,6 +138,14 @@ class VirtualKeyboardDialog(QDialog):
         self._target = widget
         self._load_target_text(widget)
 
+    def set_text_line_target(self, widget):
+        cursor = widget.textCursor()
+        cursor.select(QTextCursor.SelectionType.LineUnderCursor)
+        self._target = ("text_line", widget, cursor.selectionStart(), cursor.selectionEnd())
+        self._buffer.setText(cursor.selectedText())
+        self._buffer.setCursorPosition(len(self._buffer.text()))
+        self._buffer.selectAll()
+
     def set_table_target(self, table, row, column):
         self._target = ("table", table, row, column)
         item = table.item(row, column) if shiboken6.isValid(table) else None
@@ -146,6 +155,14 @@ class VirtualKeyboardDialog(QDialog):
 
     def show_for(self, widget):
         self.set_target(widget)
+        if not self.isVisible():
+            self.adjustSize()
+            self.show()
+        self.raise_()
+        self._center_on_parent()
+
+    def show_for_text_line(self, widget):
+        self.set_text_line_target(widget)
         if not self.isVisible():
             self.adjustSize()
             self.show()
@@ -246,7 +263,7 @@ class VirtualKeyboardDialog(QDialog):
         if target is not None:
             self._write_buffer_to_target(target)
             self._commit_target(target)
-            if not self._is_table_target(target) and shiboken6.isValid(target):
+            if not self._is_table_target(target) and not self._is_text_line_target(target) and shiboken6.isValid(target):
                 target.clearFocus()
         self.close()
 
@@ -265,6 +282,12 @@ class VirtualKeyboardDialog(QDialog):
                 self._target = None
                 return None
             return target
+        if self._is_text_line_target(target):
+            widget = target[1]
+            if widget is None or not shiboken6.isValid(widget):
+                self._target = None
+                return None
+            return target
         if target is None or not shiboken6.isValid(target):
             self._target = None
             return None
@@ -272,6 +295,9 @@ class VirtualKeyboardDialog(QDialog):
 
     def _is_table_target(self, target):
         return isinstance(target, tuple) and len(target) == 4 and target[0] == "table"
+
+    def _is_text_line_target(self, target):
+        return isinstance(target, tuple) and len(target) == 4 and target[0] == "text_line"
 
     def _line_edit_for(self, widget):
         if isinstance(widget, QLineEdit):
@@ -289,6 +315,15 @@ class VirtualKeyboardDialog(QDialog):
             _kind, table, row, column = widget
             item = table.item(row, column) if shiboken6.isValid(table) else None
             self._buffer.setText(item.text() if item else "")
+            self._buffer.setCursorPosition(len(self._buffer.text()))
+            self._buffer.selectAll()
+            return
+        if self._is_text_line_target(widget):
+            _kind, text_widget, start, end = widget
+            cursor = text_widget.textCursor()
+            cursor.setPosition(start)
+            cursor.setPosition(end, QTextCursor.MoveMode.KeepAnchor)
+            self._buffer.setText(cursor.selectedText())
             self._buffer.setCursorPosition(len(self._buffer.text()))
             self._buffer.selectAll()
             return
@@ -326,6 +361,19 @@ class VirtualKeyboardDialog(QDialog):
                 table.setItem(row, column, item)
             item.setText(text)
             table.setCurrentCell(row, column)
+            return
+        if self._is_text_line_target(widget):
+            _kind, text_widget, start, end = widget
+            if not shiboken6.isValid(text_widget):
+                return
+            cursor = text_widget.textCursor()
+            cursor.setPosition(start)
+            cursor.setPosition(end, QTextCursor.MoveMode.KeepAnchor)
+            cursor.insertText(text)
+            text_widget.setTextCursor(cursor)
+            new_pos = start + min(len(text), self._buffer.cursorPosition())
+            cursor.setPosition(new_pos)
+            text_widget.setTextCursor(cursor)
             return
         if shiboken6.isValid(widget):
             widget.setFocus(Qt.FocusReason.OtherFocusReason)
@@ -368,6 +416,11 @@ class VirtualKeyboardDialog(QDialog):
             _kind, table, _row, _column = widget
             if shiboken6.isValid(table):
                 table.clearFocus()
+            return
+        if self._is_text_line_target(widget):
+            _kind, text_widget, _start, _end = widget
+            if shiboken6.isValid(text_widget):
+                text_widget.clearFocus()
             return
         if isinstance(widget, QAbstractSpinBox):
             try:
@@ -432,6 +485,10 @@ class VirtualKeyboardModule(ThorModule):
             _kind, table, row, column = widget
             self._dialog.show_for_table_cell(table, row, column)
             return False
+        if isinstance(widget, tuple) and widget[0] == "text_line":
+            _kind, text_widget = widget
+            self._dialog.show_for_text_line(text_widget)
+            return False
         self._dialog.show_for(widget)
         return False
 
@@ -492,6 +549,8 @@ class VirtualKeyboardModule(ThorModule):
         while candidate is not None:
             if isinstance(candidate, QTableWidget):
                 return self._table_target(candidate, widget, event)
+            if isinstance(candidate, QPlainTextEdit) and self._is_gcode_editor(candidate):
+                return self._text_line_target(candidate, widget, event)
             if isinstance(candidate, self._INPUT_TYPES):
                 if self._is_editable(candidate):
                     return candidate
@@ -512,6 +571,17 @@ class VirtualKeyboardModule(ThorModule):
         table.setCurrentItem(item)
         return ("table", table, item.row(), item.column())
 
+    def _text_line_target(self, text_widget, watched, event):
+        if text_widget.isReadOnly():
+            return None
+        viewport = text_widget.viewport()
+        pos = event.position().toPoint() if hasattr(event, "position") else event.pos()
+        if watched is not viewport and isinstance(watched, QWidget):
+            pos = viewport.mapFrom(watched, pos)
+        cursor = text_widget.cursorForPosition(pos)
+        text_widget.setTextCursor(cursor)
+        return ("text_line", text_widget)
+
     def _is_keyboard_widget(self, widget):
         dialog = getattr(self, "_dialog", None)
         while widget is not None:
@@ -530,3 +600,12 @@ class VirtualKeyboardModule(ThorModule):
         if isinstance(widget, QAbstractSpinBox):
             return not widget.isReadOnly()
         return True
+
+    def _is_gcode_editor(self, widget):
+        names = {"gcodeViewer", "filePreviewArea"}
+        candidate = widget
+        while candidate is not None:
+            if candidate.objectName() in names:
+                return True
+            candidate = candidate.parent()
+        return False

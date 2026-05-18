@@ -96,10 +96,15 @@ Pull the latest changes and reinstall without deleting the folder:
 ./update.sh
 ```
 
-In development mode:
+At startup, the updater asks whether to use Build, Dev, or Force mode and preselects
+the detected installed mode where possible.
+
+Explicit modes:
 
 ```bash
+./update.sh --build
 ./update.sh --dev
+./update.sh --force
 ```
 
 ### Manual
