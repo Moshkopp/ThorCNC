@@ -1639,6 +1639,25 @@ QTableWidget#offsetsTable::item {
     border-bottom: 1px solid #222222;
 }
 
+QPushButton#wcs_action_btn {
+    background-color: #1e4a7b;
+    color: #eeeeee;
+    border-radius: 3px;
+    border: none;
+    font-weight: bold;
+    font-size: 10pt;
+    padding: 0 16px;
+}
+QPushButton#wcs_action_btn:disabled {
+    background-color: #1e252a;
+    color: #2a3a4a;
+    border: none;
+}
+QPushButton#wcs_action_btn:hover {
+    background-color: #3a7abf;
+    color: white;
+}
+
 QPushButton#wcs_clear_btn {
     background-color: #3a1a1a;
     color: #eeeeee;

@@ -714,6 +714,9 @@ class VirtualKeyboardModule(ThorModule):
         return None
 
     def _table_target(self, table, watched, event):
+        from PySide6.QtWidgets import QAbstractItemView
+        if table.editTriggers() == QAbstractItemView.EditTrigger.NoEditTriggers:
+            return None
         viewport = table.viewport()
         pos = event.position().toPoint() if hasattr(event, "position") else event.pos()
         if watched is not viewport and isinstance(watched, QWidget):

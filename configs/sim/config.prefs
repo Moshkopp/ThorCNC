@@ -25,6 +25,7 @@
     "ts_search_vel": 304.0,
     "ts_probe_vel": 7.0,
     "mdi_history": [
+        "O<goto_zero_xy> call",
         "m3 s1000",
         "T99 M6 G43",
         "T3 M6 G43",
@@ -73,8 +74,7 @@
         "G1 X10 Y20 F5000",
         "O<goto_zero_xy> call",
         "G53 G0 X0 Y0",
-        "G53 G0 Z0",
-        "O<goto_zero_xy> call"
+        "G53 G0 Z0"
     ],
     "theme": "dark",
     "backplot_msaa_samples": 16,

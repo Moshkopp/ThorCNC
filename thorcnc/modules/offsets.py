@@ -133,11 +133,48 @@ class OffsetsModule(ThorModule):
         self._offset_table = tbl
         self._offset_active_row = 0
         self._offset_var_mtime = 0.0
+        self._is_editing = False
 
+        btn_lay = QHBoxLayout()
+        self._btn_edit = QPushButton(_t("Edit Offsets"))
+        self._btn_edit.clicked.connect(self._on_edit_clicked)
+        self._btn_edit.setFocusPolicy(_Qt.FocusPolicy.NoFocus)
+        self._btn_edit.setObjectName("wcs_action_btn")
+        self._btn_edit.setMinimumHeight(34)
+
+        self._btn_save = QPushButton(_t("Save"))
+        self._btn_save.clicked.connect(self._on_save_clicked)
+        self._btn_save.setVisible(False)
+        self._btn_save.setFocusPolicy(_Qt.FocusPolicy.NoFocus)
+        self._btn_save.setObjectName("wcs_action_btn")
+        self._btn_save.setMinimumHeight(34)
+
+        self._btn_cancel = QPushButton(_t("Cancel"))
+        self._btn_cancel.clicked.connect(self._on_cancel_clicked)
+        self._btn_cancel.setVisible(False)
+        self._btn_cancel.setFocusPolicy(_Qt.FocusPolicy.NoFocus)
+        self._btn_cancel.setObjectName("wcs_clear_btn")
+        self._btn_cancel.setMinimumHeight(34)
+
+        btn_lay.addStretch()
+        btn_lay.addWidget(self._btn_edit)
+        btn_lay.addWidget(self._btn_save)
+        btn_lay.addWidget(self._btn_cancel)
+        outer.addLayout(btn_lay)
+
+        self._set_clear_buttons_enabled(False)
         self._refresh_offsets_table()
+
+    def _set_clear_buttons_enabled(self, enabled: bool):
+        for row in range(self._offset_table.rowCount()):
+            cell = self._offset_table.cellWidget(row, 5)
+            if cell:
+                cell.setEnabled(enabled)
 
     def _refresh_offsets_table(self):
         """Reads the .var file (only if mtime changed) and updates the table."""
+        if getattr(self, "_is_editing", False):
+            return
         path = self._var_file_path()
         if not hasattr(self, "_offset_table"):
             return
@@ -216,3 +253,61 @@ class OffsetsModule(ThorModule):
             self._offset_var_mtime = 0.0
         except Exception as e:
             self._t._status(_t("Error:") + f" {e}")
+
+    def _on_edit_clicked(self):
+        from PySide6.QtWidgets import QAbstractItemView
+        self._is_editing = True
+        self._btn_edit.setVisible(False)
+        self._btn_save.setVisible(True)
+        self._btn_cancel.setVisible(True)
+        self._offset_table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+        self._offset_table.setEditTriggers(
+            QAbstractItemView.EditTrigger.DoubleClicked | 
+            QAbstractItemView.EditTrigger.SelectedClicked | 
+            QAbstractItemView.EditTrigger.AnyKeyPressed
+        )
+        self._set_clear_buttons_enabled(True)
+
+    def _on_cancel_clicked(self):
+        from PySide6.QtWidgets import QAbstractItemView
+        self._is_editing = False
+        self._btn_edit.setVisible(True)
+        self._btn_save.setVisible(False)
+        self._btn_cancel.setVisible(False)
+        self._offset_table.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
+        self._offset_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self._set_clear_buttons_enabled(False)
+        self._offset_var_mtime = 0.0
+        self._refresh_offsets_table()
+
+    def _on_save_clicked(self):
+        # Check if machine is idle
+        if self._t.poller and hasattr(self._t.poller.stat, 'interp_state'):
+            if self._t.poller.stat.interp_state != linuxcnc.INTERP_IDLE:
+                self._t._status(_t("Cannot save offsets while program is running!"))
+                return
+
+        tbl = self._offset_table
+        
+        try:
+            self._t.cmd.mode(linuxcnc.MODE_MDI)
+            self._t.cmd.wait_complete()
+            
+            for row, (_, p_idx, _) in enumerate(self._WCS_LIST):
+                try:
+                    x = float(tbl.item(row, 1).text())
+                    y = float(tbl.item(row, 2).text())
+                    z = float(tbl.item(row, 3).text())
+                    r = float(tbl.item(row, 4).text())
+                    self._t.cmd.mdi(f"G10 L2 P{p_idx} X{x} Y{y} Z{z} R{r}")
+                    self._t.cmd.wait_complete()
+                except ValueError:
+                    continue # Skip invalid numbers
+                    
+            self._t.cmd.mode(linuxcnc.MODE_MANUAL)
+            self._t._status(_t("Offsets updated."))
+            
+        except Exception as e:
+            self._t._status(_t("Error saving offsets:") + f" {e}")
+            
+        self._on_cancel_clicked()
