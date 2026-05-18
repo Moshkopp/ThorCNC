@@ -1,6 +1,7 @@
 import os
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QPushButton, QStackedWidget
 from PySide6.QtUiTools import QUiLoader
+from PySide6.QtCore import Qt
 
 from .backplot import BackplotWidget
 from .gcode_view import GCodeView
@@ -14,7 +15,7 @@ _PT_MED  = 42   # MACH values
 _PT_INFO = 32   # FEED / RPM
 _PT_HDR  = 20   # WCS / MACH / DTG column headers
 
-_MONO = "Ubuntu Mono"
+_MONO = "'Ubuntu Mono', 'Courier New', 'Consolas', 'DejaVu Sans Mono', monospace"
 
 # Colors matching the main DRO (dark.qss)
 _COL_WCS  = "#00dd55"        # green
@@ -103,13 +104,19 @@ class SimpleView(QWidget):
         axis_style = _axis_style()
 
         for lbl in (self.lbl_wcs_x, self.lbl_wcs_y, self.lbl_wcs_z):
-            if lbl: lbl.setStyleSheet(wcs_style)
+            if lbl: 
+                lbl.setStyleSheet(wcs_style)
+                lbl.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
 
         for lbl in (self.lbl_mach_x, self.lbl_mach_y, self.lbl_mach_z):
-            if lbl: lbl.setStyleSheet(mach_style)
+            if lbl: 
+                lbl.setStyleSheet(mach_style)
+                lbl.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
 
         for lbl in (self.lbl_dtg_x, self.lbl_dtg_y, self.lbl_dtg_z):
-            if lbl: lbl.setStyleSheet(dtg_style)
+            if lbl: 
+                lbl.setStyleSheet(dtg_style)
+                lbl.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
 
         for lbl in (self.lbl_feed, self.lbl_rpm):
             if lbl: lbl.setStyleSheet(info_style)

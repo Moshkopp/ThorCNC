@@ -98,12 +98,6 @@
          <property name="text"><string>STOP</string></property>
         </widget>
        </item>
-       <item>
-        <widget class="QPushButton" name="btn_simple_estop">
-         <property name="minimumSize"><size><width>0</width><height>110</height></size></property>
-         <property name="text"><string>E-STOP</string></property>
-        </widget>
-       </item>
       </layout>
      </item>
 
@@ -119,6 +113,24 @@
        <layout class="QVBoxLayout" name="backplotVLayout">
         <property name="margin"><number>0</number></property>
        </layout>
+      </widget>
+     </item>
+
+     <!-- Right: E-STOP (Vertical) -->
+     <item>
+      <widget class="QPushButton" name="btn_simple_estop">
+       <property name="minimumSize"><size><width>80</width><height>0</height></size></property>
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Fixed" vsizetype="Expanding">
+         <horstretch>0</horstretch><verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="text"><string>E
+-
+S
+T
+O
+P</string></property>
       </widget>
      </item>
 

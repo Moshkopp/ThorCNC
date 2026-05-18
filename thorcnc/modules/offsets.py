@@ -1,10 +1,12 @@
 """Offsets/WCS module for ThorCNC."""
 
 import os
+from datetime import datetime
 import linuxcnc
 from PySide6.QtCore import Slot
 from .base import ThorModule
 from ._theme_utils import theme_color
+from . import offsets_snapshots as _snaps
 from ..i18n import _t
 
 
@@ -156,7 +158,21 @@ class OffsetsModule(ThorModule):
         self._btn_cancel.setObjectName("wcs_clear_btn")
         self._btn_cancel.setMinimumHeight(34)
 
+        self._btn_snapshot_save = QPushButton(_t("Save Snapshot"))
+        self._btn_snapshot_save.clicked.connect(self._on_save_snapshot_clicked)
+        self._btn_snapshot_save.setFocusPolicy(_Qt.FocusPolicy.NoFocus)
+        self._btn_snapshot_save.setObjectName("wcs_action_btn")
+        self._btn_snapshot_save.setMinimumHeight(34)
+
+        self._btn_snapshot_load = QPushButton(_t("Load Snapshot…"))
+        self._btn_snapshot_load.clicked.connect(self._on_load_snapshot_clicked)
+        self._btn_snapshot_load.setFocusPolicy(_Qt.FocusPolicy.NoFocus)
+        self._btn_snapshot_load.setObjectName("wcs_action_btn")
+        self._btn_snapshot_load.setMinimumHeight(34)
+
         btn_lay.addStretch()
+        btn_lay.addWidget(self._btn_snapshot_save)
+        btn_lay.addWidget(self._btn_snapshot_load)
         btn_lay.addWidget(self._btn_edit)
         btn_lay.addWidget(self._btn_save)
         btn_lay.addWidget(self._btn_cancel)
@@ -309,5 +325,98 @@ class OffsetsModule(ThorModule):
             
         except Exception as e:
             self._t._status(_t("Error saving offsets:") + f" {e}")
-            
+
         self._on_cancel_clicked()
+
+    # ── Snapshots ─────────────────────────────────────────────────────────
+
+    def _snapshots_path(self) -> str | None:
+        settings = getattr(self._t, "settings", None)
+        if not settings or not getattr(settings, "filepath", None):
+            return None
+        return _snaps.snapshots_path(settings.filepath)
+
+    def _collect_all_wcs(self) -> dict[str, dict]:
+        tbl = self._offset_table
+        out: dict[str, dict] = {}
+        for row, (_, p_idx, _) in enumerate(self._WCS_LIST):
+            entry = {}
+            for col, axis in enumerate(("x", "y", "z", "r"), start=1):
+                item = tbl.item(row, col)
+                try:
+                    entry[axis] = float(item.text()) if item else 0.0
+                except (ValueError, AttributeError):
+                    entry[axis] = 0.0
+            out[str(p_idx)] = entry
+        return out
+
+    def _on_save_snapshot_clicked(self):
+        path = self._snapshots_path()
+        if not path:
+            self._t._status(_t("Snapshots unavailable: no prefs path"))
+            return
+        from ..widgets.offsets_snapshot_dialog import OffsetsSnapshotSaveDialog
+
+        wcs = self._collect_all_wcs()
+        dlg = OffsetsSnapshotSaveDialog(wcs, self._WCS_LIST, parent=self._t.ui)
+        if dlg.exec() != dlg.DialogCode.Accepted:
+            return
+        comment = dlg.get_comment()
+        now = datetime.now().isoformat(timespec="seconds")
+        snapshot = {
+            "id": now,
+            "created": now,
+            "comment": comment,
+            "wcs": wcs,
+        }
+        snapshots = _snaps.load_snapshots(path)
+        snapshots.append(snapshot)
+        _snaps.save_snapshots(path, snapshots)
+        self._t._status(_t("Snapshot saved: {}").format(comment or now))
+
+    def _on_load_snapshot_clicked(self):
+        path = self._snapshots_path()
+        if not path:
+            self._t._status(_t("Snapshots unavailable: no prefs path"))
+            return
+        snapshots = _snaps.load_snapshots(path)
+        if not snapshots:
+            self._t._status(_t("No snapshots available"))
+            return
+        from ..widgets.offsets_snapshot_dialog import OffsetsSnapshotLoadDialog
+
+        dlg = OffsetsSnapshotLoadDialog(snapshots, self._WCS_LIST, parent=self._t.ui)
+        result = dlg.exec()
+        remaining = dlg.get_remaining_snapshots()
+        if remaining != snapshots:
+            _snaps.save_snapshots(path, remaining)
+        if result != dlg.DialogCode.Accepted:
+            return
+        snap = dlg.get_selected_snapshot()
+        if not snap:
+            return
+
+        if self._t.poller and hasattr(self._t.poller.stat, "interp_state"):
+            if self._t.poller.stat.interp_state != linuxcnc.INTERP_IDLE:
+                self._t._status(_t("Cannot load snapshot while program is running!"))
+                return
+
+        try:
+            self._t.cmd.mode(linuxcnc.MODE_MDI)
+            self._t.cmd.wait_complete()
+            for _, p_idx, _ in self._WCS_LIST:
+                vals = snap.get("wcs", {}).get(str(p_idx))
+                if not vals:
+                    continue
+                x = float(vals.get("x", 0.0))
+                y = float(vals.get("y", 0.0))
+                z = float(vals.get("z", 0.0))
+                r = float(vals.get("r", 0.0))
+                self._t.cmd.mdi(f"G10 L2 P{p_idx} X{x} Y{y} Z{z} R{r}")
+                self._t.cmd.wait_complete()
+            self._t.cmd.mode(linuxcnc.MODE_MANUAL)
+            self._offset_var_mtime = 0.0
+            label = snap.get("comment") or snap.get("id") or ""
+            self._t._status(_t("Snapshot loaded: {}").format(label))
+        except Exception as e:
+            self._t._status(_t("Error loading snapshot:") + f" {e}")

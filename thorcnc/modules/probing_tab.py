@@ -469,7 +469,7 @@ class ProbingTabModule(ThorModule):
         for widget in [frm, *frm.findChildren(QWidget)]:
             widget.style().unpolish(widget)
             widget.style().polish(widget)
-            widget.update()
+            QWidget.update(widget)
 
     def _setup_probe_result_panel(self):
         """Build Probe Result Panel, insert into layout, start polling."""
