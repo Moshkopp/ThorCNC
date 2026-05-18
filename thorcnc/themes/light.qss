@@ -452,8 +452,7 @@ QPushButton#btn_go_to_home {
 /* ── Simple View Overlay Buttons ── */
 QPushButton#btn_simple_start,
 QPushButton#btn_simple_pause,
-QPushButton#btn_simple_stop,
-QPushButton#btn_simple_estop {
+QPushButton#btn_simple_stop {
     min-height: 80px;
     font-size: 22pt;
     font-weight: bold;
@@ -523,7 +522,11 @@ QPushButton#btn_simple_stop[status="active"] {
 QPushButton#btn_simple_estop {
     background-color: #c62828;
     border-color: #8e1a1a;
-    color: #ffffff;
+    color: #ffeb3b; /* Bright Yellow text for contrast */
+    font-size: 38pt; /* Much larger font for vertical layout */
+    font-weight: 900;
+    border-radius: 6px;
+    border: 2px solid #8e1a1a;
 }
 
 /* ── Navigation Sidebar ── */
