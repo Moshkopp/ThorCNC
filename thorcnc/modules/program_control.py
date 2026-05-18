@@ -14,6 +14,7 @@ from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QPushButton, QComboBox, QTableWidget, QTabWidget
 
 from .base import ThorModule
+from ._theme_utils import theme_color
 from ..i18n import _t
 
 
@@ -37,31 +38,52 @@ class ProgramControlModule(ThorModule):
     @Slot(bool)
     def _on_estop(self, active: bool):
         self._t._status(f"ESTOP {'AKTIV' if active else 'ZURÜCKGESETZT'}")
-        _base = "border-radius: 6px; font-weight: bold; font-size: 14pt; min-height: 70px;"
-        if b := self._t._w(QPushButton, "estop_button"):
-            if active:
-                b.setStyleSheet(f"QPushButton {{ border: 2px solid #ff4444; color: #cc0000; {_base} }}")
-            else:
-                b.setStyleSheet(f"QPushButton {{ background-color: #cc0000; color: white; {_base} }}")
+        self._last_estop_active = active
+        self._refresh_estop_style(active)
+        self._refresh_power_style(getattr(self._t, "_is_machine_on", False))
 
-        sv = self._t.simple_view_mod.simple_view
+    def _refresh_estop_style(self, active: bool):
+        _base = "border-radius: 6px; font-weight: bold; font-size: 14pt; min-height: 70px;"
+        c_border = theme_color(self._t, "error.border")
+        c_text   = theme_color(self._t, "error")
+        c_bg     = theme_color(self._t, "error")
+        if active:
+            css = f"QPushButton {{ border: 2px solid {c_border}; color: {c_text}; {_base} }}"
+        else:
+            css = f"QPushButton {{ background-color: {c_bg}; color: white; {_base} }}"
+        if b := self._t._w(QPushButton, "estop_button"):
+            b.setStyleSheet(css)
+        sv = self._t.simple_view_mod.simple_view if hasattr(self._t, "simple_view_mod") else None
         if sv and (b_s := getattr(sv, "btn_estop", None)):
-            if active:
-                b_s.setStyleSheet(f"QPushButton {{ border: 2px solid #ff4444; color: #cc0000; {_base} }}")
-            else:
-                b_s.setStyleSheet(f"QPushButton {{ background-color: #cc0000; color: white; {_base} }}")
+            b_s.setStyleSheet(css)
+
+    def _refresh_power_style(self, on: bool):
+        _base = "border-radius: 6px; font-weight: bold; font-size: 14pt; min-height: 70px;"
+        c_success = theme_color(self._t, "success")
+        if on:
+            css = f"QPushButton {{ background-color: {c_success}; color: white; {_base} }}"
+        else:
+            css = f"QPushButton {{ border: 2px solid {c_success}; color: {c_success}; {_base} }}"
+        if b := self._t._w(QPushButton, "power_button"):
+            b.setStyleSheet(css)
 
     @Slot(bool)
     def _on_machine_on(self, on: bool):
         self._t._is_machine_on = on
-        _base = "border-radius: 6px; font-weight: bold; font-size: 14pt; min-height: 70px;"
-        if b := self._t._w(QPushButton, "power_button"):
-            if on:
-                b.setStyleSheet(f"QPushButton {{ background-color: #27ae60; color: white; {_base} }}")
-            else:
-                b.setStyleSheet(f"QPushButton {{ border: 2px solid #27ae60; color: #27ae60; {_base} }}")
+        self._refresh_power_style(on)
         self._update_run_buttons()
         self._t.motion._update_goto_home_style(on and getattr(self._t, "_all_joints_homed", False))
+
+    def refresh_theme(self):
+        """Re-apply theme-aware dynamic styles after a theme switch."""
+        active = getattr(self, "_last_estop_active", None)
+        if active is None:
+            try:
+                active = self._t.poller.stat.task_state == linuxcnc.STATE_ESTOP
+            except Exception:
+                active = False
+        self._refresh_estop_style(active)
+        self._refresh_power_style(getattr(self._t, "_is_machine_on", False))
 
     # ── Mode ──────────────────────────────────────────────────────────────────
 

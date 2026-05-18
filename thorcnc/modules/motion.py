@@ -7,6 +7,7 @@ from PySide6.QtWidgets import QApplication
 from PySide6.QtGui import QPixmap, QPainter, QColor, QFont, QPen, QBrush, QRadialGradient, QIcon
 
 from .base import ThorModule
+from ._theme_utils import theme_color
 from ..i18n import _t
 
 
@@ -84,19 +85,30 @@ class MotionModule(ThorModule):
                 
             self._lbl_actual_feed = QLabel("Feed: 0", parent_widget)
             self._lbl_actual_feed.setObjectName("actual_feed_label")
-            self._lbl_actual_feed.setStyleSheet(
-                "font-weight: bold; "
-                "color: #2ecc71; "
-                "font-size: 20pt; "
-                "background-color: rgba(25, 28, 30, 0.85); "
-                "border: 1.5px solid #2ecc71; "
-                "border-radius: 5px; "
-                "padding: 4px 10px;"
-            )
+            self._apply_feed_label_style()
             self._lbl_actual_feed.move(15, 15)
             self._lbl_actual_feed.adjustSize()
             self._lbl_actual_feed.raise_()
             self._lbl_actual_feed.show()
+
+    def _apply_feed_label_style(self):
+        if not getattr(self, "_lbl_actual_feed", None):
+            return
+        col = theme_color(self._t, "dro.work")
+        from ._theme_utils import current_theme
+        if current_theme(self._t) == "light":
+            bg_rgba = "rgba(253, 246, 227, 0.85)"
+        else:
+            bg_rgba = "rgba(25, 28, 30, 0.85)"
+        self._lbl_actual_feed.setStyleSheet(
+            f"font-weight: bold; color: {col}; font-size: 20pt; "
+            f"background-color: {bg_rgba}; border: 1.5px solid {col}; "
+            "border-radius: 5px; padding: 4px 10px;"
+        )
+
+    def refresh_theme(self):
+        """Re-apply theme-aware overlay styling after theme switch."""
+        self._apply_feed_label_style()
 
     def _update_goto_home_style(self, all_homed: bool):
         in_auto = getattr(self._t, "_current_mode", None) == linuxcnc.MODE_AUTO

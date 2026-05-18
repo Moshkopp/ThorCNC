@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (QLabel, QLineEdit, QPushButton, QWidget,
                                 QStackedWidget)
 
 from .base import ThorModule
+from ._theme_utils import theme_color, current_theme
 from ..widgets.gcode_view import GCodeView
 from ..i18n import _t
 
@@ -26,6 +27,17 @@ class GCodeViewModule(ThorModule):
 
     def connect_signals(self):
         pass
+
+    def refresh_theme(self):
+        """Re-apply theme-aware dynamic styles after a theme switch."""
+        lq_title = getattr(self, "_lq_title", None)
+        if lq_title is not None:
+            lq_title.setStyleSheet(f"font-weight: bold; color: {theme_color(self._t, 'accent')};")
+        # Re-render active G/M codes panel so col_def / col_imp pick up the new theme
+        try:
+            self._update_active_codes_display()
+        except Exception:
+            pass
 
     # ── Widget Setup (called from _replace_custom_widgets) ────────────────────
 
@@ -80,7 +92,9 @@ class GCodeViewModule(ThorModule):
         lq_lay.setContentsMargins(10, 10, 10, 10)
         lq_lay.setSpacing(8)
         lq_title = QLabel(_t("SELECT START LINE:"))
-        lq_title.setStyleSheet("font-weight: bold; color: #3a7abf;")
+        lq_title.setObjectName("line_queue_title")
+        lq_title.setStyleSheet(f"font-weight: bold; color: {theme_color(self._t, 'accent')};")
+        self._lq_title = lq_title
         lq_lay.addWidget(lq_title)
         t._line_input = QSpinBox()
         t._line_input.setRange(1, 999999)
@@ -291,10 +305,12 @@ class GCodeViewModule(ThorModule):
         warn_list = set(s.get("hlight_gc_warn_list", "").replace(",", " ").upper().split())
         m_list = set(s.get("hlight_mc_list", "").replace(",", " ").upper().split())
 
-        col_imp = s.get("hlight_gc_imp_color", "#ffffff")
-        col_warn = s.get("hlight_gc_warn_color", "#ffffff")
-        col_m = s.get("hlight_mc_color", "#ffffff")
-        col_def = "#cccccc"
+        is_light = current_theme(self._t) == "light"
+        default_imp_color = "#073642" if is_light else "#ffffff"
+        col_imp = s.get("hlight_gc_imp_color", default_imp_color)
+        col_warn = s.get("hlight_gc_warn_color", default_imp_color)
+        col_m = s.get("hlight_mc_color", default_imp_color)
+        col_def = theme_color(self._t, "text.secondary")
 
         active_g = []
         for g in self._t._current_gcodes[1:]:
@@ -353,6 +369,8 @@ class GCodeViewModule(ThorModule):
 
     def _setup_highlight_settings(self):
         s = self._t.settings
+        is_light = current_theme(self._t) == "light"
+        default_color = "#073642" if is_light else "#ffffff"
         for prefix, le_name, btn_name in [
             ("hlight_gc_imp",  "le_gc_important",  "btn_gc_color_important"),
             ("hlight_gc_warn", "le_gc_warning",     "btn_gc_color_warning"),
@@ -367,7 +385,7 @@ class GCodeViewModule(ThorModule):
                     lambda text, p=prefix: self._on_hlight_text_changed(p, text))
 
             if btn:
-                color = s.get(f"{prefix}_color", "#ffffff")
+                color = s.get(f"{prefix}_color", default_color)
                 self._update_color_btn_style(btn, color)
                 btn.clicked.connect(
                     lambda checked=False, p=prefix, b=btn: self._on_hlight_color_clicked(p, b))
@@ -381,7 +399,9 @@ class GCodeViewModule(ThorModule):
         from PySide6.QtWidgets import QColorDialog
         from PySide6.QtGui import QColor
 
-        current = self._t.settings.get(f"{prefix}_color", "#ffffff")
+        is_light = current_theme(self._t) == "light"
+        default_color = "#073642" if is_light else "#ffffff"
+        current = self._t.settings.get(f"{prefix}_color", default_color)
         color = QColorDialog.getColor(QColor(current), self._t.ui, _t("Choose Color"))
 
         if color.isValid():

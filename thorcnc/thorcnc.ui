@@ -1588,7 +1588,7 @@
                     <widget class="QGroupBox" name="groupBox_ts_wechsel">
                      <property name="title"><string>Change Position</string></property>
                      <layout class="QGridLayout">
-                      <property name="spacing"><number>5</number></property>
+                      <property name="spacing"><number>12</number></property>
                       <item row="0" column="0">
                        <widget class="QLabel" name="lbl_dsb_ts_wechsel_x">
                         <property name="text"><string>X:</string></property>
@@ -1638,7 +1638,7 @@
                     <widget class="QGroupBox" name="groupBox_ts_mess">
                      <property name="title"><string>Probe Position</string></property>
                      <layout class="QGridLayout">
-                      <property name="spacing"><number>5</number></property>
+                      <property name="spacing"><number>12</number></property>
                       <item row="0" column="0">
                        <widget class="QLabel" name="lbl_dsb_ts_x">
                         <property name="text"><string>X:</string></property>
@@ -1688,7 +1688,7 @@
                     <widget class="QGroupBox" name="groupBox_ts_params">
                      <property name="title"><string>Messparameter</string></property>
                      <layout class="QGridLayout">
-                      <property name="spacing"><number>5</number></property>
+                      <property name="spacing"><number>12</number></property>
                       <item row="0" column="0">
                        <widget class="QLabel" name="lbl_dsb_ts_spindle_zero">
                         <property name="text"><string>Spindle Zero:</string></property>

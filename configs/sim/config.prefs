@@ -3,9 +3,9 @@
     "window_geometry": "01d9d0cb0003000000000000000000000000077f00000437000001100000001c0000060f0000036d0000000100040000078000000000000000000000077f00000437",
     "window_state": "000000ff00000000fd00000000000007800000041c00000004000000040000000800000008fc00000000",
     "backplot_view": {
-        "distance": 892.5830127612843,
-        "elevation": 23.0,
-        "azimuth": -80.0,
+        "distance": 1006.4449618333251,
+        "elevation": 33.0,
+        "azimuth": -64.0,
         "center": [
             277.2605895996094,
             244.14797973632812,
@@ -23,8 +23,9 @@
     "ts_z": -4.05,
     "ts_max_probe": -90.0,
     "ts_search_vel": 300.0,
-    "ts_probe_vel": 10.0,
+    "ts_probe_vel": 7.0,
     "mdi_history": [
+        "T3 M6 G43",
         "G53 G0 Z-15",
         "G1 X10 Y20 F5000",
         "G53 G0 X0",
@@ -73,8 +74,7 @@
         "G53 G0 Z0",
         "O<goto_zero_xy> call",
         "blubb",
-        "T8 M6 G43",
-        "blubb"
+        "T8 M6 G43"
     ],
     "theme": "dark",
     "backplot_msaa_samples": 16,
@@ -116,7 +116,7 @@
     "surface_map_tool": 99,
     "surface_map_feed": 80.0,
     "surface_map_clearance": 5.0,
-    "surface_map_depth": -6.0,
+    "surface_map_depth": -2.0,
     "surface_map_x_start": 10.0,
     "surface_map_x_end": 40.0,
     "surface_map_y_start": 10.0,
@@ -133,5 +133,6 @@
     "shortcut_gcode": "G53 G0 Z-15",
     "last_tool": 3,
     "ui_font_family": "Roboto Condensed",
-    "ui_font_scale": 101
+    "ui_font_scale": 101,
+    "ts_offset_direction": "X-"
 }

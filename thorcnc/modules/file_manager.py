@@ -15,23 +15,33 @@ from PySide6.QtWidgets import (QTreeView, QWidget, QHBoxLayout, QLabel,
                                QPushButton, QFileDialog, QFileSystemModel)
 
 
+from .base import ThorModule
+from ._theme_utils import theme_color
+from ..gcode_parser import parse_file
+from ..widgets.gcode_view import GCodeView
+from ..i18n import _t
+
+
 class _GCodeFileSystemModel(QFileSystemModel):
     """QFileSystemModel that highlights .nc/.ngc files with a distinct color."""
 
     _GCODE_EXTS = {".nc", ".ngc"}
-    _COLOR = QColor("#4ec9b0")  # teal-green, clearly visible on dark bg
+
+    def __init__(self, parent=None, thorc=None):
+        super().__init__(parent)
+        self._thorc = thorc
+        self._color = QColor(theme_color(thorc, "marker.gcode")) if thorc else QColor("#4ec9b0")
+
+    def refresh_color(self):
+        if self._thorc is not None:
+            self._color = QColor(theme_color(self._thorc, "marker.gcode"))
 
     def data(self, index, role=Qt.ItemDataRole.DisplayRole):
         if role == Qt.ItemDataRole.ForegroundRole and index.column() == 0:
             path = self.filePath(index)
             if os.path.splitext(path)[1].lower() in self._GCODE_EXTS:
-                return self._COLOR
+                return self._color
         return super().data(index, role)
-
-from .base import ThorModule
-from ..gcode_parser import parse_file
-from ..widgets.gcode_view import GCodeView
-from ..i18n import _t
 
 
 class FileManagerModule(ThorModule):
@@ -40,6 +50,14 @@ class FileManagerModule(ThorModule):
     def setup(self):
         """Initialize file manager UI."""
         self._setup_file_manager()
+
+    def refresh_theme(self):
+        """Update G-Code marker color after a theme switch and repaint."""
+        if hasattr(self, "_fs_model") and self._fs_model:
+            self._fs_model.refresh_color()
+            tree = self._t._w(QTreeView, "fileManagerView")
+            if tree and tree.viewport():
+                tree.viewport().update()
 
     def connect_signals(self):
         """Wire file manager signals."""
@@ -150,7 +168,7 @@ class FileManagerModule(ThorModule):
         self._file_home_dir = start_dir
 
         # File system model
-        self._fs_model = _GCodeFileSystemModel()
+        self._fs_model = _GCodeFileSystemModel(thorc=self._t)
         self._fs_model.setRootPath(start_dir)
         self._fs_model.setFilter(QDir.AllDirs | QDir.Files | QDir.NoDotAndDotDot)
 

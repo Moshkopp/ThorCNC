@@ -10,7 +10,7 @@ import os
 import linuxcnc
 from PySide6.QtCore import Qt, QTimer, Slot
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QFrame,
+    QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QFrame, QGroupBox,
     QLabel, QDoubleSpinBox, QSpinBox, QPushButton, QProgressBar, QSizePolicy,
 )
 
@@ -117,13 +117,11 @@ class SurfaceMapModule(ThorModule):
     def _build_params_panel(self) -> QFrame:
         frame = QFrame()
         frame.setObjectName("surfaceMapParams")
-        frame.setFrameShape(QFrame.Shape.StyledPanel)
-        frame.setMaximumWidth(360)
+        frame.setMaximumWidth(380)
 
-        grid = QGridLayout(frame)
-        grid.setContentsMargins(8, 6, 8, 6)
-        grid.setVerticalSpacing(12)
-        grid.setHorizontalSpacing(8)
+        outer = QVBoxLayout(frame)
+        outer.setContentsMargins(4, 4, 4, 4)
+        outer.setSpacing(10)
 
         def dsb(val, mn, mx, decimals=2, step=1.0):
             w = QDoubleSpinBox()
@@ -131,8 +129,6 @@ class SurfaceMapModule(ThorModule):
             w.setDecimals(decimals)
             w.setSingleStep(step)
             w.setValue(val)
-            w.setMinimumHeight(55)
-            w.setStyleSheet("font-size: 14pt; font-weight: bold;")
             w.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
             w.valueChanged.connect(self._save_prefs)
             return w
@@ -141,68 +137,58 @@ class SurfaceMapModule(ThorModule):
             w = QSpinBox()
             w.setRange(mn, mx)
             w.setValue(val)
-            w.setMinimumHeight(55)
-            w.setStyleSheet("font-size: 14pt; font-weight: bold;")
             w.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
             w.valueChanged.connect(self._save_prefs)
             return w
-            
-        def lbl(text):
-            l = QLabel(text)
-            l.setStyleSheet("font-size: 11pt; color: #eee; font-weight: bold;")
-            return l
 
-        # --- Probing Parameters ---
-        lbl_title_params = QLabel(_t("PROBING PARAMETERS"))
-        lbl_title_params.setStyleSheet("font-size: 13pt; font-weight: bold; color: #4db8ff;")
-        grid.addWidget(lbl_title_params, 0, 0, 1, 2)
+        def add_row(grid, row, label_text, widget):
+            l = QLabel(label_text)
+            l.setObjectName("surfaceMapParamLabel")
+            grid.addWidget(l, row, 0)
+            grid.addWidget(widget, row, 1)
 
-        grid.addWidget(lbl(_t("PROBE TOOL")), 1, 0)
+        # --- Probing Parameters group ---
+        gb_params = QGroupBox(_t("PROBING PARAMETERS"))
+        gb_params.setObjectName("surfaceMapGroupParams")
+        grid1 = QGridLayout(gb_params)
+        grid1.setVerticalSpacing(8)
+        grid1.setHorizontalSpacing(8)
+        grid1.setContentsMargins(10, 18, 10, 10)
+
         self._spb_probe_tool = spb(99, 1, 999)
-        grid.addWidget(self._spb_probe_tool, 1, 1)
-
-        grid.addWidget(lbl(_t("PROBE FEED")), 2, 0)
+        add_row(grid1, 0, _t("PROBE TOOL"), self._spb_probe_tool)
         self._dsb_feed = dsb(60.0, 1, 1000, step=10)
-        grid.addWidget(self._dsb_feed, 2, 1)
-
-        grid.addWidget(lbl(_t("Z CLEARANCE")), 3, 0)
+        add_row(grid1, 1, _t("PROBE FEED"), self._dsb_feed)
         self._dsb_clearance = dsb(5.0, -999, 999)
-        grid.addWidget(self._dsb_clearance, 3, 1)
-
-        grid.addWidget(lbl(_t("PROBE DEPTH")), 4, 0)
+        add_row(grid1, 2, _t("Z CLEARANCE"), self._dsb_clearance)
         self._dsb_depth = dsb(-5.0, -999, 0)
-        grid.addWidget(self._dsb_depth, 4, 1)
+        add_row(grid1, 3, _t("PROBE DEPTH"), self._dsb_depth)
 
-        # --- Scan Coordinates ---
-        lbl_title_coords = QLabel(_t("SCAN COORDINATES"))
-        lbl_title_coords.setStyleSheet("font-size: 13pt; font-weight: bold; color: #4db8ff; margin-top: 15px;")
-        grid.addWidget(lbl_title_coords, 5, 0, 1, 2)
+        outer.addWidget(gb_params)
 
-        grid.addWidget(lbl(_t("X Start")), 6, 0)
+        # --- Scan Coordinates group ---
+        gb_scan = QGroupBox(_t("SCAN COORDINATES"))
+        gb_scan.setObjectName("surfaceMapGroupScan")
+        grid2 = QGridLayout(gb_scan)
+        grid2.setVerticalSpacing(8)
+        grid2.setHorizontalSpacing(8)
+        grid2.setContentsMargins(10, 18, 10, 10)
+
         self._dsb_x_start = dsb(-50.0, -9999, 9999)
-        grid.addWidget(self._dsb_x_start, 6, 1)
-
-        grid.addWidget(lbl(_t("X End")), 7, 0)
+        add_row(grid2, 0, _t("X Start"), self._dsb_x_start)
         self._dsb_x_end = dsb(50.0, -9999, 9999)
-        grid.addWidget(self._dsb_x_end, 7, 1)
-
-        grid.addWidget(lbl(_t("Y Start")), 8, 0)
+        add_row(grid2, 1, _t("X End"), self._dsb_x_end)
         self._dsb_y_start = dsb(-50.0, -9999, 9999)
-        grid.addWidget(self._dsb_y_start, 8, 1)
-
-        grid.addWidget(lbl(_t("Y End")), 9, 0)
+        add_row(grid2, 2, _t("Y Start"), self._dsb_y_start)
         self._dsb_y_end = dsb(50.0, -9999, 9999)
-        grid.addWidget(self._dsb_y_end, 9, 1)
-
-        grid.addWidget(lbl(_t("Columns")), 10, 0)
+        add_row(grid2, 3, _t("Y End"), self._dsb_y_end)
         self._spb_cols = spb(5, 2, 30)
-        grid.addWidget(self._spb_cols, 10, 1)
-
-        grid.addWidget(lbl(_t("Rows")), 11, 0)
+        add_row(grid2, 4, _t("Columns"), self._spb_cols)
         self._spb_rows = spb(5, 2, 30)
-        grid.addWidget(self._spb_rows, 11, 1)
+        add_row(grid2, 5, _t("Rows"), self._spb_rows)
 
-        grid.setRowStretch(12, 1)
+        outer.addWidget(gb_scan)
+        outer.addStretch(1)
 
         return frame
 

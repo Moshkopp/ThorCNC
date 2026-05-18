@@ -4,6 +4,7 @@ import os
 import linuxcnc
 from PySide6.QtCore import Slot
 from .base import ThorModule
+from ._theme_utils import theme_color
 from ..i18n import _t
 
 
@@ -149,13 +150,15 @@ class OffsetsModule(ThorModule):
         params = self._read_var_file()
         tbl = self._offset_table
 
+        col_active = theme_color(self._t, "row.active.fg")
+        col_idle   = theme_color(self._t, "row.idle.fg")
         for row, (_, _, base) in enumerate(self._WCS_LIST):
             for col, offset in enumerate((0, 1, 2, 9)):
                 val = params.get(base + offset, 0.0)
                 it = tbl.item(row, col + 1)
                 if it:
                     it.setText(f"{val:+.4f}")
-                    it.setForeground(QColor("#3db2ff" if val != 0.0 else "#999999"))
+                    it.setForeground(QColor(col_active if val != 0.0 else col_idle))
 
     @Slot(int)
     def _on_offset_wcs_changed(self, index: int):
@@ -164,13 +167,29 @@ class OffsetsModule(ThorModule):
             return
         from PySide6.QtGui import QColor
         tbl = self._offset_table
+        self._last_offset_wcs_index = index
+        bg_active = QColor(theme_color(self._t, "row.active.bg"))
+        bg_idle   = QColor(theme_color(self._t, "row.idle.bg"))
         for row, (_, p_idx, _) in enumerate(self._WCS_LIST):
             active = p_idx == index
-            bg = QColor("#194a82") if active else QColor("#252525")
+            bg = bg_active if active else bg_idle
             for col in range(6):
                 it = tbl.item(row, col)
                 if it:
                     it.setBackground(bg)
+
+    def refresh_theme(self):
+        """Re-apply theme-aware backgrounds/foregrounds after a theme switch."""
+        # Forces foreground refresh by invalidating the cache mtime
+        self._offset_var_mtime = 0.0
+        self._refresh_offsets_table()
+        idx = getattr(self, "_last_offset_wcs_index", None)
+        if idx is None:
+            try:
+                idx = self._t.poller.stat.g5x_index
+            except Exception:
+                return
+        self._on_offset_wcs_changed(idx)
 
     def _clear_wcs(self, p_idx: int):
         """Clears all offsets of the specified WCS to 0 via G10 L2."""

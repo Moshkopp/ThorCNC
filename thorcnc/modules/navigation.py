@@ -452,6 +452,17 @@ class NavigationModule(ThorModule):
         self._t.settings.save()
         self.update_nav_icons()
 
+        # Refresh modules that draw with hardcoded colors via setStyleSheet/QColor.
+        # Each module exposes an optional refresh_theme() that re-applies its dynamic styles.
+        for attr in ("program_control", "status_mod", "probing_tab", "surface_map",
+                     "offsets", "file_manager", "gcode_view_mod", "motion"):
+            mod = getattr(self._t, attr, None)
+            if mod is not None and hasattr(mod, "refresh_theme"):
+                try:
+                    mod.refresh_theme()
+                except Exception as e:
+                    print(f"[ThorCNC] refresh_theme failed for {attr}: {e}")
+
     def update_nav_icons(self):
         """Updates navigation icons for the sidebar based on theme."""
         theme = self._t.settings.get("theme", "dark")

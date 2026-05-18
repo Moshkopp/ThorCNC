@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtGui import QIcon
 
 from .base import ThorModule
+from ._theme_utils import theme_color
 from ..i18n import _t
 from ..widgets.probe_result import (
     ProbeResultPanel, ProbeHistoryDialog, ProbeResult,
@@ -75,6 +76,38 @@ class ProbingTabModule(ThorModule):
 
     def connect_signals(self):
         self._t.poller.digital_outputs_changed.connect(self._on_digital_out_changed)
+
+    def refresh_theme(self):
+        """Re-apply theme-aware probe marker/accent styles after a theme switch."""
+        accent = theme_color(self._t, "marker.probe")
+        m = getattr(self, "_probe_marker", None)
+        if m is not None:
+            sz = getattr(self, "_probe_marker_sz", 22)
+            m.setStyleSheet(
+                f"background:{accent};color:white;border-radius:{sz//2}px;"
+                "font-size:8pt;font-weight:bold;"
+            )
+        ha = getattr(self, "_probe_home_accent", None)
+        if ha is not None:
+            try:
+                ha.setStyleSheet(f"background:{accent}; border-radius:3px;")
+            except RuntimeError:
+                pass
+        # Re-place L-shaped corner accent (border colors re-applied on next move)
+        try:
+            self._update_probe_marker_pos()
+        except Exception:
+            pass
+        # Sim probe button (theme-aware orange tones)
+        sim = self._t._w(QPushButton, "btn_sim_probe") if hasattr(self._t, "_w") else None
+        if sim is not None:
+            bg_warn = theme_color(self._t, "warning.bg")
+            fg_warn = theme_color(self._t, "warning.text")
+            bg_press = theme_color(self._t, "warning")
+            sim.setStyleSheet(
+                f"QPushButton {{ background: {bg_warn}; color: {fg_warn}; font-weight: bold; border-radius: 4px; }}"
+                f"QPushButton:pressed {{ background: {bg_press}; color: white; }}"
+            )
 
     def _on_digital_out_changed(self, dout):
         self._t._last_dout = dout
@@ -333,15 +366,16 @@ class ProbingTabModule(ThorModule):
             self._probe_marker = QLabel("⌂", self._t.ui.tab_probing)
             self._probe_marker.setFixedSize(self._probe_marker_sz, self._probe_marker_sz)
             self._probe_marker.setAlignment(Qt.AlignCenter)
+            marker_bg = theme_color(self._t, "marker.probe")
             self._probe_marker.setStyleSheet(
-                f"background:#e67e00;color:white;border-radius:{self._probe_marker_sz//2}px;"
+                f"background:{marker_bg};color:white;border-radius:{self._probe_marker_sz//2}px;"
                 "font-size:8pt;font-weight:bold;")
             self._probe_marker.setToolTip("Machine Zero")
 
-            # Orange Corner Accent
+            # Corner Accent (theme-aware)
             self._probe_home_accent = QFrame(self._t.ui.tab_probing)
             self._probe_home_accent.setFixedSize(14, 14)
-            self._probe_home_accent.setStyleSheet("background:#e67e00; border-radius:3px;")
+            self._probe_home_accent.setStyleSheet(f"background:{marker_bg}; border-radius:3px;")
             self._probe_home_accent.lower() # Place behind icon
             
             # L-Shaped Corner Accent (inside the frame)
@@ -491,8 +525,13 @@ class ProbingTabModule(ThorModule):
         btn.setObjectName("btn_sim_probe")
         btn.setCheckable(False)
         btn.setFixedHeight(28)
-        btn.setStyleSheet("QPushButton { background: #7a3000; color: #ffcc88; font-weight: bold; border-radius: 4px; }"
-                          "QPushButton:pressed { background: #ff6600; color: white; }")
+        bg_warn = theme_color(self._t, "warning.bg")
+        fg_warn = theme_color(self._t, "warning.text")
+        bg_press = theme_color(self._t, "warning")
+        btn.setStyleSheet(
+            f"QPushButton {{ background: {bg_warn}; color: {fg_warn}; font-weight: bold; border-radius: 4px; }}"
+            f"QPushButton:pressed {{ background: {bg_press}; color: white; }}"
+        )
         btn.pressed.connect(self._sim_probe_press)
         btn.released.connect(self._sim_probe_release)
 
@@ -728,8 +767,9 @@ class ProbingTabModule(ThorModule):
                 border_x = "right" if is_right else "left"
                 border_y = "bottom" if is_bottom else "top"
                 
+                accent = theme_color(self._t, "marker.probe")
                 self._probe_corner_accent.setStyleSheet(
-                    f"background: transparent; border-{border_x}: 4px solid #e67e00; border-{border_y}: 4px solid #e67e00;"
+                    f"background: transparent; border-{border_x}: 4px solid {accent}; border-{border_y}: 4px solid {accent};"
                 )
                 
                 # Move to the absolute corner of the frame

@@ -13,6 +13,7 @@ from PySide6.QtWidgets import QListWidget, QListWidgetItem
 from PySide6.QtGui import QColor
 
 from .base import ThorModule
+from ._theme_utils import theme_color
 
 
 class StatusModule(ThorModule):
@@ -44,8 +45,9 @@ class StatusModule(ThorModule):
         lbl = getattr(self._t, '_lbl_status_msg', None) or getattr(self, '_lbl_status_msg', None)
         if lbl:
             lbl.setText(msg)
+            col = theme_color(self._t, "error.text" if error else "text.primary")
             lbl.setStyleSheet(
-                f"color: {'#ff5555' if error else '#cccccc'}; font-weight: bold; margin-left: 10px;"
+                f"color: {col}; font-weight: bold; margin-left: 10px;"
             )
             self._status_timer.start(10000)
 
@@ -58,11 +60,8 @@ class StatusModule(ThorModule):
         log.setAlternatingRowColors(False)
         ts = QDateTime.currentDateTime().toString("HH:mm:ss")
         item = QListWidgetItem(f"[{ts}]  {msg}")
-        if error:
-            item.setForeground(QColor("#ff5555"))
-        else:
-            theme = self._t.settings.get("theme", "dark")
-            item.setForeground(QColor("#1a2332" if theme == "light" else "#d0d0d0"))
+        col = theme_color(self._t, "error.text" if error else "text.primary")
+        item.setForeground(QColor(col))
         log.addItem(item)
         log.scrollToBottom()
 

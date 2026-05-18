@@ -554,6 +554,41 @@ QLineEdit:focus {
     border-color: #3a7abf;
 }
 
+/* ── Global SpinBox / DoubleSpinBox (touch-friendly, no up/down buttons) ── */
+QAbstractSpinBox {
+    min-height: 50px;
+    font-family: 'Bebas Neue', 'Noto Sans', sans-serif;
+    font-size: 14pt;
+    font-weight: bold;
+    background-color: #1a1a1a;
+    border: 1px solid #444444;
+    border-radius: 6px;
+    color: #d0d0d0;
+    selection-background-color: #3a7abf;
+    selection-color: white;
+    padding: 0 10px;
+    qproperty-alignment: AlignCenter;
+    qproperty-buttonSymbols: NoButtons;
+}
+QAbstractSpinBox:focus {
+    border-color: #3a7abf;
+}
+QAbstractSpinBox:hover {
+    border-color: #666666;
+}
+QAbstractSpinBox:disabled {
+    background-color: #2a2a2a;
+    color: #555555;
+    border-color: #333333;
+}
+QAbstractSpinBox::up-button,
+QAbstractSpinBox::down-button {
+    width: 0;
+    height: 0;
+    border: none;
+    background: transparent;
+}
+
 /* ── Scrollbars & Sliders ── */
 QScrollBar:vertical {
     background: #1e1e1e;
@@ -983,39 +1018,39 @@ QLabel#lbl_probe_params_title {
 
 QFrame#frm_probe_params QLabel[objectName^="lbl_probe_param_"] {
     margin: 2px 0px;
-    font-size: 11pt;
+    font-family: 'Bebas Neue', 'Noto Sans', sans-serif;
+    font-size: 13pt;
     font-weight: bold;
-    color: #000000;
-    background-color: #e0e0e0;
-    border: 1px solid #ffffff;
-    border-radius: 4px;
+    color: #d0d0d0;
+    background-color: #252525;
+    border: 1px solid #444444;
+    border-radius: 6px;
     padding: 6px 12px;
-    height: 42px;
-    min-height: 42px;
-    max-height: 42px;
+    min-height: 50px;
 }
 
-QFrame#frm_probe_params QSpinBox, 
-QFrame#frm_probe_params QDoubleSpinBox,
+/* Probe-Params Combo follows the same touch sizing as global SpinBox */
 QFrame#frm_probe_params QComboBox {
     margin: 2px 0px;
     padding: 6px 8px;
-    font-size: 11pt;
+    font-family: 'Bebas Neue', 'Noto Sans', sans-serif;
+    font-size: 14pt;
     font-weight: bold;
-    color: #000000;
-    background-color: #e0e0e0;
-    border: 1px solid #999999;
-    border-radius: 4px;
-    height: 42px;
-    min-height: 42px;
-    max-height: 42px;
+    color: #d0d0d0;
+    background-color: #1a1a1a;
+    border: 1px solid #444444;
+    border-radius: 6px;
+    min-height: 50px;
 }
 
-QFrame#frm_probe_params QSpinBox:hover, 
-QFrame#frm_probe_params QDoubleSpinBox:hover,
 QFrame#frm_probe_params QComboBox:hover {
-    background-color: #ffffff;
+    background-color: #2a2a2a;
     border-color: #3a7abf;
+}
+
+/* SpinBoxes inside probe params use the global touch style — uniform margin only */
+QFrame#frm_probe_params QAbstractSpinBox {
+    margin: 2px 0px;
 }
 
 /* Auto Zero Master Button in the grid */
@@ -1034,6 +1069,42 @@ QPushButton#btn_auto_zero_master:checked {
     background-color: #3a7abf;
     border-color: #5599dd;
     color: #ffffff;
+}
+
+/* ── Surface Map: GroupBoxes for Probing Params + Scan Coordinates ── */
+QGroupBox#surfaceMapGroupParams,
+QGroupBox#surfaceMapGroupScan {
+    background-color: #1e1e1e;
+    border: 1px solid #444444;
+    border-radius: 8px;
+    margin-top: 22px;
+    padding-top: 8px;
+}
+QGroupBox#surfaceMapGroupParams::title,
+QGroupBox#surfaceMapGroupScan::title {
+    subcontrol-origin: margin;
+    subcontrol-position: top left;
+    left: 12px;
+    top: 2px;
+    padding: 3px 12px;
+    color: #3a7abf;
+    font-size: 11pt;
+    font-weight: bold;
+    background-color: #252525;
+    border: 1px solid #444444;
+    border-radius: 4px;
+}
+QGroupBox#surfaceMapGroupParams QLabel#surfaceMapParamLabel,
+QGroupBox#surfaceMapGroupScan QLabel#surfaceMapParamLabel {
+    font-family: 'Bebas Neue', 'Noto Sans', sans-serif;
+    font-size: 13pt;
+    font-weight: bold;
+    color: #d0d0d0;
+    background-color: #252525;
+    border: 1px solid #444444;
+    border-radius: 6px;
+    padding: 6px 12px;
+    min-height: 50px;
 }
 
 QFrame#frm_probe_grid {
@@ -1327,23 +1398,32 @@ QTabWidget#settings_tabs QTextEdit {
     selection-background-color: #3a7abf;
 }
 
-QTabWidget#settings_tabs QDoubleSpinBox,
-QTabWidget#settings_tabs QSpinBox,
 QTabWidget#settings_tabs QComboBox {
-    background-color: #16191c;
+    background-color: #1a1a1a;
     border: 1px solid #3f4956;
-    border-radius: 4px;
-    padding: 2px 4px;
+    border-radius: 6px;
+    padding: 6px 8px;
     color: #ffffff;
     selection-background-color: #3a7abf;
-    min-height: 22px;
+    min-height: 50px;
+    font-family: 'Bebas Neue', 'Noto Sans', sans-serif;
+    font-size: 14pt;
+    font-weight: bold;
 }
 
 /* Toolsetter tab — wider input fields for readability */
-QWidget#settings_tab_toolsetter QDoubleSpinBox,
-QWidget#settings_tab_toolsetter QSpinBox,
+QWidget#settings_tab_toolsetter QAbstractSpinBox,
 QWidget#settings_tab_toolsetter QComboBox {
-    min-width: 140px;
+    min-width: 160px;
+}
+
+/* Toolsetter GroupBox labels — match SpinBox height so they align row by row */
+QGroupBox#groupBox_ts_wechsel QLabel,
+QGroupBox#groupBox_ts_mess QLabel,
+QGroupBox#groupBox_ts_params QLabel {
+    min-height: 50px;
+    font-size: 12pt;
+    color: #d0d0d0;
 }
 
 QTabWidget#settings_tabs QLineEdit:focus,
