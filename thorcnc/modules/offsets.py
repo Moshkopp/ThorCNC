@@ -401,6 +401,18 @@ class OffsetsModule(ThorModule):
                 self._t._status(_t("Cannot load snapshot while program is running!"))
                 return
 
+        from PySide6.QtWidgets import QMessageBox
+        label = snap.get("comment") or snap.get("id") or ""
+        res = QMessageBox.question(
+            self._t.ui,
+            _t("Load snapshot"),
+            _t("Overwrite all WCS offsets with snapshot '{}'?").format(label),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if res != QMessageBox.StandardButton.Yes:
+            return
+
         try:
             self._t.cmd.mode(linuxcnc.MODE_MDI)
             self._t.cmd.wait_complete()
@@ -416,7 +428,6 @@ class OffsetsModule(ThorModule):
                 self._t.cmd.wait_complete()
             self._t.cmd.mode(linuxcnc.MODE_MANUAL)
             self._offset_var_mtime = 0.0
-            label = snap.get("comment") or snap.get("id") or ""
             self._t._status(_t("Snapshot loaded: {}").format(label))
         except Exception as e:
             self._t._status(_t("Error loading snapshot:") + f" {e}")

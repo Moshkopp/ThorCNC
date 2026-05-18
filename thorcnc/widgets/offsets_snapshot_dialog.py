@@ -2,8 +2,9 @@
 
 from PySide6.QtCore import Qt, Slot
 from PySide6.QtWidgets import (QDialog, QFrame, QHBoxLayout, QHeaderView,
-                               QLabel, QLineEdit, QPushButton, QTableWidget,
-                               QTableWidgetItem, QVBoxLayout, QAbstractItemView)
+                               QLabel, QLineEdit, QMessageBox, QPushButton,
+                               QTableWidget, QTableWidgetItem, QVBoxLayout,
+                               QAbstractItemView)
 
 from ..i18n import _t
 
@@ -233,6 +234,17 @@ class OffsetsSnapshotLoadDialog(QDialog):
     def _on_delete_clicked(self):
         row = self.table.currentRow()
         if not (0 <= row < len(self._snapshots)):
+            return
+        snap = self._snapshots[row]
+        label = snap.get("comment") or _fmt_date(snap)
+        res = QMessageBox.question(
+            self,
+            _t("Delete snapshot"),
+            _t("Delete snapshot '{}'?").format(label),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if res != QMessageBox.StandardButton.Yes:
             return
         del self._snapshots[row]
         self._populate_table()
