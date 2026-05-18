@@ -1,11 +1,21 @@
 """Spindle module for ThorCNC — Spindle and Coolant management."""
 
+import os
+import re
 import linuxcnc
 from PySide6.QtCore import Qt, Slot
-from PySide6.QtWidgets import QPushButton, QLabel, QProgressBar
+from PySide6.QtWidgets import QPushButton, QLabel, QProgressBar, QMessageBox
 
 from .base import ThorModule
 from ..i18n import _t
+
+
+def _probe_tool_number(thorc) -> int:
+    """Tool number considered a touch-probe (must never be spun)."""
+    try:
+        return int(thorc.settings.get("safety_probe_tool_number", 99))
+    except (TypeError, ValueError):
+        return 99
 
 class SpindleModule(ThorModule):
     """Manages spindle (CW/CCW/Stop), RPM displays, load bar, and Coolant."""
@@ -27,6 +37,7 @@ class SpindleModule(ThorModule):
         p.spindle_speed_actual.connect(self._on_spindle_actual)
         p.spindle_load.connect(self._on_spindle_load)
         p.spindle_speed_cmd.connect(self._on_spindle_speed)
+        p.file_loaded.connect(self._on_file_loaded_probe_check)
 
     @Slot(float)
     def _on_spindle_speed(self, rpm: float):
@@ -127,6 +138,12 @@ class SpindleModule(ThorModule):
             self._t._status(_t("Machine is in estop!"), error=True)
             return
 
+        # Safety: never spin a touch probe (T99 by default)
+        probe_t = _probe_tool_number(self._t)
+        if self._t.poller.stat.tool_in_spindle == probe_t:
+            self._block_spindle_for_probe(probe_t)
+            return
+
         speed = abs(self._t.poller.stat.spindle[0]['speed'])
         if speed < 1:
             speed = 6000
@@ -163,6 +180,56 @@ class SpindleModule(ThorModule):
         
         state_text = _t("ON") if new_state == 1 else _t("OFF")
         self._t._status("Coolant: " + state_text)
+
+    # ── Probe-Tool Safety ─────────────────────────────────────────────────────
+
+    @Slot(str)
+    def _on_file_loaded_probe_check(self, path: str):
+        """When a G-code file is loaded, scan once for the probe tool number.
+        If found (and not inside a comment), warn the operator with a modal."""
+        if not path or not os.path.isfile(path):
+            return
+        probe_t = _probe_tool_number(self._t)
+        try:
+            with open(path, "r", errors="ignore") as f:
+                content = f.read()
+        except OSError:
+            return
+
+        pattern = re.compile(r'\bT0*' + str(probe_t) + r'\b', re.IGNORECASE)
+        for i, raw in enumerate(content.splitlines(), start=1):
+            clean = re.sub(r'\(.*?\)|;.*', '', raw)
+            if pattern.search(clean):
+                self._warn_probe_in_program(probe_t, i, raw.strip())
+                return  # one warning per file is enough
+
+    def _warn_probe_in_program(self, probe_t: int, line_num: int, line_text: str):
+        text = _t(
+            "The loaded program references the probe tool T{n}:\n\n"
+            "Line {ln}:  {txt}\n\n"
+            "Make sure the spindle never runs while T{n} is in the spindle.\n"
+            "A tool change (M6) to a real cutter must precede any M3/M4."
+        ).format(n=probe_t, ln=line_num, txt=line_text)
+        QMessageBox.warning(self._t.ui, _t("Probe-Tool in Program"), text)
+        self._t._status(
+            _t("Probe tool T{n} referenced in program (line {ln})").format(
+                n=probe_t, ln=line_num),
+            error=True,
+        )
+
+    def _block_spindle_for_probe(self, probe_t: int):
+        """Modal + status when the user tries to start the spindle manually
+        while the probe tool is in the spindle."""
+        self._t._status(
+            _t("BLOCKED: T{n} (probe) loaded — spindle disabled").format(n=probe_t),
+            error=True,
+        )
+        text = _t(
+            "Touch probe T{n} is loaded.\n\n"
+            "Manual spindle start is blocked to protect the probe.\n"
+            "Unload T{n} first (e.g. M6 T<cutter>)."
+        ).format(n=probe_t)
+        QMessageBox.critical(self._t.ui, _t("Probe-Tool Safety"), text)
 
     def sync_buttons(self):
         """Syncs the coolant button highlight with machine status."""

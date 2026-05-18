@@ -359,6 +359,30 @@ class SettingsTabModule(ThorModule):
             gl_safety.addWidget(sep2)
             gl_safety.addSpacing(5)
 
+            # ── Probe Tool Lockout ───────────────────────────────────────
+            lbl_pt_desc = QLabel(_t(
+                "<b>Probe Tool Lockout:</b><br>"
+                "Manual spindle start is blocked while this tool number is loaded.<br>"
+                "If a running program commands the spindle on with this tool in the "
+                "spindle, the spindle is stopped and the program is aborted."))
+            lbl_pt_desc.setWordWrap(True)
+            lbl_pt_desc.setObjectName("settings_desc_label")
+            gl_safety.addWidget(lbl_pt_desc)
+
+            lay_pt = QHBoxLayout()
+            lay_pt.addWidget(QLabel(_t("Probe Tool Number:")))
+            self._sb_probe_tool = QSpinBox()
+            self._sb_probe_tool.setRange(1, 99999)
+            self._sb_probe_tool.setValue(
+                int(self._t.settings.get("safety_probe_tool_number", 99)))
+            self._sb_probe_tool.setToolTip(_t(
+                "Tool number reserved for the touch probe — spindle is never "
+                "allowed to spin while this tool is loaded."))
+            self._sb_probe_tool.valueChanged.connect(self._on_probe_tool_changed)
+            lay_pt.addWidget(self._sb_probe_tool)
+            lay_pt.addStretch()
+            gl_safety.addLayout(lay_pt)
+
             fl_safety.addWidget(gb_safety)
             fl_safety.addStretch()
             col_safety.addWidget(f_safety)
@@ -1114,6 +1138,10 @@ class SettingsTabModule(ThorModule):
                 timer.start()
             else:
                 timer.stop()
+
+    def _on_probe_tool_changed(self, value: int):
+        self._t.settings.set("safety_probe_tool_number", int(value))
+        self._t.settings.save()
 
     def _on_show_pocket_column_changed(self, visible: bool):
         from PySide6.QtWidgets import QTableWidget

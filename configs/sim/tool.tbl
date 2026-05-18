@@ -6,6 +6,7 @@ T5 P5 D8.000 Z33.256 ;Ø8mm SeoGeo 1T
 T6 P6 D12.000 ;Seco Ø12mm 4T
 T7 P7 D56.000 ;Ø56mm
 T8 P8 D55.000 ;Ø55mm
+T9 P9 D6 Z22.5569 ;Ø6mm
 T10 P10 D8.000 ;Ø8mm SeoGeo 3T gerade
 T14 P14 D35.000 Z21.490 ;Planfräser 35mm
 T99 P99 D3.000 ;3D-Taster
