@@ -24,20 +24,28 @@ class _HoverImageBridge(QObject):
     between sibling widgets inside the same group.
     """
 
-    def __init__(self, image_label, mapping, assets_dir, default_text, parent=None):
+    def __init__(self, image_label, mapping, assets_dir, default_text,
+                 comment_label=None, default_comment=None, parent=None):
         super().__init__(parent)
         self._image_label = image_label
+        self._comment_label = comment_label
         self._mapping = mapping
         self._assets_dir = assets_dir
         self._default_text = default_text
+        self._default_comment = default_comment
+        self._default_pixmap = None
+        default_path = os.path.join(self._assets_dir, "change_position.png")
+        if os.path.isfile(default_path):
+            self._default_pixmap = QPixmap(default_path)
         self._current_pixmap = None
         self._current_key = None  # (filename, caption) currently displayed, or None
-        image_label.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
+        image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self._leave_timer = QTimer(self)
         self._leave_timer.setSingleShot(True)
         self._leave_timer.setInterval(80)
         self._leave_timer.timeout.connect(self._show_default)
+        self._show_default()
 
     def eventFilter(self, obj, event):
         et = event.type()
@@ -75,18 +83,26 @@ class _HoverImageBridge(QObject):
             self._current_pixmap = None
             self._image_label.clear()
             self._image_label.setText(
-                f"<b>{caption}</b><br><i>(no image yet — place "
+                f"<b>{caption}</b><br><i>(no image yet - place "
                 f"<code>{filename}</code> in <code>assets/toolsetter/</code>)</i>"
                 if filename else f"<b>{caption}</b>"
             )
+        if self._comment_label:
+            self._comment_label.setText(caption)
 
     def _show_default(self):
-        if self._current_key is None:
+        if self._current_key is None and self._current_pixmap is self._default_pixmap:
             return
         self._current_key = None
-        self._current_pixmap = None
         self._image_label.clear()
-        self._image_label.setText(self._default_text)
+        if self._default_pixmap:
+            self._current_pixmap = self._default_pixmap
+            self._rescale()
+        else:
+            self._current_pixmap = None
+            self._image_label.setText(self._default_text)
+        if self._comment_label and self._default_comment is not None:
+            self._comment_label.setText(self._default_comment)
 
     def _rescale(self):
         if not self._current_pixmap:
@@ -150,7 +166,7 @@ class SettingsTabModule(ThorModule):
                                 "Probe Position — XY of the sensor, Z of the probe surface"),
         # Measurement parameters — one image per parameter
         "dsb_ts_spindle_zero": ("spindle_zero.png",
-                                "Spindle Zero — reference tool measurement at G59.3"),
+                                "Spindle Zero — distance between spindle nut and toolsetter"),
         "dsb_ts_max_probe":    ("max_probe.png",
                                 "MAX Probe — maximum probing distance (negative = downwards)"),
         "dsb_ts_retract":      ("retract.png",
@@ -162,6 +178,8 @@ class SettingsTabModule(ThorModule):
         # Macros
         "te_ts_before":        ("ts_before.png",  "Before Toolsetter — G-code before each measurement"),
         "te_ts_after":         ("ts_after.png",   "After Toolsetter — G-code after each measurement"),
+        "groupBox_ts_large_tool": ("large_tools.png",
+                                   "Large tools — offset the sensor position when the tool is wider than the contact surface"),
     }
 
     def __init__(self, thorc):
@@ -208,41 +226,46 @@ class SettingsTabModule(ThorModule):
                 cb_lang.setCurrentIndex(idx)
             cb_lang.currentIndexChanged.connect(lambda i, c=cb_lang: self._on_language_changed(c.itemData(i)))
 
-        # ── UI Tab: 2-Spalten-Layout ──────────────────────────────────────────
+        # ── UI Tab: konsistente Settings-Karten ───────────────────────────────
         if ui_tab := self._t._w(QWidget, "settings_tab_ui"):
             old_layout = ui_tab.layout()
 
             # Vorhandene Widgets aus dem .ui-Layout einsammeln (Theme, GCode, Language)
-            left_widgets = []
+            ui_groups = {}
             while old_layout.count():
                 item = old_layout.takeAt(0)
                 if w := item.widget():
                     w.setParent(None)
-                    left_widgets.append(w)
+                    ui_groups[w.objectName()] = w
 
-            # Wrapper mit 2-Spalten-HBox in das leere Layout einhängen
             wrapper = QWidget()
+            wrapper.setObjectName("settings_ui_matrix")
             hbox = QHBoxLayout(wrapper)
-            hbox.setSpacing(16)
+            hbox.setSpacing(14)
             hbox.setContentsMargins(0, 0, 0, 0)
 
-            left_vbox = QVBoxLayout()
-            left_vbox.setSpacing(8)
-            right_vbox = QVBoxLayout()
-            right_vbox.setSpacing(8)
+            col_appearance = QVBoxLayout()
+            col_appearance.setSpacing(10)
+            col_display = QVBoxLayout()
+            col_display.setSpacing(10)
+            col_backplot = QVBoxLayout()
+            col_backplot.setSpacing(10)
 
-            # Linke Spalte: Theme, G-Code Highlighting, Language
-            for w in left_widgets:
-                left_vbox.addWidget(w)
+            for name in ("groupBoxTheme", "groupBoxLanguage"):
+                if group := ui_groups.get(name):
+                    col_appearance.addWidget(group)
+            col_appearance.addWidget(self._build_ui_font_groupbox())
+            col_appearance.addStretch()
 
-            left_vbox.addWidget(self._build_ui_font_groupbox())
-            left_vbox.addStretch()
+            if group := ui_groups.get("groupBox_gc_highlights"):
+                col_display.addWidget(group)
 
-            hbox.addLayout(left_vbox, 1)
-            hbox.addLayout(right_vbox, 1)
+            hbox.addLayout(col_appearance, 1)
+            hbox.addLayout(col_display, 1)
+            hbox.addLayout(col_backplot, 1)
             old_layout.addWidget(wrapper)
 
-            # ── Rechte Spalte: Grafik / Performance ──
+            # ── Grafik / Performance ──
             gb_gfx = QGroupBox(_t("Graphics / Performance"))
             gl_gfx = QVBoxLayout(gb_gfx)
             self._cb_aa = QCheckBox(_t("Backplot Antialiasing (Smoothing)"))
@@ -271,9 +294,9 @@ class SettingsTabModule(ThorModule):
             self._cb_resource_monitor.setChecked(self._t.settings.get("show_resource_monitor", False))
             self._cb_resource_monitor.toggled.connect(self._on_resource_monitor_toggled)
             gl_gfx.addWidget(self._cb_resource_monitor)
-            right_vbox.addWidget(gb_gfx)
+            col_backplot.addWidget(gb_gfx)
 
-            # ── Rechte Spalte: Werkzeugliste ──
+            # ── Werkzeugliste ──
             gb_tools = QGroupBox(_t("Tool List"))
             gl_tools = QVBoxLayout(gb_tools)
             self._cb_show_pocket = QCheckBox(_t("Show Pocket Column"))
@@ -282,11 +305,12 @@ class SettingsTabModule(ThorModule):
             self._cb_show_pocket.setChecked(show_pocket)
             self._cb_show_pocket.toggled.connect(self._on_show_pocket_column_changed)
             gl_tools.addWidget(self._cb_show_pocket)
-            right_vbox.addWidget(gb_tools)
+            col_display.addWidget(gb_tools)
+            col_display.addStretch()
 
-            # ── Rechte Spalte: Backplot Farben ──
-            self._setup_backplot_colors(right_vbox)
-            right_vbox.addStretch()
+            # ── Backplot Farben ──
+            self._setup_backplot_colors(col_backplot)
+            col_backplot.addStretch()
 
             # Initiale Sichtbarkeit anwenden
             self._on_show_pocket_column_changed(show_pocket)
@@ -313,10 +337,7 @@ class SettingsTabModule(ThorModule):
             
             # --- Column 1: Machine Safety / Warnings (Left) ---
             col_safety = QVBoxLayout()
-            f_safety = QFrame()
-            f_safety.setFrameShape(QFrame.Shape.StyledPanel)
-            f_safety.setObjectName("safetyFrame")
-            fl_safety = QVBoxLayout(f_safety)
+            col_safety.setSpacing(10)
             gb_safety = QGroupBox(_t("Machine Safety / Warnings"))
             gl_safety = QVBoxLayout(gb_safety)
             
@@ -383,13 +404,14 @@ class SettingsTabModule(ThorModule):
             lay_pt.addStretch()
             gl_safety.addLayout(lay_pt)
 
-            fl_safety.addWidget(gb_safety)
-            fl_safety.addStretch()
-            col_safety.addWidget(f_safety)
+            gl_safety.addStretch()
+            col_safety.addWidget(gb_safety)
+            col_safety.addStretch()
             main_layout.addLayout(col_safety, 1)
             
             # --- Column 2: Abort Handler (Middle) ---
             col_abort = QVBoxLayout()
+            col_abort.setSpacing(10)
             gb_abort = QGroupBox(_t("Abort Handler (STOP/Error)"))
             gl_abort = QVBoxLayout(gb_abort)
             
@@ -445,6 +467,7 @@ class SettingsTabModule(ThorModule):
             
             # --- Column 3: Macros (Right) ---
             col_macros = QVBoxLayout()
+            col_macros.setSpacing(10)
             
             # --- Toolsetter Macros ---
             gb_ts = QGroupBox(_t("Toolsetter Macros (Before/After)"))
@@ -794,6 +817,103 @@ class SettingsTabModule(ThorModule):
                     return found
         return None
 
+    @staticmethod
+    def _detach_layout_items(layout):
+        """Empty a layout while keeping its widgets alive for re-parenting."""
+        if layout is None:
+            return
+        while layout.count():
+            item = layout.takeAt(0)
+            widget = item.widget()
+            if widget is not None:
+                widget.setParent(None)
+                continue
+            sub_layout = item.layout()
+            if sub_layout is not None:
+                SettingsTabModule._detach_layout_items(sub_layout)
+
+    def _rebuild_toolsetter_layout(self, large_tool_group):
+        """Arrange Toolsetter settings like the user's sketch:
+        four parameter blocks left, image plus comment right.
+        """
+        ts_tab = self._t._w(QWidget, "settings_tab_toolsetter")
+        if not ts_tab:
+            return
+
+        tab_layout = ts_tab.layout()
+        if not tab_layout:
+            tab_layout = QVBoxLayout(ts_tab)
+
+        widgets = {
+            "change": ts_tab.findChild(QGroupBox, "groupBox_ts_wechsel"),
+            "probe": ts_tab.findChild(QGroupBox, "groupBox_ts_mess"),
+            "params": ts_tab.findChild(QGroupBox, "groupBox_ts_params"),
+            "info": ts_tab.findChild(QGroupBox, "groupBox_ts_info"),
+        }
+        if not all(widgets.values()) or large_tool_group is None:
+            return
+
+        widgets["params"].setTitle(_t("Probe Parameters"))
+
+        old_macro = ts_tab.findChild(QGroupBox, "groupBoxTsBeforeAfter")
+        if old_macro:
+            old_macro.hide()
+
+        if frame_inputs := ts_tab.findChild(QFrame, "frame_ts_inputs"):
+            frame_inputs.setMaximumWidth(16777215)
+            frame_inputs.hide()
+
+        self._detach_layout_items(tab_layout)
+        tab_layout.setContentsMargins(10, 10, 10, 10)
+        tab_layout.setSpacing(10)
+
+        main = QWidget()
+        main.setObjectName("toolsetter_settings_matrix")
+        main_layout = QHBoxLayout(main)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(14)
+
+        left_grid = QGridLayout()
+        left_grid.setContentsMargins(0, 0, 0, 0)
+        left_grid.setHorizontalSpacing(12)
+        left_grid.setVerticalSpacing(10)
+        left_grid.addWidget(widgets["change"], 0, 0)
+        left_grid.addWidget(widgets["probe"], 0, 1)
+        left_grid.addWidget(widgets["params"], 1, 0)
+        left_grid.addWidget(large_tool_group, 1, 1)
+        left_grid.setColumnStretch(0, 1)
+        left_grid.setColumnStretch(1, 1)
+        left_grid.setRowStretch(0, 1)
+        left_grid.setRowStretch(1, 1)
+
+        right_col = QVBoxLayout()
+        right_col.setContentsMargins(0, 0, 0, 0)
+        right_col.setSpacing(10)
+
+        image_group = QGroupBox(_t("Image"))
+        image_group.setObjectName("groupBox_ts_image")
+        image_layout = QVBoxLayout(image_group)
+        image_layout.setContentsMargins(10, 10, 10, 10)
+        self._lbl_ts_image = QLabel("")
+        self._lbl_ts_image.setObjectName("lbl_ts_image")
+        self._lbl_ts_image.setWordWrap(True)
+        self._lbl_ts_image.setMinimumSize(360, 260)
+        self._lbl_ts_image.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        image_layout.addWidget(self._lbl_ts_image)
+
+        widgets["info"].setTitle(_t("Comment"))
+        if lbl_desc := widgets["info"].findChild(QLabel, "lbl_ts_desc"):
+            lbl_desc.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
+            lbl_desc.setMinimumHeight(95)
+            lbl_desc.setMaximumHeight(150)
+
+        right_col.addWidget(image_group, 3)
+        right_col.addWidget(widgets["info"], 1)
+
+        main_layout.addLayout(left_grid, 5)
+        main_layout.addLayout(right_col, 4)
+        tab_layout.addWidget(main)
+
     def _setup_large_tool_offset(self):
         """Neue GroupBox im Toolsetter-Tab für den Großwerkzeug-Versatz."""
         ts_tab = self._t._w(QWidget, "settings_tab_toolsetter")
@@ -803,7 +923,8 @@ class SettingsTabModule(ThorModule):
         if not layout:
             return
 
-        gb = QGroupBox(_t("Large Tools (> Probe Contact Surface)"))
+        gb = QGroupBox(_t("Large Tools"))
+        gb.setObjectName("groupBox_ts_large_tool")
         vbox = QVBoxLayout(gb)
         vbox.setSpacing(6)
         vbox.setContentsMargins(10, 10, 10, 10)
@@ -825,23 +946,25 @@ class SettingsTabModule(ThorModule):
         self._cb_large_tool.toggled.connect(self._on_large_tool_toggled)
         vbox.addWidget(self._cb_large_tool)
 
-        # Kontaktfläche Ø + Richtung nebeneinander
-        row_lay = QHBoxLayout()
-        row_lay.setSpacing(16)
+        grid = QGridLayout()
+        grid.setHorizontalSpacing(8)
+        grid.setVerticalSpacing(6)
 
-        row_lay.addWidget(QLabel(_t("Contact surface diameter (mm):")))
+        grid.addWidget(QLabel(_t("Contact surface diameter (mm):")), 0, 0)
         self._dsb_contact_dia = QDoubleSpinBox()
+        self._dsb_contact_dia.setObjectName("dsb_ts_contact_dia")
         self._dsb_contact_dia.setRange(1.0, 200.0)
         self._dsb_contact_dia.setSingleStep(0.5)
         self._dsb_contact_dia.setDecimals(1)
-        self._dsb_contact_dia.setFixedWidth(80)
+        self._dsb_contact_dia.setMinimumWidth(90)
+        self._dsb_contact_dia.setMaximumWidth(110)
         self._dsb_contact_dia.setValue(float(self._t.settings.get("ts_contact_diameter", 16.0)))
         self._dsb_contact_dia.valueChanged.connect(self._on_contact_dia_changed)
-        row_lay.addWidget(self._dsb_contact_dia)
+        grid.addWidget(self._dsb_contact_dia, 0, 1)
 
-        row_lay.addSpacing(20)
-        row_lay.addWidget(QLabel(_t("Offset direction:")))
+        grid.addWidget(QLabel(_t("Offset direction:")), 1, 0)
         self._cb_offset_dir = QComboBox()
+        self._cb_offset_dir.setObjectName("combo_ts_offset_dir")
         for d in self._OFFSET_DIRS:
             self._cb_offset_dir.addItem(d)
         saved_dir = self._t.settings.get("ts_offset_direction", "X+")
@@ -849,26 +972,13 @@ class SettingsTabModule(ThorModule):
         if idx >= 0:
             self._cb_offset_dir.setCurrentIndex(idx)
         self._cb_offset_dir.currentTextChanged.connect(self._on_offset_dir_changed)
-        self._cb_offset_dir.setFixedWidth(70)
-        row_lay.addWidget(self._cb_offset_dir)
-        row_lay.addStretch()
-        vbox.addLayout(row_lay)
+        self._cb_offset_dir.setMinimumWidth(70)
+        self._cb_offset_dir.setMaximumWidth(90)
+        grid.addWidget(self._cb_offset_dir, 1, 1)
+        grid.setColumnStretch(0, 1)
+        vbox.addLayout(grid)
 
-        # Place Large Tools beneath the "Beschreibung" group on the right column.
-        # Fallback to appending full width if the structure can't be found.
-        gb_info = ts_tab.findChild(QGroupBox, "groupBox_ts_info")
-        h_layout = self._find_containing_layout(gb_info, layout)
-        if gb_info and h_layout is not None:
-            idx = h_layout.indexOf(gb_info)
-            h_layout.takeAt(idx)  # detach from horizontal row
-            right_col = QVBoxLayout()
-            right_col.setSpacing(10)
-            right_col.addWidget(gb_info)
-            right_col.addWidget(gb)
-            right_col.addStretch()
-            h_layout.insertLayout(idx, right_col)
-        else:
-            layout.addWidget(gb)
+        self._rebuild_toolsetter_layout(gb)
 
         # HAL-Pins beim Start setzen
         self._sync_large_tool_hal()
@@ -885,27 +995,25 @@ class SettingsTabModule(ThorModule):
         if not ts_tab:
             return
         lbl_desc = ts_tab.findChild(QLabel, "lbl_ts_desc")
-        if not lbl_desc:
+        lbl_image = ts_tab.findChild(QLabel, "lbl_ts_image")
+        if not lbl_desc or not lbl_image:
             return
 
-        # Give the input column more horizontal room (UI default is 460)
-        frame_inputs = ts_tab.findChild(QFrame, "frame_ts_inputs")
-        if frame_inputs:
-            frame_inputs.setMaximumWidth(520)
-
-        # Give the label space to show large images; preserve text wrap as fallback.
+        # The right side has a dedicated image area and a smaller comment area.
         lbl_desc.setWordWrap(True)
-        lbl_desc.setMinimumSize(360, 380)
-        lbl_desc.setScaledContents(False)
+        lbl_image.setWordWrap(True)
+        lbl_image.setScaledContents(False)
 
         assets_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)),
                                   "assets", "toolsetter")
 
         bridge = _HoverImageBridge(
-            image_label=lbl_desc,
+            image_label=lbl_image,
             mapping=self._TS_HOVER_MAP,
             assets_dir=assets_dir,
-            default_text=lbl_desc.text(),
+            default_text=lbl_image.text(),
+            comment_label=lbl_desc,
+            default_comment=lbl_desc.text(),
             parent=ts_tab,
         )
         self._ts_hover_bridge = bridge  # keep reference alive
@@ -920,8 +1028,8 @@ class SettingsTabModule(ThorModule):
             w.installEventFilter(bridge)
             for child in w.findChildren(QWidget):
                 child.installEventFilter(bridge)
-        # Also watch the description label itself for resize events
-        lbl_desc.installEventFilter(bridge)
+        # Also watch the image label itself for resize events
+        lbl_image.installEventFilter(bridge)
 
     def _sync_large_tool_hal(self):
         """Alle Großwerkzeug-HAL-Pins aus den gespeicherten Werten setzen."""

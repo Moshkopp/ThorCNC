@@ -5,9 +5,10 @@ import time
 import linuxcnc
 from PySide6.QtCore import Qt, QSize, QTimer, QPoint
 from PySide6.QtWidgets import (
-    QPushButton, QButtonGroup, QLineEdit, QSlider, QFrame,
+    QPushButton, QButtonGroup, QLineEdit, QSlider, QFrame, QGroupBox,
     QWidget, QStackedWidget, QGridLayout, QVBoxLayout, QHBoxLayout,
     QLabel, QSpinBox, QDoubleSpinBox, QComboBox, QTextEdit, QSizePolicy,
+    QSpacerItem,
 )
 from PySide6.QtGui import QIcon
 
@@ -396,6 +397,7 @@ class ProbingTabModule(ThorModule):
             QTimer.singleShot(100, self._update_probe_marker_pos)
 
         self._probe_set_mode("OUTSIDE CORNERS")
+        self._polish_probe_params_panel()
 
         # ── CLEAR Buttons ─────────────────────────────────────────────────────
         for btn_name, fields in [
@@ -431,6 +433,43 @@ class ProbingTabModule(ThorModule):
 
         # ── Setup Result Panel + Polling ───────────────────────────────────
         self._setup_probe_result_panel()
+
+    def _polish_probe_params_panel(self):
+        """Match the Probing parameter grid to the Toolsetter parameter cards."""
+        frm = self._t._w(QGroupBox, "frm_probe_params")
+        if not frm:
+            return
+
+        if grid := frm.layout():
+            grid.setContentsMargins(4, 6, 14, 4)
+            grid.setHorizontalSpacing(12)
+            grid.setVerticalSpacing(14)
+            grid.setColumnMinimumWidth(0, 126)
+            grid.setColumnMinimumWidth(1, 194)
+            grid.setColumnStretch(0, 0)
+            grid.setColumnStretch(1, 1)
+            # Critical: stretchable spacer row at the bottom so the GroupBox
+            # can grow vertically (max-height on cells would otherwise cap it).
+            grid.addItem(
+                QSpacerItem(0, 0, QSizePolicy.Minimum, QSizePolicy.Expanding),
+                grid.rowCount(), 0, 1, 2,
+            )
+
+        for label in frm.findChildren(QLabel):
+            if label.objectName().startswith("lbl_probe_param_"):
+                label.setMinimumWidth(126)
+                label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+
+        for cls in (QSpinBox, QDoubleSpinBox, QComboBox):
+            for widget in frm.findChildren(cls):
+                widget.setMinimumWidth(194)
+                widget.setMinimumHeight(46)
+                widget.setMaximumHeight(46)
+
+        for widget in [frm, *frm.findChildren(QWidget)]:
+            widget.style().unpolish(widget)
+            widget.style().polish(widget)
+            widget.update()
 
     def _setup_probe_result_panel(self):
         """Build Probe Result Panel, insert into layout, start polling."""
@@ -482,6 +521,13 @@ class ProbingTabModule(ThorModule):
         # SIM Button
         main_layout = self._t.ui.tab_probing.layout()
         self._setup_sim_probe_button(main_layout)
+
+        # Make hl_probe_main absorb extra vertical space so the parameter
+        # GroupBox can expand to fill the column height.
+        if main_layout is not None:
+            for i in range(main_layout.count()):
+                main_layout.setStretch(i, 0)
+            main_layout.setStretch(0, 1)
 
         # Ensure probe parameters exist in var file
         self._seed_probe_var_params()
@@ -1178,4 +1224,3 @@ class ProbingTabModule(ThorModule):
             self._t.settings.save()
             self._update_probe_color_button()
             self.update_probe_warning(self._t._last_dout if hasattr(self._t, "_last_dout") else [])
-

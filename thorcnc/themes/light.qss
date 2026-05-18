@@ -1102,39 +1102,52 @@ QTableWidget#toolTable::item:selected {
 }
 
 /* ── Probe ── */
-QFrame#frm_probe_params,
-QFrame#frm_probe_pre_post {
-    background-color: #eee8d5;
+QGroupBox#frm_probe_params {
+    background-color: #fdf6e3;
     border: 1px solid #d3cbb1;
-    border-radius: 12px;
+    border-radius: 6px;
+    margin-top: 20px;
+    padding: 8px 10px 6px 6px;
+}
+
+QGroupBox#frm_probe_params::title {
+    subcontrol-origin: margin;
+    subcontrol-position: top left;
+    left: 12px;
+    padding: 3px 12px;
+    color: #006064;
+    font-size: 10pt;
+    font-weight: bold;
+    background-color: #fbf3d8;
+    border: 1px solid #d3cbb1;
+    border-radius: 4px;
+}
+
+QFrame#frm_probe_pre_post {
+    background-color: #fdf6e3;
+    border: 1px solid #d3cbb1;
+    border-radius: 6px;
     padding: 10px;
 }
 
-QLabel#lbl_probe_params_title {
-    font-weight: bold;
-    font-size: 11pt;
-    color: #586e75;
-    margin-bottom: 8px;
-    letter-spacing: 1px;
-}
-
-QFrame#frm_probe_params QLabel[objectName^="lbl_probe_param_"] {
-    margin: 2px 0px;
+QGroupBox#frm_probe_params QLabel[objectName^="lbl_probe_param_"] {
+    margin: 0px;
     font-family: 'Bebas Neue', 'Noto Sans', sans-serif;
     font-size: 13pt;
     font-weight: bold;
     color: #073642;
-    background-color: #fbf3d8;
+    background-color: #fffbea;
     border: 1px solid #d3cbb1;
     border-radius: 6px;
-    padding: 6px 12px;
-    min-height: 50px;
+    padding: 0px 12px;
+    min-height: 46px;
+    max-height: 46px;
 }
 
 /* Probe-Params Combo follows the same touch sizing as global SpinBox */
-QFrame#frm_probe_params QComboBox {
-    margin: 2px 0px;
-    padding: 6px 8px;
+QGroupBox#frm_probe_params QComboBox {
+    margin: 0px;
+    padding: 0px 10px;
     font-family: 'Bebas Neue', 'Noto Sans', sans-serif;
     font-size: 14pt;
     font-weight: bold;
@@ -1142,28 +1155,35 @@ QFrame#frm_probe_params QComboBox {
     background-color: #fdf6e3;
     border: 1px solid #d3cbb1;
     border-radius: 6px;
-    min-height: 50px;
+    min-height: 46px;
+    max-height: 46px;
 }
 
-QFrame#frm_probe_params QComboBox:hover {
+QGroupBox#frm_probe_params QComboBox:hover {
     background-color: #fffbea;
     border-color: #00838f;
 }
 
 /* SpinBoxes inside probe params use the global touch style — uniform margin only */
-QFrame#frm_probe_params QAbstractSpinBox {
-    margin: 2px 0px;
+QGroupBox#frm_probe_params QAbstractSpinBox {
+    margin: 0px;
+    min-height: 46px;
+    max-height: 46px;
+    background-color: #fffbea;
+    border: 1px solid #d3cbb1;
+    border-radius: 6px;
 }
 
 QPushButton#btn_auto_zero_master {
-    margin: 2px 0px;
-    min-height: 42px;
-    font-size: 11pt;
+    margin: 12px 8px 12px 8px;
+    min-height: 50px;
+    max-height: 50px;
+    font-size: 12pt;
     font-weight: bold;
     background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #fbf3d8, stop:1 #eee8d5);
     color: #073642;
     border: 1px solid #a39e84;
-    border-radius: 4px;
+    border-radius: 6px;
 }
 
 QPushButton#btn_auto_zero_master:checked {
@@ -1177,19 +1197,19 @@ QGroupBox#surfaceMapGroupParams,
 QGroupBox#surfaceMapGroupScan {
     background-color: #fdf6e3;
     border: 1px solid #d3cbb1;
-    border-radius: 8px;
-    margin-top: 22px;
-    padding-top: 8px;
+    border-radius: 6px;
+    margin-top: 20px;
+    padding: 12px 10px 10px 10px;
+    min-width: 360px;
 }
 QGroupBox#surfaceMapGroupParams::title,
 QGroupBox#surfaceMapGroupScan::title {
     subcontrol-origin: margin;
     subcontrol-position: top left;
     left: 12px;
-    top: 2px;
     padding: 3px 12px;
     color: #00838f;
-    font-size: 11pt;
+    font-size: 10pt;
     font-weight: bold;
     background-color: #fbf3d8;
     border: 1px solid #d3cbb1;
@@ -1201,11 +1221,21 @@ QGroupBox#surfaceMapGroupScan QLabel#surfaceMapParamLabel {
     font-size: 13pt;
     font-weight: bold;
     color: #073642;
-    background-color: #fbf3d8;
+    background-color: #fffbea;
     border: 1px solid #d3cbb1;
     border-radius: 6px;
     padding: 6px 12px;
     min-height: 50px;
+    margin: 0px;
+}
+
+QGroupBox#surfaceMapGroupParams QAbstractSpinBox,
+QGroupBox#surfaceMapGroupScan QAbstractSpinBox {
+    min-height: 50px;
+    background-color: #fffbea;
+    border: 1px solid #d3cbb1;
+    border-radius: 6px;
+    margin: 0px;
 }
 
 QFrame#frm_probe_grid {
@@ -1545,6 +1575,33 @@ QTabWidget#settings_tabs QComboBox {
 QWidget#settings_tab_toolsetter QAbstractSpinBox,
 QWidget#settings_tab_toolsetter QComboBox {
     min-width: 160px;
+}
+
+QWidget#settings_tab_toolsetter QAbstractSpinBox#dsb_ts_contact_dia,
+QWidget#settings_tab_toolsetter QComboBox#combo_ts_offset_dir {
+    min-width: 70px;
+}
+
+QWidget#toolsetter_settings_matrix QGroupBox {
+    min-width: 230px;
+}
+
+QWidget#settings_ui_matrix QGroupBox,
+QWidget#settings_tab_machine QGroupBox {
+    min-width: 230px;
+}
+
+QLabel#lbl_ts_image {
+    background-color: #fffbea;
+    border: 1px solid #d3cbb1;
+    border-radius: 4px;
+    color: #586e75;
+    padding: 10px;
+}
+
+QGroupBox#groupBox_ts_info QLabel#lbl_ts_desc {
+    color: #586e75;
+    font-size: 10pt;
 }
 
 /* Toolsetter GroupBox labels — match SpinBox height so they align row by row */

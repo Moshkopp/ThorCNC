@@ -7,7 +7,8 @@ PNG or JPG.
 Expected files:
 - change_position.png   — manual tool change safety position
 - probe_position.png    — sensor XY/Z location
-- spindle_zero.png      — reference measurement (G59.3)
+- large_tools.png       — large tool diameter offset from contact surface
+- spindle_zero.png      — distance between spindle nut and toolsetter
 - max_probe.png         — maximum downward probing distance
 - retract.png           — retract distance after first touch
 - search_vel.png        — fast pre-positioning speed

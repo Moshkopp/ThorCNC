@@ -25,6 +25,7 @@
     "ts_search_vel": 304.0,
     "ts_probe_vel": 7.0,
     "mdi_history": [
+        "m3 s1000",
         "T99 M6 G43",
         "T3 M6 G43",
         "G53 G0 Z-15",
@@ -73,8 +74,7 @@
         "O<goto_zero_xy> call",
         "G53 G0 X0 Y0",
         "G53 G0 Z0",
-        "O<goto_zero_xy> call",
-        "blubb"
+        "O<goto_zero_xy> call"
     ],
     "theme": "dark",
     "backplot_msaa_samples": 16,
@@ -89,7 +89,7 @@
     "probe_search": 200.0,
     "probe_rapid": 400.0,
     "probe_edge_w": -30.0,
-    "probe_step_off": 15.0,
+    "probe_step_off": 3.0,
     "probe_z_clear": 5.0,
     "editor_gcode_font_size": 12,
     "viewer_gcode_font_size": 12,
