@@ -176,6 +176,16 @@ QDialog#virtualKeyboardDialog QLineEdit#virtualKeyboardBuffer {
     selection-background-color: #3a7abf;
 }
 
+QDialog#virtualKeyboardDialog QTextEdit#virtualKeyboardTextBuffer {
+    background-color: #1a1a1a;
+    border: 1px solid #555555;
+    border-radius: 4px;
+    color: #ffffff;
+    font-size: 13pt;
+    padding: 4px 8px;
+    selection-background-color: #3a7abf;
+}
+
 QDialog#virtualKeyboardDialog QPushButton#virtualKeyboardKey,
 QDialog#virtualKeyboardDialog QPushButton#virtualKeyboardNumberKey {
     background-color: #3a3a3a;

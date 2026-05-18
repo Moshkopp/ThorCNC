@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
     QPlainTextEdit,
     QPushButton,
     QSizePolicy,
+    QStackedWidget,
     QTableWidget,
     QTableWidgetItem,
     QTextEdit,
@@ -67,6 +68,13 @@ class VirtualKeyboardDialog(QDialog):
         self._buffer.setObjectName("virtualKeyboardBuffer")
         self._buffer.setMinimumHeight(42)
         self._buffer.installEventFilter(self)
+        self._text_buffer = QTextEdit()
+        self._text_buffer.setObjectName("virtualKeyboardTextBuffer")
+        self._text_buffer.setMinimumHeight(110)
+        self._text_buffer.installEventFilter(self)
+        self._buffer_stack = QStackedWidget()
+        self._buffer_stack.addWidget(self._buffer)
+        self._buffer_stack.addWidget(self._text_buffer)
 
         root = QVBoxLayout(self)
         root.setContentsMargins(10, 10, 10, 10)
@@ -74,10 +82,10 @@ class VirtualKeyboardDialog(QDialog):
 
         edit_row = QHBoxLayout()
         edit_row.setSpacing(6)
-        edit_row.addWidget(self._buffer, 1)
+        edit_row.addWidget(self._buffer_stack, 1)
         edit_row.addWidget(self._make_button("<", lambda _checked=False: self._move_cursor(-1)))
         edit_row.addWidget(self._make_button(">", lambda _checked=False: self._move_cursor(1)))
-        edit_row.addWidget(self._make_button("CLR", lambda _checked=False: self._buffer.clear(), wide=True))
+        edit_row.addWidget(self._make_button("CLR", lambda _checked=False: self._active_buffer().clear(), wide=True))
         edit_row.addWidget(self._make_button("BACK", self._backspace, wide=True))
         root.addLayout(edit_row)
 
@@ -105,6 +113,7 @@ class VirtualKeyboardDialog(QDialog):
         self._sym_btn.setCheckable(True)
         actions.addWidget(self._shift_btn)
         actions.addWidget(self._sym_btn)
+        actions.addWidget(self._make_button("NL", lambda _checked=False: self._send_text("\n"), wide=True))
         space_btn = self._make_button("SPACE", lambda _checked=False: self._send_text(" "), wide=True)
         space_btn.setMinimumWidth(220)
         actions.addWidget(space_btn, 1)
@@ -125,14 +134,43 @@ class VirtualKeyboardDialog(QDialog):
         super().keyPressEvent(event)
 
     def eventFilter(self, watched, event):
-        if watched is self._buffer and event.type() == QEvent.Type.KeyPress:
+        if watched in (self._buffer, self._text_buffer) and event.type() == QEvent.Type.KeyPress:
             if event.key() == Qt.Key.Key_Escape:
                 self._cancel()
                 return True
-            if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
+            if watched is self._buffer and event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
                 self._enter()
                 return True
         return super().eventFilter(watched, event)
+
+    def _set_multiline_mode(self, enabled):
+        self._buffer_stack.setCurrentWidget(self._text_buffer if enabled else self._buffer)
+
+    def _is_multiline_mode(self):
+        return self._buffer_stack.currentWidget() is self._text_buffer
+
+    def _active_buffer(self):
+        return self._text_buffer if self._is_multiline_mode() else self._buffer
+
+    def _buffer_text(self):
+        return self._text_buffer.toPlainText() if self._is_multiline_mode() else self._buffer.text()
+
+    def _set_buffer_text(self, text, multiline=False):
+        self._set_multiline_mode(multiline)
+        if multiline:
+            self._text_buffer.setPlainText(text)
+            cursor = self._text_buffer.textCursor()
+            cursor.select(QTextCursor.SelectionType.Document)
+            self._text_buffer.setTextCursor(cursor)
+        else:
+            self._buffer.setText(text)
+            self._buffer.setCursorPosition(len(text))
+            self._buffer.selectAll()
+
+    def _buffer_cursor_position(self):
+        if self._is_multiline_mode():
+            return self._text_buffer.textCursor().position()
+        return self._buffer.cursorPosition()
 
     def set_target(self, widget):
         self._target = widget
@@ -140,18 +178,25 @@ class VirtualKeyboardDialog(QDialog):
 
     def set_text_line_target(self, widget):
         cursor = widget.textCursor()
-        cursor.select(QTextCursor.SelectionType.LineUnderCursor)
-        self._target = ("text_line", widget, cursor.selectionStart(), cursor.selectionEnd())
-        self._buffer.setText(cursor.selectedText())
-        self._buffer.setCursorPosition(len(self._buffer.text()))
-        self._buffer.selectAll()
+        start_block = cursor.block()
+        end_block = start_block
+        for _ in range(5):
+            nxt = end_block.next()
+            if not nxt.isValid():
+                break
+            end_block = nxt
+        start = start_block.position()
+        end = end_block.position() + max(0, end_block.length() - 1)
+        cursor.setPosition(start)
+        cursor.setPosition(end, QTextCursor.MoveMode.KeepAnchor)
+        self._target = ("text_block", widget, start, end, start_block.blockNumber())
+        text = cursor.selectedText().replace("\u2029", "\n")
+        self._set_buffer_text(text, multiline=True)
 
     def set_table_target(self, table, row, column):
         self._target = ("table", table, row, column)
         item = table.item(row, column) if shiboken6.isValid(table) else None
-        self._buffer.setText(item.text() if item else "")
-        self._buffer.setCursorPosition(len(self._buffer.text()))
-        self._buffer.selectAll()
+        self._set_buffer_text(item.text() if item else "", multiline=False)
 
     def show_for(self, widget):
         self.set_target(widget)
@@ -248,22 +293,35 @@ class VirtualKeyboardDialog(QDialog):
 
     def _send_text(self, text):
         text = str(text)
+        if text == "\n" and not self._is_multiline_mode():
+            return
         if not self._symbols and len(text) == 1 and text.isalpha() and self._shift:
             text = text.upper()
             self._shift = False
             self._refresh_letters()
             self._refresh_mode_buttons()
-        self._buffer.insert(text)
+        if self._is_multiline_mode():
+            self._text_buffer.textCursor().insertText(text)
+        else:
+            self._buffer.insert(text)
 
     def _backspace(self, _checked=False):
-        self._buffer.backspace()
+        if self._is_multiline_mode():
+            cursor = self._text_buffer.textCursor()
+            if cursor.hasSelection():
+                cursor.removeSelectedText()
+            else:
+                cursor.deletePreviousChar()
+            self._text_buffer.setTextCursor(cursor)
+        else:
+            self._buffer.backspace()
 
     def _enter(self, _checked=False):
         target = self._target_widget()
         if target is not None:
             self._write_buffer_to_target(target)
             self._commit_target(target)
-            if not self._is_table_target(target) and not self._is_text_line_target(target) and shiboken6.isValid(target):
+            if not self._is_table_target(target) and not self._is_text_block_target(target) and shiboken6.isValid(target):
                 target.clearFocus()
         self.close()
 
@@ -271,6 +329,13 @@ class VirtualKeyboardDialog(QDialog):
         self.close()
 
     def _move_cursor(self, delta):
+        if self._is_multiline_mode():
+            cursor = self._text_buffer.textCursor()
+            op = QTextCursor.MoveOperation.Right if delta > 0 else QTextCursor.MoveOperation.Left
+            for _ in range(abs(delta)):
+                cursor.movePosition(op)
+            self._text_buffer.setTextCursor(cursor)
+            return
         pos = self._buffer.cursorPosition() + delta
         self._buffer.setCursorPosition(max(0, min(len(self._buffer.text()), pos)))
 
@@ -282,7 +347,7 @@ class VirtualKeyboardDialog(QDialog):
                 self._target = None
                 return None
             return target
-        if self._is_text_line_target(target):
+        if self._is_text_block_target(target):
             widget = target[1]
             if widget is None or not shiboken6.isValid(widget):
                 self._target = None
@@ -296,8 +361,8 @@ class VirtualKeyboardDialog(QDialog):
     def _is_table_target(self, target):
         return isinstance(target, tuple) and len(target) == 4 and target[0] == "table"
 
-    def _is_text_line_target(self, target):
-        return isinstance(target, tuple) and len(target) == 4 and target[0] == "text_line"
+    def _is_text_block_target(self, target):
+        return isinstance(target, tuple) and len(target) == 5 and target[0] == "text_block"
 
     def _line_edit_for(self, widget):
         if isinstance(widget, QLineEdit):
@@ -314,43 +379,33 @@ class VirtualKeyboardDialog(QDialog):
         if self._is_table_target(widget):
             _kind, table, row, column = widget
             item = table.item(row, column) if shiboken6.isValid(table) else None
-            self._buffer.setText(item.text() if item else "")
-            self._buffer.setCursorPosition(len(self._buffer.text()))
-            self._buffer.selectAll()
+            self._set_buffer_text(item.text() if item else "", multiline=False)
             return
-        if self._is_text_line_target(widget):
-            _kind, text_widget, start, end = widget
+        if self._is_text_block_target(widget):
+            _kind, text_widget, start, end, _line = widget
             cursor = text_widget.textCursor()
             cursor.setPosition(start)
             cursor.setPosition(end, QTextCursor.MoveMode.KeepAnchor)
-            self._buffer.setText(cursor.selectedText())
-            self._buffer.setCursorPosition(len(self._buffer.text()))
-            self._buffer.selectAll()
+            self._set_buffer_text(cursor.selectedText().replace("\u2029", "\n"), multiline=True)
             return
         if widget is None or not shiboken6.isValid(widget):
-            self._buffer.clear()
+            self._set_buffer_text("", multiline=False)
             return
         line_edit = self._line_edit_for(widget)
         if line_edit is not None:
             text = line_edit.text()
-            self._buffer.setText(text)
-            self._buffer.setCursorPosition(line_edit.cursorPosition())
-            self._buffer.selectAll()
+            self._set_buffer_text(text, multiline=False)
             return
         if isinstance(widget, QTextEdit):
-            self._buffer.setText(widget.toPlainText())
-            self._buffer.setCursorPosition(len(self._buffer.text()))
-            self._buffer.selectAll()
+            self._set_buffer_text(widget.toPlainText(), multiline=True)
             return
         if isinstance(widget, QPlainTextEdit):
-            self._buffer.setText(widget.toPlainText())
-            self._buffer.setCursorPosition(len(self._buffer.text()))
-            self._buffer.selectAll()
+            self._set_buffer_text(widget.toPlainText(), multiline=True)
             return
-        self._buffer.clear()
+        self._set_buffer_text("", multiline=False)
 
     def _write_buffer_to_target(self, widget):
-        text = self._buffer.text()
+        text = self._buffer_text()
         if self._is_table_target(widget):
             _kind, table, row, column = widget
             if not shiboken6.isValid(table):
@@ -362,16 +417,17 @@ class VirtualKeyboardDialog(QDialog):
             item.setText(text)
             table.setCurrentCell(row, column)
             return
-        if self._is_text_line_target(widget):
-            _kind, text_widget, start, end = widget
+        if self._is_text_block_target(widget):
+            _kind, text_widget, start, end, start_line = widget
             if not shiboken6.isValid(text_widget):
                 return
+            text = self._renumber_gcode_text(text_widget, text, start_line)
             cursor = text_widget.textCursor()
             cursor.setPosition(start)
             cursor.setPosition(end, QTextCursor.MoveMode.KeepAnchor)
             cursor.insertText(text)
             text_widget.setTextCursor(cursor)
-            new_pos = start + min(len(text), self._buffer.cursorPosition())
+            new_pos = start + min(len(text), self._buffer_cursor_position())
             cursor.setPosition(new_pos)
             text_widget.setTextCursor(cursor)
             return
@@ -381,7 +437,7 @@ class VirtualKeyboardDialog(QDialog):
             line_edit = self._line_edit_for(widget)
             if line_edit is not None:
                 line_edit.setText(text)
-                line_edit.setCursorPosition(min(len(text), self._buffer.cursorPosition()))
+                line_edit.setCursorPosition(min(len(text), self._buffer_cursor_position()))
             try:
                 widget.interpretText()
             except Exception:
@@ -390,12 +446,12 @@ class VirtualKeyboardDialog(QDialog):
         line_edit = self._line_edit_for(widget)
         if line_edit is not None:
             line_edit.setText(text)
-            line_edit.setCursorPosition(self._buffer.cursorPosition())
+            line_edit.setCursorPosition(self._buffer_cursor_position())
             return
         if isinstance(widget, (QTextEdit, QPlainTextEdit)):
             widget.setPlainText(text)
             cursor = widget.textCursor()
-            cursor.setPosition(min(len(text), self._buffer.cursorPosition()))
+            cursor.setPosition(min(len(text), self._buffer_cursor_position()))
             widget.setTextCursor(cursor)
 
     def _delete_previous(self, widget):
@@ -417,8 +473,8 @@ class VirtualKeyboardDialog(QDialog):
             if shiboken6.isValid(table):
                 table.clearFocus()
             return
-        if self._is_text_line_target(widget):
-            _kind, text_widget, _start, _end = widget
+        if self._is_text_block_target(widget):
+            _kind, text_widget, _start, _end, _line = widget
             if shiboken6.isValid(text_widget):
                 text_widget.clearFocus()
             return
@@ -439,6 +495,64 @@ class VirtualKeyboardDialog(QDialog):
             cursor = widget.textCursor()
             cursor.clearSelection()
             widget.setTextCursor(cursor)
+
+    def _renumber_gcode_text(self, text_widget, text, start_line):
+        if not self._is_gcode_widget(text_widget):
+            return text
+        start_n, step = self._detect_gcode_n_sequence(text_widget, start_line)
+        if start_n is None:
+            return text
+
+        import re
+        number = start_n
+        out = []
+        for line in text.splitlines():
+            if re.match(r"^\s*N\d+\b", line, re.IGNORECASE):
+                line = re.sub(r"^(\s*)N\d+\b", rf"\1N{number}", line, count=1, flags=re.IGNORECASE)
+                number += step
+            out.append(line)
+        return "\n".join(out)
+
+    def _detect_gcode_n_sequence(self, text_widget, start_line):
+        import re
+
+        lines = text_widget.toPlainText().splitlines()
+
+        def n_at(idx):
+            if 0 <= idx < len(lines):
+                m = re.match(r"\s*N(\d+)\b", lines[idx], re.IGNORECASE)
+                if m:
+                    return int(m.group(1))
+            return None
+
+        current = n_at(start_line)
+        prev_idx = next((i for i in range(start_line - 1, -1, -1) if n_at(i) is not None), None)
+        next_idx = next((i for i in range(start_line + 1, len(lines)) if n_at(i) is not None), None)
+        prev_n = n_at(prev_idx) if prev_idx is not None else None
+        next_n = n_at(next_idx) if next_idx is not None else None
+
+        step = 1
+        if current is not None and next_n is not None and next_n > current:
+            step = max(1, (next_n - current) // max(1, next_idx - start_line))
+        elif current is not None and prev_n is not None and current > prev_n:
+            step = max(1, (current - prev_n) // max(1, start_line - prev_idx))
+        elif prev_n is not None and next_n is not None and next_n > prev_n:
+            step = max(1, (next_n - prev_n) // max(1, next_idx - prev_idx))
+
+        if current is not None:
+            return current, step
+        if prev_n is not None:
+            return prev_n + step * max(1, start_line - prev_idx), step
+        return None, step
+
+    def _is_gcode_widget(self, widget):
+        names = {"gcodeViewer", "filePreviewArea"}
+        candidate = widget
+        while candidate is not None:
+            if candidate.objectName() in names:
+                return True
+            candidate = candidate.parent()
+        return False
 
     def _send_key(self, target, key, text):
         if target is None or not shiboken6.isValid(target):
@@ -485,7 +599,7 @@ class VirtualKeyboardModule(ThorModule):
             _kind, table, row, column = widget
             self._dialog.show_for_table_cell(table, row, column)
             return False
-        if isinstance(widget, tuple) and widget[0] == "text_line":
+        if isinstance(widget, tuple) and widget[0] == "text_block":
             _kind, text_widget = widget
             self._dialog.show_for_text_line(text_widget)
             return False
@@ -580,7 +694,7 @@ class VirtualKeyboardModule(ThorModule):
             pos = viewport.mapFrom(watched, pos)
         cursor = text_widget.cursorForPosition(pos)
         text_widget.setTextCursor(cursor)
-        return ("text_line", text_widget)
+        return ("text_block", text_widget)
 
     def _is_keyboard_widget(self, widget):
         dialog = getattr(self, "_dialog", None)
