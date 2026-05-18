@@ -441,9 +441,9 @@ class ProbingTabModule(ThorModule):
             return
 
         if grid := frm.layout():
-            grid.setContentsMargins(4, 6, 14, 4)
+            grid.setContentsMargins(4, 6, 14, 24)
             grid.setHorizontalSpacing(12)
-            grid.setVerticalSpacing(14)
+            grid.setVerticalSpacing(6)
             grid.setColumnMinimumWidth(0, 126)
             grid.setColumnMinimumWidth(1, 194)
             grid.setColumnStretch(0, 0)
@@ -463,8 +463,8 @@ class ProbingTabModule(ThorModule):
         for cls in (QSpinBox, QDoubleSpinBox, QComboBox):
             for widget in frm.findChildren(cls):
                 widget.setMinimumWidth(194)
-                widget.setMinimumHeight(46)
-                widget.setMaximumHeight(46)
+                widget.setMinimumHeight(42)
+                widget.setMaximumHeight(42)
 
         for widget in [frm, *frm.findChildren(QWidget)]:
             widget.style().unpolish(widget)

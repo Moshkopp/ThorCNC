@@ -965,6 +965,17 @@ class SettingsTabModule(ThorModule):
         grid.addWidget(QLabel(_t("Offset direction:")), 1, 0)
         self._cb_offset_dir = QComboBox()
         self._cb_offset_dir.setObjectName("combo_ts_offset_dir")
+        # Hack to center text in QComboBox: make editable but read-only
+        self._cb_offset_dir.setEditable(True)
+        self._cb_offset_dir.lineEdit().setReadOnly(True)
+        self._cb_offset_dir.lineEdit().setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._cb_offset_dir.lineEdit().setCursor(Qt.CursorShape.PointingHandCursor)
+        
+        # Forward mouse clicks on the LineEdit to the ComboBox to open the popup
+        def _show_popup(event):
+            self._cb_offset_dir.showPopup()
+        self._cb_offset_dir.lineEdit().mousePressEvent = _show_popup
+        
         for d in self._OFFSET_DIRS:
             self._cb_offset_dir.addItem(d)
         saved_dir = self._t.settings.get("ts_offset_direction", "X+")
@@ -972,8 +983,8 @@ class SettingsTabModule(ThorModule):
         if idx >= 0:
             self._cb_offset_dir.setCurrentIndex(idx)
         self._cb_offset_dir.currentTextChanged.connect(self._on_offset_dir_changed)
-        self._cb_offset_dir.setMinimumWidth(70)
-        self._cb_offset_dir.setMaximumWidth(90)
+        self._cb_offset_dir.setMinimumWidth(90)
+        self._cb_offset_dir.setMaximumWidth(110)
         grid.addWidget(self._cb_offset_dir, 1, 1)
         grid.setColumnStretch(0, 1)
         vbox.addLayout(grid)

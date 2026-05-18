@@ -131,7 +131,8 @@ class SurfaceMapModule(ThorModule):
             w.setValue(val)
             w.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
             w.setMinimumWidth(194)
-            w.setMinimumHeight(50)
+            w.setMinimumHeight(42)
+            w.setMaximumHeight(42)
             w.valueChanged.connect(self._save_prefs)
             return w
 
@@ -141,7 +142,8 @@ class SurfaceMapModule(ThorModule):
             w.setValue(val)
             w.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
             w.setMinimumWidth(194)
-            w.setMinimumHeight(50)
+            w.setMinimumHeight(42)
+            w.setMaximumHeight(42)
             w.valueChanged.connect(self._save_prefs)
             return w
 
@@ -149,6 +151,8 @@ class SurfaceMapModule(ThorModule):
             l = QLabel(label_text)
             l.setObjectName("surfaceMapParamLabel")
             l.setMinimumWidth(126)
+            l.setMinimumHeight(42)
+            l.setMaximumHeight(42)
             l.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
             grid.addWidget(l, row, 0)
             grid.addWidget(widget, row, 1)
@@ -156,6 +160,7 @@ class SurfaceMapModule(ThorModule):
         # --- Probing Parameters group ---
         gb_params = QGroupBox(_t("Probe Parameters"))
         gb_params.setObjectName("surfaceMapGroupParams")
+        gb_params.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         grid1 = QGridLayout(gb_params)
         grid1.setVerticalSpacing(12)
         grid1.setHorizontalSpacing(12)
@@ -179,6 +184,7 @@ class SurfaceMapModule(ThorModule):
         # --- Scan Coordinates group ---
         gb_scan = QGroupBox(_t("Scan Coordinates"))
         gb_scan.setObjectName("surfaceMapGroupScan")
+        gb_scan.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         grid2 = QGridLayout(gb_scan)
         grid2.setVerticalSpacing(12)
         grid2.setHorizontalSpacing(12)

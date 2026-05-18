@@ -1140,8 +1140,8 @@ QGroupBox#frm_probe_params QLabel[objectName^="lbl_probe_param_"] {
     border: 1px solid #d3cbb1;
     border-radius: 6px;
     padding: 0px 12px;
-    min-height: 46px;
-    max-height: 46px;
+    min-height: 42px;
+    max-height: 42px;
 }
 
 /* Probe-Params Combo follows the same touch sizing as global SpinBox */
@@ -1155,8 +1155,8 @@ QGroupBox#frm_probe_params QComboBox {
     background-color: #fdf6e3;
     border: 1px solid #d3cbb1;
     border-radius: 6px;
-    min-height: 46px;
-    max-height: 46px;
+    min-height: 42px;
+    max-height: 42px;
 }
 
 QGroupBox#frm_probe_params QComboBox:hover {
@@ -1167,8 +1167,8 @@ QGroupBox#frm_probe_params QComboBox:hover {
 /* SpinBoxes inside probe params use the global touch style — uniform margin only */
 QGroupBox#frm_probe_params QAbstractSpinBox {
     margin: 0px;
-    min-height: 46px;
-    max-height: 46px;
+    min-height: 42px;
+    max-height: 42px;
     background-color: #fffbea;
     border: 1px solid #d3cbb1;
     border-radius: 6px;
@@ -1224,14 +1224,16 @@ QGroupBox#surfaceMapGroupScan QLabel#surfaceMapParamLabel {
     background-color: #fffbea;
     border: 1px solid #d3cbb1;
     border-radius: 6px;
-    padding: 6px 12px;
-    min-height: 50px;
+    padding: 0px 12px;
+    min-height: 42px;
+    max-height: 42px;
     margin: 0px;
 }
 
 QGroupBox#surfaceMapGroupParams QAbstractSpinBox,
 QGroupBox#surfaceMapGroupScan QAbstractSpinBox {
-    min-height: 50px;
+    min-height: 42px;
+    max-height: 42px;
     background-color: #fffbea;
     border: 1px solid #d3cbb1;
     border-radius: 6px;
@@ -1571,15 +1573,29 @@ QTabWidget#settings_tabs QComboBox {
     font-weight: bold;
 }
 
+QTabWidget#settings_tabs QComboBox::drop-down {
+    border: none;
+    background: transparent;
+}
+
+QTabWidget#settings_tabs QComboBox QLineEdit {
+    background: transparent;
+    border: none;
+    color: #073642;
+}
+
 /* Toolsetter tab — wider input fields for readability */
 QWidget#settings_tab_toolsetter QAbstractSpinBox,
 QWidget#settings_tab_toolsetter QComboBox {
     min-width: 160px;
+    min-height: 42px;
+    max-height: 42px;
+    qproperty-alignment: 'AlignCenter';
 }
 
 QWidget#settings_tab_toolsetter QAbstractSpinBox#dsb_ts_contact_dia,
 QWidget#settings_tab_toolsetter QComboBox#combo_ts_offset_dir {
-    min-width: 70px;
+    min-width: 90px;
 }
 
 QWidget#toolsetter_settings_matrix QGroupBox {
@@ -1608,9 +1624,15 @@ QGroupBox#groupBox_ts_info QLabel#lbl_ts_desc {
 QGroupBox#groupBox_ts_wechsel QLabel,
 QGroupBox#groupBox_ts_mess QLabel,
 QGroupBox#groupBox_ts_params QLabel {
-    min-height: 50px;
+    min-height: 42px;
+    max-height: 42px;
     font-size: 12pt;
     color: #073642;
+    qproperty-alignment: 'AlignCenter';
+    background-color: #fffbea;
+    border: 1px solid #d3cbb1;
+    border-radius: 4px;
+    margin: 0px;
 }
 
 QTabWidget#settings_tabs QLineEdit:focus,
