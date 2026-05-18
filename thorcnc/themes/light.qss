@@ -152,11 +152,20 @@ QPushButton:checked {
 }
 
 /* ── Virtual Touch Keyboard ── */
-QPushButton#btn_virtual_keyboard {
-    min-width: 46px;
-    max-height: 44px;
-    padding: 2px 6px;
-    font-size: 11pt;
+QToolButton#btn_virtual_keyboard {
+    background-color: #fbf3d8;
+    border: 1px solid #a39e84;
+    border-radius: 5px;
+    padding: 2px;
+}
+
+QToolButton#btn_virtual_keyboard:hover {
+    border-color: #00acc1;
+}
+
+QToolButton#btn_virtual_keyboard:checked {
+    background-color: #00838f;
+    border-color: #006064;
 }
 
 QDialog#virtualKeyboardDialog {

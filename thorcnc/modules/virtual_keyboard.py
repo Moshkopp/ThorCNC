@@ -1,7 +1,7 @@
 """Touch-friendly virtual keyboard for text and numeric input widgets."""
 
-from PySide6.QtCore import QEvent, Qt
-from PySide6.QtGui import QKeyEvent
+from PySide6.QtCore import QEvent, QObject, QSize, Qt
+from PySide6.QtGui import QColor, QIcon, QKeyEvent, QPainter, QPen, QPixmap
 from PySide6.QtGui import QTextCursor
 from PySide6.QtWidgets import (
     QApplication,
@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (
     QTableWidget,
     QTableWidgetItem,
     QTextEdit,
+    QToolButton,
     QVBoxLayout,
     QWidget,
 )
@@ -24,6 +25,17 @@ import shiboken6
 
 from .base import ThorModule
 from ..i18n import _t
+
+
+class _TogglePositionBridge(QObject):
+    def __init__(self, module):
+        super().__init__(module._t.ui)
+        self._module = module
+
+    def eventFilter(self, watched, event):
+        if event.type() == QEvent.Type.Resize:
+            self._module._position_toggle_button()
+        return False
 
 
 class VirtualKeyboardDialog(QDialog):
@@ -579,8 +591,10 @@ class VirtualKeyboardModule(ThorModule):
 
     def setup(self):
         self._enabled = bool(self._t.settings.get("virtual_keyboard_enabled", False))
+        self._toggle_pos_bridge = None
         self._dialog = VirtualKeyboardDialog(self._t.ui)
         self._toggle_btn = self._ensure_toggle_button()
+        self._position_toggle_button()
         self._sync_toggle_button()
 
     def connect_signals(self):
@@ -614,28 +628,55 @@ class VirtualKeyboardModule(ThorModule):
         self._sync_toggle_button()
 
     def _ensure_toggle_button(self):
-        existing = self._t.ui.findChild(QPushButton, "btn_virtual_keyboard")
+        existing = self._t.ui.findChild(QToolButton, "btn_virtual_keyboard")
         if existing:
             return existing
 
         jog = self._t.ui.findChild(QWidget, "jog_xyz")
-        if not jog or not jog.layout():
+        if not jog:
             return None
 
-        btn = QPushButton("KBD")
+        btn = QToolButton(jog)
         btn.setObjectName("btn_virtual_keyboard")
         btn.setToolTip(_t("Virtual keyboard"))
+        btn.setIcon(self._keyboard_icon())
         btn.setCheckable(True)
         btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        btn.setMinimumSize(54, 40)
-        btn.setMaximumHeight(44)
-
-        layout = jog.layout()
-        try:
-            layout.addWidget(btn, 0, 2, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignTop)
-        except TypeError:
-            layout.addWidget(btn)
+        btn.setFixedSize(38, 30)
+        btn.setIconSize(QSize(24, 18))
+        btn.raise_()
+        self._toggle_pos_bridge = _TogglePositionBridge(self)
+        jog.installEventFilter(self._toggle_pos_bridge)
         return btn
+
+    def _position_toggle_button(self):
+        btn = getattr(self, "_toggle_btn", None)
+        jog = self._t.ui.findChild(QWidget, "jog_xyz") if getattr(self._t, "ui", None) else None
+        if not btn or not jog:
+            return
+        margin = 14
+        x = max(margin, jog.width() - btn.width() - margin)
+        y = margin
+        btn.move(x, y)
+
+    def _keyboard_icon(self):
+        pix = QPixmap(36, 26)
+        pix.fill(Qt.GlobalColor.transparent)
+        painter = QPainter(pix)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+        border = QColor("#d0d0d0")
+        key = QColor("#d0d0d0")
+        painter.setPen(QPen(border, 2))
+        painter.drawRoundedRect(2, 3, 32, 20, 3, 3)
+
+        painter.setPen(QPen(key, 1))
+        for y, count, offset in ((8, 6, 6), (13, 5, 8), (18, 4, 10)):
+            for i in range(count):
+                painter.drawLine(offset + i * 4, y, offset + i * 4 + 1, y)
+        painter.drawLine(13, 21, 23, 21)
+        painter.end()
+        return QIcon(pix)
 
     def _set_enabled(self, enabled):
         self._enabled = bool(enabled)
