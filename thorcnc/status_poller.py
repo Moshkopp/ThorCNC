@@ -180,9 +180,21 @@ class StatusPoller(QObject):
 
         if s.file != self._file:
             self._file = s.file
+            self._line = 0
             self.file_loaded.emit(s.file)
+            self.program_line.emit(0)
 
-        active_line = s.motion_line if s.motion_line > 0 else s.current_line
+        # Prefer motion_line (line actually executing) over current_line (interpreter
+        # read-ahead, often many lines ahead). On stop motion_line drops to 0 — keep
+        # the last known line so the viewer stays where execution actually stopped
+        # instead of jumping to the interpreter's look-ahead position.
+        if s.motion_line > 0:
+            active_line = s.motion_line
+        elif self._line in (None, 0):
+            active_line = s.current_line
+        else:
+            active_line = self._line
+
         if active_line != self._line:
             self._line = active_line
             self.program_line.emit(active_line)
