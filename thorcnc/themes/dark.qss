@@ -152,6 +152,76 @@ QPushButton:checked {
     color: #ffffff;
 }
 
+/* ── Virtual Touch Keyboard ── */
+QPushButton#btn_virtual_keyboard {
+    min-width: 46px;
+    max-height: 44px;
+    padding: 2px 6px;
+    font-size: 11pt;
+}
+
+QDialog#virtualKeyboardDialog {
+    background-color: #252525;
+    border: 1px solid #3a7abf;
+    border-radius: 6px;
+}
+
+QDialog#virtualKeyboardDialog QLineEdit#virtualKeyboardBuffer {
+    background-color: #1a1a1a;
+    border: 1px solid #555555;
+    border-radius: 4px;
+    color: #ffffff;
+    font-size: 15pt;
+    padding: 4px 8px;
+    selection-background-color: #3a7abf;
+}
+
+QDialog#virtualKeyboardDialog QPushButton#virtualKeyboardKey,
+QDialog#virtualKeyboardDialog QPushButton#virtualKeyboardNumberKey {
+    background-color: #3a3a3a;
+    border: 1px solid #555555;
+    border-radius: 4px;
+    color: #f0f0f0;
+    font-size: 13pt;
+    padding: 4px 8px;
+}
+
+QDialog#virtualKeyboardDialog QPushButton#virtualKeyboardNumberKey {
+    background-color: #303846;
+    border-color: #4d6a8a;
+}
+
+QDialog#virtualKeyboardDialog QPushButton#virtualKeyboardKey:hover,
+QDialog#virtualKeyboardDialog QPushButton#virtualKeyboardNumberKey:hover {
+    border-color: #4d9de0;
+}
+
+QDialog#virtualKeyboardDialog QPushButton#virtualKeyboardKey:pressed,
+QDialog#virtualKeyboardDialog QPushButton#virtualKeyboardNumberKey:pressed,
+QDialog#virtualKeyboardDialog QPushButton#virtualKeyboardKey[active="true"] {
+    background-color: #3a7abf;
+    border-color: #5599dd;
+    color: #ffffff;
+}
+
+QDialog#virtualKeyboardDialog QPushButton#virtualKeyboardEnterKey {
+    background-color: #2d7d46;
+    border: 1px solid #5ec878;
+    border-radius: 4px;
+    color: #ffffff;
+    font-size: 15pt;
+    padding: 4px 8px;
+}
+
+QDialog#virtualKeyboardDialog QPushButton#virtualKeyboardEnterKey:hover {
+    background-color: #35a35a;
+    border-color: #78e695;
+}
+
+QDialog#virtualKeyboardDialog QPushButton#virtualKeyboardEnterKey:pressed {
+    background-color: #236637;
+}
+
 /* ── Utility Classes (for Entknöselung) ── */
 .btn-blue {
     background-color: #3464a4;

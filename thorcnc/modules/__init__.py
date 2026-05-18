@@ -23,6 +23,7 @@ from .backplot import BackplotModule
 from .program_control import ProgramControlModule
 from .status import StatusModule
 from .surface_map import SurfaceMapModule
+from .virtual_keyboard import VirtualKeyboardModule
 
 __all__ = [
     "ThorModule",
@@ -44,4 +45,5 @@ __all__ = [
     "ProgramControlModule",
     "StatusModule",
     "SurfaceMapModule",
+    "VirtualKeyboardModule",
 ]

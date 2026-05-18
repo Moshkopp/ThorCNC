@@ -134,5 +134,6 @@
     "last_tool": 3,
     "ui_font_family": "Roboto Condensed",
     "ui_font_scale": 101,
-    "ts_offset_direction": "X-"
+    "ts_offset_direction": "X-",
+    "virtual_keyboard_enabled": true
 }

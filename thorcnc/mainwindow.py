@@ -10,7 +10,7 @@ from .status_poller import StatusPoller
 from .i18n import TranslationManager, _t
 from .modules import (FileManagerModule, ToolTableModule, OffsetsModule,
                         MotionModule, ProbingTabModule, NavigationModule, SettingsTabModule, DROModule, SpindleModule, SimpleViewModule, GCodeViewModule, MDIModule, HALModule, ControlPanelModule, BackplotModule,
-                        ProgramControlModule, StatusModule, SurfaceMapModule)
+                        ProgramControlModule, StatusModule, SurfaceMapModule, VirtualKeyboardModule)
 # from .widgets.opt_options import OptOptionsDialog
 
 _DIR = os.path.dirname(__file__)
@@ -64,6 +64,7 @@ class ThorCNC(QObject):
         self.program_control = ProgramControlModule(self)
         self.status_mod = StatusModule(self)
         self.surface_map = SurfaceMapModule(self)
+        self.virtual_keyboard = VirtualKeyboardModule(self)
         
         # i18n
         self.i18n = TranslationManager(self.settings.get("language", "Deutsch"))
@@ -91,6 +92,7 @@ class ThorCNC(QObject):
         self.gcode_view_mod.setup()
         self.mdi_mod.setup()
         self.control_panel_mod.setup()
+        self.virtual_keyboard.setup()
         self._connect_signals()
         
         # Performance/Throttle state
@@ -396,6 +398,9 @@ class ThorCNC(QObject):
         if self.navigation.handle_event(event):
             return True
 
+        if self.virtual_keyboard.handle_event(watched, event):
+            return True
+
         if watched == getattr(self.probing_tab, "_probe_grid_frm", None):
             if event.type() == QEvent.Resize:
                 self.probing_tab.update_marker_pos()
@@ -601,6 +606,7 @@ class ThorCNC(QObject):
         self.gcode_view_mod.connect_signals()
         self.mdi_mod.connect_signals()
         self.control_panel_mod.connect_signals()
+        self.virtual_keyboard.connect_signals()
         self.simple_view_mod.connect_signals()
         self.backplot_mod.connect_signals()
         self.program_control.connect_signals()
@@ -708,5 +714,4 @@ class ThorCNC(QObject):
                               [hw.item(i).text() for i in range(hw.count())])
 
         self.settings.save()
-
 

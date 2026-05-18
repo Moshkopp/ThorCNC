@@ -455,7 +455,8 @@ class NavigationModule(ThorModule):
         # Refresh modules that draw with hardcoded colors via setStyleSheet/QColor.
         # Each module exposes an optional refresh_theme() that re-applies its dynamic styles.
         for attr in ("program_control", "status_mod", "probing_tab", "surface_map",
-                     "offsets", "file_manager", "gcode_view_mod", "motion"):
+                     "offsets", "file_manager", "gcode_view_mod", "motion",
+                     "virtual_keyboard"):
             mod = getattr(self._t, attr, None)
             if mod is not None and hasattr(mod, "refresh_theme"):
                 try:
