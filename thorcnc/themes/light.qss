@@ -874,6 +874,26 @@ QListWidget#mdiHistory {
 QListWidget#mdiHistory::item:hover { background-color: #ffeaa7; }
 QListWidget#mdiHistory::item:selected { background-color: #00838f; color: white; }
 
+/* ── File Browser Source Sidebar ── */
+QListWidget#fileSourceSidebar {
+    background-color: #fdf6e3;
+    color: #073642;
+    border: 1px solid #d3cbb1;
+    border-radius: 4px;
+    font-size: 12pt;
+    padding: 4px;
+    outline: 0;
+}
+QListWidget#fileSourceSidebar::item {
+    padding: 6px 8px;
+    border-radius: 3px;
+}
+QListWidget#fileSourceSidebar::item:hover { background-color: #eee8d5; }
+QListWidget#fileSourceSidebar::item:selected {
+    background-color: #00838f;
+    color: #ffffff;
+}
+
 /* ── File Browser ── */
 QTreeView#fileManagerView {
     background-color: #fdf6e3;

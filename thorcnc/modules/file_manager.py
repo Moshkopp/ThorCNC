@@ -9,11 +9,12 @@ Handles:
 
 import os
 import linuxcnc
-from PySide6.QtCore import Qt, QDir
+from PySide6.QtCore import Qt, QDir, QFileSystemWatcher, QSize, QTimer
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (QTreeView, QWidget, QHBoxLayout, QLabel,
                                QPushButton, QFileDialog, QFileSystemModel,
-                               QComboBox, QFrame)
+                               QComboBox, QFrame, QListWidget, QListWidgetItem,
+                               QStyle, QVBoxLayout)
 
 
 from .base import ThorModule
@@ -203,10 +204,24 @@ class FileManagerModule(ThorModule):
         tree.hideColumn(2)  # type
         tree.hideColumn(3)  # date
 
-        # Insert horizontal separator + filter combobox row below the tree
+        # Build the source sidebar (Home, USB sticks, Network mounts)
+        self._build_source_sidebar()
+
+        # Wrap [sidebar + tree] into a horizontal layout, then add the
+        # separator + filter row below it (full width)
         parent_layout = tree.parent().layout() if tree.parent() else None
         if parent_layout is not None:
             tree_idx = parent_layout.indexOf(tree)
+            # Take the tree out of its current spot so we can put it in an HBox
+            parent_layout.removeWidget(tree)
+
+            tree_row = QHBoxLayout()
+            tree_row.setContentsMargins(0, 0, 0, 0)
+            tree_row.setSpacing(6)
+            tree_row.addWidget(self._t._source_sidebar)
+            tree_row.addWidget(tree, 1)
+            parent_layout.insertLayout(tree_idx, tree_row)
+
             sep = QFrame()
             sep.setFrameShape(QFrame.HLine)
             sep.setFrameShadow(QFrame.Sunken)
@@ -294,6 +309,128 @@ class FileManagerModule(ThorModule):
         "nc": ["*.nc", "*.NC"],
         "ngc": ["*.ngc", "*.NGC"],
     }
+
+    # ───────────────────── Source Sidebar (Home / USB / Network) ─────────────────────
+
+    def _build_source_sidebar(self):
+        """Create the source-list sidebar that mirrors a file-explorer."""
+        sb = QListWidget()
+        sb.setObjectName("fileSourceSidebar")
+        sb.setFixedWidth(180)
+        sb.setIconSize(QSize(22, 22))
+        sb.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        sb.itemClicked.connect(self._on_sidebar_clicked)
+        self._t._source_sidebar = sb
+
+        self._sidebar_watcher = QFileSystemWatcher()
+        self._sidebar_watcher.directoryChanged.connect(self._on_sidebar_dir_changed)
+
+        # Debounce timer: rapid mount/unmount events should not thrash the UI
+        self._sidebar_refresh_timer = QTimer()
+        self._sidebar_refresh_timer.setSingleShot(True)
+        self._sidebar_refresh_timer.setInterval(250)
+        self._sidebar_refresh_timer.timeout.connect(self._refresh_sidebar)
+
+        self._refresh_sidebar()
+
+    def _scan_sources(self):
+        """Return (entries, watch_dirs).
+
+        Each entry is (label, path, kind) where kind ∈ {home, usb, network}.
+        """
+        entries = []
+        watch_dirs = []
+
+        if getattr(self, "_file_home_dir", None) and os.path.isdir(self._file_home_dir):
+            entries.append((_t("Home"), self._file_home_dir, "home"))
+
+        user = os.environ.get("USER") or os.path.basename(os.path.expanduser("~"))
+        for base in (f"/media/{user}", f"/run/media/{user}", "/media"):
+            if not os.path.isdir(base):
+                continue
+            watch_dirs.append(base)
+            try:
+                for name in sorted(os.listdir(base)):
+                    if name.startswith("."):
+                        continue
+                    path = os.path.join(base, name)
+                    if os.path.ismount(path) or os.path.isdir(path):
+                        entries.append((name, path, "usb"))
+            except PermissionError:
+                pass
+
+        try:
+            uid = os.getuid()
+            gvfs = f"/run/user/{uid}/gvfs"
+            if os.path.isdir(gvfs):
+                watch_dirs.append(gvfs)
+                for name in sorted(os.listdir(gvfs)):
+                    path = os.path.join(gvfs, name)
+                    if os.path.isdir(path):
+                        entries.append((self._parse_gvfs_label(name), path, "network"))
+        except (OSError, AttributeError):
+            pass
+
+        return entries, watch_dirs
+
+    def _parse_gvfs_label(self, name):
+        """Turn 'smb-share:server=host,share=name' into 'name @ host'."""
+        if ":" in name:
+            scheme, _, rest = name.partition(":")
+            parts = {}
+            for chunk in rest.split(","):
+                if "=" in chunk:
+                    k, v = chunk.split("=", 1)
+                    parts[k] = v
+            if "share" in parts and "server" in parts:
+                return f"{parts['share']} @ {parts['server']}"
+            if "host" in parts:
+                return f"{scheme}: {parts['host']}"
+        return name
+
+    def _refresh_sidebar(self):
+        sb = getattr(self._t, "_source_sidebar", None)
+        if sb is None:
+            return
+        # Remember which path was selected so we can restore it across refreshes
+        prev_path = None
+        cur = sb.currentItem()
+        if cur:
+            prev_path = cur.data(Qt.ItemDataRole.UserRole)
+
+        sb.clear()
+        entries, watch_dirs = self._scan_sources()
+        style = sb.style()
+        icon_map = {
+            "home": style.standardIcon(QStyle.StandardPixmap.SP_DirHomeIcon),
+            "usb": style.standardIcon(QStyle.StandardPixmap.SP_DriveHDIcon),
+            "network": style.standardIcon(QStyle.StandardPixmap.SP_DriveNetIcon),
+        }
+        for label, path, kind in entries:
+            item = QListWidgetItem(label)
+            item.setData(Qt.ItemDataRole.UserRole, path)
+            item.setToolTip(path)
+            item.setIcon(icon_map.get(kind, icon_map["home"]))
+            item.setSizeHint(QSize(0, 36))
+            sb.addItem(item)
+            if prev_path and path == prev_path:
+                sb.setCurrentItem(item)
+
+        existing = self._sidebar_watcher.directories()
+        if existing:
+            self._sidebar_watcher.removePaths(existing)
+        if watch_dirs:
+            self._sidebar_watcher.addPaths(watch_dirs)
+
+    def _on_sidebar_dir_changed(self, _path: str):
+        # Debounce — udisks/gvfs often emit several signals in a row
+        self._sidebar_refresh_timer.start()
+
+    def _on_sidebar_clicked(self, item):
+        path = item.data(Qt.ItemDataRole.UserRole)
+        if path and os.path.isdir(path):
+            self._nav_set_dir(path)
+
 
     def _current_filter_mode(self) -> str:
         cmb = getattr(self._t, "_cmb_filter_gcode", None)
