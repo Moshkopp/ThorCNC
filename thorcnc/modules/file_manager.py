@@ -12,7 +12,8 @@ import linuxcnc
 from PySide6.QtCore import Qt, QDir
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (QTreeView, QWidget, QHBoxLayout, QLabel,
-                               QPushButton, QFileDialog, QFileSystemModel)
+                               QPushButton, QFileDialog, QFileSystemModel,
+                               QComboBox, QFrame)
 
 
 from .base import ThorModule
@@ -70,6 +71,8 @@ class FileManagerModule(ThorModule):
             self._t._btn_nav_up.clicked.connect(self._nav_up)
         if self._t._btn_nav_home:
             self._t._btn_nav_home.clicked.connect(self._nav_home)
+        if getattr(self._t, "_cmb_filter_gcode", None):
+            self._t._cmb_filter_gcode.currentIndexChanged.connect(self._on_filter_changed)
 
         if self._t._btn_load:
             self._t._btn_load.clicked.connect(self._load_selected_file)
@@ -135,6 +138,26 @@ class FileManagerModule(ThorModule):
             self._t._btn_nav_home.setFixedWidth(60)
             self._t._btn_nav_home.setToolTip(_t("Home Directory"))
 
+        # G-Code filter combobox (below the tree, separated by a horizontal line)
+        self._t._cmb_filter_gcode = QComboBox()
+        self._t._cmb_filter_gcode.setObjectName("fileFilterCombo")
+        self._t._cmb_filter_gcode.setFixedHeight(46)
+        self._t._cmb_filter_gcode.setMinimumWidth(220)
+        self._t._cmb_filter_gcode.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        # Items: (label, mode-id stored in settings)
+        filter_items = [
+            (_t("Show all"), "all"),
+            (_t("Only .nc + .ngc"), "gcode"),
+            (_t("Only .nc"), "nc"),
+            (_t("Only .ngc"), "ngc"),
+        ]
+        for label, mode in filter_items:
+            self._t._cmb_filter_gcode.addItem(label, mode)
+
+        saved_mode = self._t.settings.get("file_filter_mode", "gcode")
+        idx = self._t._cmb_filter_gcode.findData(saved_mode)
+        self._t._cmb_filter_gcode.setCurrentIndex(idx if idx >= 0 else 1)
+
         self._t.navigation.update_nav_icons()
 
         # Breadcrumb setup
@@ -171,12 +194,38 @@ class FileManagerModule(ThorModule):
         self._fs_model = _GCodeFileSystemModel(thorc=self._t)
         self._fs_model.setRootPath(start_dir)
         self._fs_model.setFilter(QDir.AllDirs | QDir.Files | QDir.NoDotAndDotDot)
+        # Hide non-matching files (instead of just greying them out)
+        self._fs_model.setNameFilterDisables(False)
 
         tree.setModel(self._fs_model)
         tree.setColumnWidth(0, 300)
         tree.hideColumn(1)  # size
         tree.hideColumn(2)  # type
         tree.hideColumn(3)  # date
+
+        # Insert horizontal separator + filter combobox row below the tree
+        parent_layout = tree.parent().layout() if tree.parent() else None
+        if parent_layout is not None:
+            tree_idx = parent_layout.indexOf(tree)
+            sep = QFrame()
+            sep.setFrameShape(QFrame.HLine)
+            sep.setFrameShadow(QFrame.Sunken)
+            sep.setObjectName("file_filter_separator")
+            sep.setFixedHeight(2)
+            parent_layout.insertWidget(tree_idx + 1, sep)
+
+            filter_row = QHBoxLayout()
+            filter_row.setContentsMargins(4, 6, 4, 4)
+            filter_row.setSpacing(8)
+            filter_label = QLabel(_t("Filter:"))
+            filter_label.setObjectName("fileFilterLabel")
+            filter_label.setMinimumHeight(44)
+            filter_row.addWidget(filter_label)
+            filter_row.addWidget(self._t._cmb_filter_gcode, 1)
+            parent_layout.insertLayout(tree_idx + 2, filter_row)
+
+        # Apply the initial filter now that the model is wired to the view
+        self._apply_gcode_filter(self._current_filter_mode())
 
         # Initial state
         self._selected_filepath = None
@@ -238,6 +287,46 @@ class FileManagerModule(ThorModule):
         btn.setCursor(Qt.CursorShape.PointingHandCursor)
         btn.clicked.connect(lambda: self._nav_set_dir(path))
         self._t._breadcrumb_layout.addWidget(btn)
+
+    _FILTER_PATTERNS = {
+        "all": None,
+        "gcode": ["*.nc", "*.ngc", "*.NC", "*.NGC"],
+        "nc": ["*.nc", "*.NC"],
+        "ngc": ["*.ngc", "*.NGC"],
+    }
+
+    def _current_filter_mode(self) -> str:
+        cmb = getattr(self._t, "_cmb_filter_gcode", None)
+        if cmb is None:
+            return "gcode"
+        mode = cmb.currentData()
+        return mode if mode in self._FILTER_PATTERNS else "gcode"
+
+    def _apply_gcode_filter(self, mode: str):
+        """Apply name filter to the file system model based on selected mode."""
+        if not getattr(self, "_fs_model", None):
+            return
+        patterns = self._FILTER_PATTERNS.get(mode)
+        if patterns is None:
+            self._fs_model.setNameFilters([])
+            self._fs_model.setNameFilterDisables(True)
+        else:
+            self._fs_model.setNameFilters(patterns)
+            self._fs_model.setNameFilterDisables(False)
+
+        # Force the view to re-read the current directory
+        tree = self._t._w(QTreeView, "fileManagerView")
+        if tree is not None and hasattr(self, "_current_dir"):
+            self._fs_model.setRootPath("")
+            self._fs_model.setRootPath(self._current_dir)
+            tree.setRootIndex(self._fs_model.index(self._current_dir))
+
+    def _on_filter_changed(self, _idx: int):
+        """Persist combobox selection and re-apply name filter."""
+        mode = self._current_filter_mode()
+        self._t.settings.set("file_filter_mode", mode)
+        self._t.settings.save()
+        self._apply_gcode_filter(mode)
 
     def _nav_up(self):
         """Navigate to parent directory."""

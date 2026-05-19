@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QPlainTextEdit,
     QPushButton,
+    QScrollBar,
     QSizePolicy,
     QStackedWidget,
     QTableWidget,
@@ -72,33 +73,40 @@ class VirtualKeyboardDialog(QDialog):
 
         self._target = None
         self._shift = False
+        self._caps = False
         self._symbols = False
         self._letter_buttons = []
         self._shift_btn = None
+        self._caps_btn = None
         self._sym_btn = None
+        self._enter_btn = None  # newline insertion in multiline mode
         self._buffer = QLineEdit()
         self._buffer.setObjectName("virtualKeyboardBuffer")
         self._buffer.setMinimumHeight(42)
         self._buffer.installEventFilter(self)
         self._text_buffer = QTextEdit()
         self._text_buffer.setObjectName("virtualKeyboardTextBuffer")
-        self._text_buffer.setMinimumHeight(110)
+        self._text_buffer.setMinimumHeight(120)
         self._text_buffer.installEventFilter(self)
         self._buffer_stack = QStackedWidget()
         self._buffer_stack.addWidget(self._buffer)
         self._buffer_stack.addWidget(self._text_buffer)
+        # Start sized for single-line; _set_multiline_mode adjusts on switch
+        self._buffer_stack.setFixedHeight(self._buffer.minimumHeight() + 6)
 
         root = QVBoxLayout(self)
         root.setContentsMargins(10, 10, 10, 10)
         root.setSpacing(8)
 
+        # Top row: ESC | buffer | < | > | BACK | CLR
         edit_row = QHBoxLayout()
         edit_row.setSpacing(6)
+        edit_row.addWidget(self._make_button("ESC", self._cancel, wide=True))
         edit_row.addWidget(self._buffer_stack, 1)
         edit_row.addWidget(self._make_button("<", lambda _checked=False: self._move_cursor(-1)))
         edit_row.addWidget(self._make_button(">", lambda _checked=False: self._move_cursor(1)))
-        edit_row.addWidget(self._make_button("CLR", lambda _checked=False: self._active_buffer().clear(), wide=True))
         edit_row.addWidget(self._make_button("BACK", self._backspace, wide=True))
+        edit_row.addWidget(self._make_button("CLR", lambda _checked=False: self._active_buffer().clear(), wide=True))
         root.addLayout(edit_row)
 
         body = QHBoxLayout()
@@ -110,31 +118,38 @@ class VirtualKeyboardDialog(QDialog):
 
         body.addLayout(self._letter_grid, 4)
         body.addLayout(self._number_grid, 1)
-        enter_btn = self._make_button("ENTER", self._enter, wide=True)
-        enter_btn.setObjectName("virtualKeyboardEnterKey")
-        enter_btn.setMinimumSize(86, 194)
-        enter_btn.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Expanding)
-        body.addWidget(enter_btn)
+        # OK button submits the input (takes the role the green ENTER used to play)
+        ok_btn = self._make_button("OK", self._enter, wide=True)
+        ok_btn.setObjectName("virtualKeyboardOkKey")
+        ok_btn.setMinimumSize(86, 194)
+        ok_btn.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Expanding)
+        body.addWidget(ok_btn)
         root.addLayout(body)
 
         actions = QHBoxLayout()
         actions.setSpacing(6)
         self._shift_btn = self._make_button("SHIFT", self._toggle_shift, wide=True)
+        self._caps_btn = self._make_button("CAPS", self._toggle_caps, wide=True)
         self._sym_btn = self._make_button("SYM", self._toggle_symbols, wide=True)
         self._shift_btn.setCheckable(True)
+        self._caps_btn.setCheckable(True)
         self._sym_btn.setCheckable(True)
+        self._enter_btn = self._make_button(
+            "ENTER", lambda _checked=False: self._send_text("\n"), wide=True
+        )
         actions.addWidget(self._shift_btn)
+        actions.addWidget(self._caps_btn)
         actions.addWidget(self._sym_btn)
-        actions.addWidget(self._make_button("NL", lambda _checked=False: self._send_text("\n"), wide=True))
+        actions.addWidget(self._enter_btn)
         space_btn = self._make_button("SPACE", lambda _checked=False: self._send_text(" "), wide=True)
         space_btn.setMinimumWidth(220)
         actions.addWidget(space_btn, 1)
-        actions.addWidget(self._make_button("ESC", self._cancel, wide=True))
         root.addLayout(actions)
 
         self._build_letters()
         self._build_numbers()
         self._refresh_mode_buttons()
+        self._update_enter_button_state()
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key.Key_Escape:
@@ -157,6 +172,17 @@ class VirtualKeyboardDialog(QDialog):
 
     def _set_multiline_mode(self, enabled):
         self._buffer_stack.setCurrentWidget(self._text_buffer if enabled else self._buffer)
+        if enabled:
+            self._buffer_stack.setFixedHeight(self._text_buffer.minimumHeight() + 10)
+        else:
+            self._buffer_stack.setFixedHeight(self._buffer.minimumHeight() + 6)
+        self._update_enter_button_state()
+        # Shrink/grow the whole dialog to match the new buffer size
+        self.adjustSize()
+
+    def _update_enter_button_state(self):
+        if self._enter_btn:
+            self._enter_btn.setEnabled(self._is_multiline_mode())
 
     def _is_multiline_mode(self):
         return self._buffer_stack.currentWidget() is self._text_buffer
@@ -280,6 +306,14 @@ class VirtualKeyboardDialog(QDialog):
         self._refresh_letters()
         self._refresh_mode_buttons()
 
+    def _toggle_caps(self, _checked=False):
+        self._caps = not self._caps
+        if self._caps:
+            # Permanent uppercase overrides any pending one-shot shift
+            self._shift = False
+        self._refresh_letters()
+        self._refresh_mode_buttons()
+
     def _toggle_symbols(self, _checked=False):
         self._symbols = not self._symbols
         self._shift = False
@@ -289,15 +323,20 @@ class VirtualKeyboardDialog(QDialog):
     def _refresh_letters(self):
         if self._symbols:
             return
+        upper = self._caps or self._shift
         for btn in self._letter_buttons:
             label = btn.text()
-            btn.setText(label.upper() if self._shift else label.lower())
+            btn.setText(label.upper() if upper else label.lower())
 
     def _refresh_mode_buttons(self):
         if self._shift_btn:
             self._shift_btn.setChecked(self._shift)
             self._shift_btn.setProperty("active", self._shift)
             self._repolish(self._shift_btn)
+        if self._caps_btn:
+            self._caps_btn.setChecked(self._caps)
+            self._caps_btn.setProperty("active", self._caps)
+            self._repolish(self._caps_btn)
         if self._sym_btn:
             self._sym_btn.setChecked(self._symbols)
             self._sym_btn.setProperty("active", self._symbols)
@@ -307,11 +346,15 @@ class VirtualKeyboardDialog(QDialog):
         text = str(text)
         if text == "\n" and not self._is_multiline_mode():
             return
-        if not self._symbols and len(text) == 1 and text.isalpha() and self._shift:
-            text = text.upper()
-            self._shift = False
-            self._refresh_letters()
-            self._refresh_mode_buttons()
+        if not self._symbols and len(text) == 1 and text.isalpha():
+            if self._caps:
+                text = text.upper()
+            elif self._shift:
+                text = text.upper()
+                # SHIFT is one-shot: clear after producing one uppercase letter
+                self._shift = False
+                self._refresh_letters()
+                self._refresh_mode_buttons()
         if self._is_multiline_mode():
             self._text_buffer.textCursor().insertText(text)
         else:
@@ -609,22 +652,56 @@ class VirtualKeyboardModule(ThorModule):
         widget = self._input_widget(watched, event)
         if widget is None:
             return False
+        self._ensure_dialog_alive()
         if isinstance(widget, tuple) and widget[0] == "table":
             _kind, table, row, column = widget
+            self._ensure_keyboard_above(table)
             self._dialog.show_for_table_cell(table, row, column)
             return False
         if isinstance(widget, tuple) and widget[0] == "text_block":
             _kind, text_widget = widget
+            self._ensure_keyboard_above(text_widget)
             self._dialog.show_for_text_line(text_widget)
             return False
+        self._ensure_keyboard_above(widget)
         self._dialog.show_for(widget)
         return False
 
+    def _ensure_dialog_alive(self):
+        """Recreate the keyboard dialog if its C++ object has been destroyed
+        (happens when the previous parent — e.g. a modal dialog — is closed)."""
+        if not shiboken6.isValid(self._dialog):
+            self._dialog = VirtualKeyboardDialog(self._t.ui)
+
+    def _ensure_keyboard_above(self, target):
+        """Reparent the keyboard dialog to the target's top-level window
+        so it can be shown above modal dialogs / popups."""
+        if not shiboken6.isValid(self._dialog):
+            return
+        if not shiboken6.isValid(target):
+            return
+        top = target.window() if hasattr(target, "window") else None
+        if top is None or top is self._dialog:
+            return
+        if not shiboken6.isValid(top):
+            return
+        if self._dialog.parentWidget() is top:
+            return
+
+        flags = self._dialog.windowFlags()
+        was_visible = self._dialog.isVisible()
+        if was_visible:
+            self._dialog.hide()
+        self._dialog.setParent(top, flags)
+        if was_visible:
+            self._dialog.show()
+
     def refresh_theme(self):
-        if getattr(self, "_dialog", None):
-            self._dialog.style().unpolish(self._dialog)
-            self._dialog.style().polish(self._dialog)
-            self._dialog.update()
+        dlg = getattr(self, "_dialog", None)
+        if dlg is not None and shiboken6.isValid(dlg):
+            dlg.style().unpolish(dlg)
+            dlg.style().polish(dlg)
+            dlg.update()
         self._sync_toggle_button()
 
     def _ensure_toggle_button(self):
@@ -682,7 +759,7 @@ class VirtualKeyboardModule(ThorModule):
         self._enabled = bool(enabled)
         self._t.settings.set("virtual_keyboard_enabled", self._enabled)
         self._t.settings.save()
-        if not self._enabled and self._dialog.isVisible():
+        if not self._enabled and shiboken6.isValid(self._dialog) and self._dialog.isVisible():
             self._dialog.close()
         self._sync_toggle_button()
 
@@ -702,6 +779,11 @@ class VirtualKeyboardModule(ThorModule):
 
         candidate = widget
         while candidate is not None:
+            # Clicks on scrollbars (dragging the thumb, arrows) must NOT
+            # trigger the keyboard, even though the scrollbar's parent is
+            # an editable widget.
+            if isinstance(candidate, QScrollBar):
+                return None
             if isinstance(candidate, QTableWidget):
                 return self._table_target(candidate, widget, event)
             if isinstance(candidate, QPlainTextEdit) and self._is_gcode_editor(candidate):

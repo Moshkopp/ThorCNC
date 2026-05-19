@@ -223,7 +223,7 @@ QDialog#virtualKeyboardDialog QPushButton#virtualKeyboardKey[active="true"] {
     color: #ffffff;
 }
 
-QDialog#virtualKeyboardDialog QPushButton#virtualKeyboardEnterKey {
+QDialog#virtualKeyboardDialog QPushButton#virtualKeyboardOkKey {
     background-color: #2d7d46;
     border: 1px solid #5ec878;
     border-radius: 4px;
@@ -232,12 +232,12 @@ QDialog#virtualKeyboardDialog QPushButton#virtualKeyboardEnterKey {
     padding: 4px 8px;
 }
 
-QDialog#virtualKeyboardDialog QPushButton#virtualKeyboardEnterKey:hover {
+QDialog#virtualKeyboardDialog QPushButton#virtualKeyboardOkKey:hover {
     background-color: #35a35a;
     border-color: #78e695;
 }
 
-QDialog#virtualKeyboardDialog QPushButton#virtualKeyboardEnterKey:pressed {
+QDialog#virtualKeyboardDialog QPushButton#virtualKeyboardOkKey:pressed {
     background-color: #236637;
 }
 
@@ -1390,6 +1390,34 @@ QComboBox#wcsCombo QAbstractItemView {
     background: rgb(46,52,54);
     color: #eeeeec;
     selection-background-color: rgb(78,154,6);
+}
+
+/* ── File browser filter ── */
+QComboBox#fileFilterCombo {
+    background-color: #1a1a1a;
+    border: 1px solid #3f4956;
+    border-radius: 6px;
+    padding: 4px 10px;
+    color: #ffffff;
+    font-family: 'Bebas Neue', 'Noto Sans', sans-serif;
+    font-size: 13pt;
+    font-weight: bold;
+    min-height: 36px;
+}
+QComboBox#fileFilterCombo::drop-down { border: none; background: transparent; width: 28px; }
+QComboBox#fileFilterCombo QAbstractItemView {
+    background: rgb(46,52,54);
+    color: #eeeeec;
+    selection-background-color: rgb(78,154,6);
+    font-size: 13pt;
+    padding: 4px;
+}
+QLabel#fileFilterLabel {
+    font-family: 'Bebas Neue', 'Noto Sans', sans-serif;
+    font-size: 13pt;
+    font-weight: bold;
+    color: #cccccc;
+    padding: 0 4px;
 }
 
 /* ── Slider overlay labels (transparent so slider shows through) ── */
