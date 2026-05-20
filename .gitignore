@@ -20,6 +20,9 @@ configs/sim/thorcnc_sim.var.bak
 # ThorCNC lokale Einstellungen (jetzt mit übertragen für Sync)
 # thorcnc.prefs
 
+# ThorCNC Job-Staging & History (lokale Fräsjob-Kopien, Vorschaubilder, history.json)
+nc_files/jobs/
+
 # IDEs & System
 .vscode/
 .idea/

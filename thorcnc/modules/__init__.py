@@ -24,6 +24,7 @@ from .program_control import ProgramControlModule
 from .status import StatusModule
 from .surface_map import SurfaceMapModule
 from .virtual_keyboard import VirtualKeyboardModule
+from .job_history import JobHistoryModule
 
 __all__ = [
     "ThorModule",
@@ -46,4 +47,5 @@ __all__ = [
     "StatusModule",
     "SurfaceMapModule",
     "VirtualKeyboardModule",
+    "JobHistoryModule",
 ]

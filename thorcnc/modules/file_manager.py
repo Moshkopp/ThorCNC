@@ -190,6 +190,7 @@ class FileManagerModule(ThorModule):
                 start_dir = os.path.expanduser("~/linuxcnc/nc_files")
 
         self._file_home_dir = start_dir
+        self._t._nc_files_dir = start_dir   # gemeinsame Quelle für JobHistory (jobs/)
 
         # File system model
         self._fs_model = _GCodeFileSystemModel(thorc=self._t)
@@ -529,6 +530,7 @@ class FileManagerModule(ThorModule):
             with open(self._selected_filepath, "w", encoding="utf-8") as f:
                 f.write(content)
             self._t._status(_t("File saved: {}").format(os.path.basename(self._selected_filepath)))
+            self._t.job_history.maybe_write_back(self._selected_filepath, content)
         except Exception as e:
             self._t._status(f"Error saving file: {e}", error=True)
 
@@ -556,14 +558,19 @@ class FileManagerModule(ThorModule):
             self._t._file_preview.clear()
 
     def _load_selected_file(self):
-        """Load file into LinuxCNC."""
+        """Load file into LinuxCNC.
+
+        Die Datei wird zuvor lokal nach jobs/ kopiert (Staging), damit nie direkt
+        vom USB-Stick oder einer instabilen SMB-Freigabe gefahren wird.
+        """
         if self._selected_filepath:
-            self._t._user_program = self._selected_filepath
+            staged = self._t.job_history.stage_job(self._selected_filepath)
+            self._t._user_program = staged
             if self._t.poller:
                 self._t.poller.reset_file_state()
             self._t.cmd.mode(linuxcnc.MODE_AUTO)
             self._t.cmd.wait_complete()
-            self._t.cmd.program_open(self._selected_filepath)
+            self._t.cmd.program_open(staged)
 
             from PySide6.QtWidgets import QTabWidget
             if tab := self._t._w(QTabWidget, "tabWidget"):

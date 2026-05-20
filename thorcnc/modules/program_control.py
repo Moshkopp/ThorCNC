@@ -413,6 +413,7 @@ class ProgramControlModule(ThorModule):
         self._t.cmd.auto(linuxcnc.AUTO_PAUSE)
 
     def stop_program(self):
+        self._t._job_abort_requested = True   # JobHistory: Lauf als „Abgebrochen“ werten
         self._t.cmd.abort()
         self._t.cmd.wait_complete()
         self._t.cmd.mode(linuxcnc.MODE_MANUAL)

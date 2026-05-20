@@ -632,6 +632,11 @@ class VirtualKeyboardModule(ThorModule):
 
     _INPUT_TYPES = (QLineEdit, QTextEdit, QPlainTextEdit, QAbstractSpinBox, QTableWidget)
 
+    # Default so handle_event() is safe if the global event filter fires before
+    # setup() runs (Qt6/Debian 13 delivers setFixedSize Resize events synchronously
+    # during widget construction).
+    _enabled = False
+
     def setup(self):
         self._enabled = bool(self._t.settings.get("virtual_keyboard_enabled", False))
         self._toggle_pos_bridge = None

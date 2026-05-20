@@ -10,7 +10,7 @@ from .status_poller import StatusPoller
 from .i18n import TranslationManager, _t
 from .modules import (FileManagerModule, ToolTableModule, OffsetsModule,
                         MotionModule, ProbingTabModule, NavigationModule, SettingsTabModule, DROModule, SpindleModule, SimpleViewModule, GCodeViewModule, MDIModule, HALModule, ControlPanelModule, BackplotModule,
-                        ProgramControlModule, StatusModule, SurfaceMapModule, VirtualKeyboardModule)
+                        ProgramControlModule, StatusModule, SurfaceMapModule, VirtualKeyboardModule, JobHistoryModule)
 # from .widgets.opt_options import OptOptionsDialog
 
 _DIR = os.path.dirname(__file__)
@@ -48,6 +48,7 @@ class ThorCNC(QObject):
 
         self.navigation = NavigationModule(self)
         self.file_manager = FileManagerModule(self)
+        self.job_history = JobHistoryModule(self)
         self.tool_table = ToolTableModule(self)
         self.offsets = OffsetsModule(self)
         self.motion = MotionModule(self)
@@ -81,6 +82,7 @@ class ThorCNC(QObject):
         self.status_mod.setup()
         self._setup_poller()
         self.file_manager.setup()
+        self.job_history.setup()   # nach file_manager (nutzt _nc_files_dir, status_log)
         self.tool_table.setup()
         self.offsets.setup()
         self.motion.setup()
@@ -611,6 +613,7 @@ class ThorCNC(QObject):
         self.backplot_mod.connect_signals()
         self.program_control.connect_signals()
         self.status_mod.connect_signals()
+        self.job_history.connect_signals()
 
         # Simple View — fullscreen overlay, opened by clicking the status bar
 

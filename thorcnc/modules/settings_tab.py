@@ -588,6 +588,19 @@ class SettingsTabModule(ThorModule):
                                  self._t.settings.save())
             )
             gl_behavior.addWidget(self._cb_arrow_jog)
+
+            # Job-History: Jobs datiert unter jobs/ ablegen + Verlauf protokollieren
+            self._cb_job_history = QCheckBox(_t("Job history (archive jobs under jobs/)"))
+            self._cb_job_history.setToolTip(_t(
+                "Loaded jobs are stored dated under jobs/YYYY/MM/DD, with preview "
+                "image and history (OK/Cancelled). Off: only jobs/tmp.ngc."))
+            self._cb_job_history.setChecked(self._t.settings.get("job_history_enabled", False))
+            self._cb_job_history.toggled.connect(
+                lambda checked: (self._t.settings.set("job_history_enabled", checked),
+                                 self._t.settings.save(),
+                                 self._t.job_history._update_history_tab())
+            )
+            gl_behavior.addWidget(self._cb_job_history)
             gl_behavior.addStretch()
             col_behavior.addWidget(gb_behavior)
             adv_layout.addLayout(col_behavior, 1)

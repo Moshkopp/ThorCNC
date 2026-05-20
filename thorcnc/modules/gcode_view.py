@@ -229,6 +229,9 @@ class GCodeViewModule(ThorModule):
             gcode_view.document().setModified(False)
             self._t._status(f"G-CODE SAVED: {os.path.basename(self._t._user_program)}")
 
+            # Optional zusätzlich die Original-Quelldatei aktualisieren (fragt nach).
+            self._t.job_history.maybe_write_back(self._t._user_program, content)
+
             # Re-parse for backplot
             from thorcnc.gcode_parser import parse_file
             tp = parse_file(self._t._user_program)
