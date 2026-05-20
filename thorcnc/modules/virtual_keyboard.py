@@ -740,6 +740,11 @@ class VirtualKeyboardModule(ThorModule):
         x = max(margin, jog.width() - btn.width() - margin)
         y = margin
         btn.move(x, y)
+        # Overlay button is not in a layout: re-show and re-raise on every
+        # (re)position so layout siblings of jog_xyz can't paint over it.
+        # raise_() during setup() doesn't stick under Qt6 (Debian 13).
+        btn.show()
+        btn.raise_()
 
     def _keyboard_icon(self):
         pix = QPixmap(36, 26)
